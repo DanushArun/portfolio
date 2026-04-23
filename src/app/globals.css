@@ -1,26 +1,133 @@
+/* ---------------------------------------------------------------
+ * Google Fonts — Syne (display), Space Grotesk (sans), Space Mono (mono)
+ * Loaded via next/font in layout.tsx for self-hosting; this @import
+ * is a resilient fallback for preview tools and dev overlays that
+ * bypass the font CSS variables.
+ *
+ * Must precede `@import "tailwindcss"` — Tailwind inlines its entire
+ * preflight as regular rules, and CSS requires every @import to sit
+ * above any non-@import rule.
+ * --------------------------------------------------------------- */
+@import url("https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap");
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------
+ * Design tokens — the field system
+ * --------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Palette — three colors, never more. Lime is spent no more
+     than six times across the entire site. */
+  --graphite: #0B0D10;
+  --lime:     #B8FF3C;
+  --cream:    #E8E4D8;
+
+  /* Typography stacks. Variables are assigned by next/font at runtime;
+     the string fallbacks keep the cascade intact during hydration. */
+  --font-display: var(--font-syne), "Syne", sans-serif;
+  --font-sans:    var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
+  --font-mono:    var(--font-space-mono), "Space Mono", ui-monospace, monospace;
+
+  /* Easing — six named curves. Never reach for CSS `ease` or `linear`. */
+  --ease-instrument: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-compute:    cubic-bezier(0.65, 0.05, 0, 1);
+  --ease-precision:  cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-typeset:    cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-transmit:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-dismiss:    cubic-bezier(0.4, 0, 1, 1);
 }
 
+/* Expose tokens to Tailwind v4's theme layer so utilities like
+   `bg-graphite`, `text-cream`, `font-display` resolve without config. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-graphite: var(--graphite);
+  --color-lime:     var(--lime);
+  --color-cream:    var(--cream);
+  --font-display:   var(--font-display);
+  --font-sans:      var(--font-sans);
+  --font-mono:      var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---------------------------------------------------------------
+ * Reset — box-sizing, margin/padding, default element chrome
+ * --------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+html {
+  /* Lenis owns scroll; native smooth-behavior fights the RAF loop. */
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--graphite);
+  color: var(--cream);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-x: hidden;
+  /* Custom cursor is drawn by a dedicated component elsewhere. */
+  cursor: none;
+  min-height: 100svh;
+}
+
+/* Links/buttons/inputs inherit cleanly rather than using UA defaults. */
+a,
+button {
+  color: inherit;
+  background: none;
+  font: inherit;
+  cursor: none;
+}
+
+img,
+video,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------
+ * Selection — lime block, graphite glyphs. One of the six lime uses.
+ * --------------------------------------------------------------- */
+::selection {
+  background: var(--lime);
+  color: var(--graphite);
+}
+
+/* ---------------------------------------------------------------
+ * Focus — never invisible, never UA blue. Lime ring, thin.
+ * --------------------------------------------------------------- */
+:focus-visible {
+  outline: 1px solid var(--lime);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------
+ * Scrollbar — hidden. Lenis + custom indicator handle scroll feedback.
+ * --------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+html {
+  scrollbar-width: none;
 }
