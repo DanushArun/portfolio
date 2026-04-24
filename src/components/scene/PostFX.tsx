@@ -46,14 +46,21 @@ type Grade = {
   caMax: number;
 };
 
+// contrast/brightness/saturation tuned per cinematic phase:
+// VOID + EVENT_HORIZON: deep black, high contrast, film grain — Nolan IMAX
+// DESCENT: crush to maximum darkness
+// Cosmic scenes: balanced, slightly desaturated — Fraser cool/warm split
+// SINGULARITY: clean, almost no grade — let the image breathe
 const GRADE: Record<ScenePhase, Grade> = {
-  IDLE:       { contrast: 0.08, saturation: -0.05, hue: 0.00,  brightness: -0.02, vignette: 0.68, noise: 0.06, caBase: 0.0015, caMax: 0.0015 },
-  THRESHOLD:  { contrast: 0.15, saturation: -0.20, hue: 0.00,  brightness: 0.05,  vignette: 0.82, noise: 0.14, caBase: 0.0015, caMax: 0.014  },
-  VOID:       { contrast: 0.20, saturation: -0.15, hue: 0.02,  brightness: 0.00,  vignette: 0.85, noise: 0.16, caBase: 0.014,  caMax: 0.018  },
-  EMERGENCE:  { contrast: 0.10, saturation: 0.10,  hue: 0.00,  brightness: -0.02, vignette: 0.75, noise: 0.10, caBase: 0.002,  caMax: 0.014  },
-  UNIVERSE:   { contrast: 0.06, saturation: 0.05,  hue: 0.00,  brightness: -0.03, vignette: 0.70, noise: 0.07, caBase: 0.0012, caMax: 0.0012 },
-  ASSEMBLY:   { contrast: 0.10, saturation: 0.00,  hue: 0.00,  brightness: 0.00,  vignette: 0.65, noise: 0.05, caBase: 0.0012, caMax: 0.0012 },
-  FINAL:      { contrast: 0.12, saturation: 0.08,  hue: 0.00,  brightness: 0.00,  vignette: 0.72, noise: 0.06, caBase: 0.0012, caMax: 0.0012 },
+  VOID:           { contrast: 0.12, saturation: -0.12, hue: 0.00, brightness: -0.04, vignette: 0.80, noise: 0.10, caBase: 0.001,  caMax: 0.001  },
+  EVENT_HORIZON:  { contrast: 0.10, saturation: -0.08, hue: 0.00, brightness: -0.03, vignette: 0.72, noise: 0.07, caBase: 0.0012, caMax: 0.012  },
+  DESCENT:        { contrast: 0.22, saturation: -0.25, hue: 0.00, brightness: 0.02,  vignette: 0.90, noise: 0.18, caBase: 0.012,  caMax: 0.020  },
+  MIRA_PULSAR:    { contrast: 0.10, saturation: -0.05, hue: 0.00, brightness: -0.02, vignette: 0.75, noise: 0.07, caBase: 0.001,  caMax: 0.001  },
+  DRIVEX_QUASAR:  { contrast: 0.08, saturation: 0.05,  hue: 0.00, brightness: -0.02, vignette: 0.70, noise: 0.06, caBase: 0.001,  caMax: 0.001  },
+  TWIN_BUILD:     { contrast: 0.10, saturation: -0.05, hue: 0.00, brightness: -0.02, vignette: 0.72, noise: 0.07, caBase: 0.001,  caMax: 0.001  },
+  FORMULA_RINGS:  { contrast: 0.08, saturation: 0.08,  hue: 0.00, brightness: -0.01, vignette: 0.65, noise: 0.05, caBase: 0.001,  caMax: 0.001  },
+  QUANTUM_PLANET: { contrast: 0.08, saturation: -0.10, hue: 0.00, brightness: -0.03, vignette: 0.75, noise: 0.06, caBase: 0.001,  caMax: 0.001  },
+  SINGULARITY:    { contrast: 0.06, saturation: 0.00,  hue: 0.00, brightness: 0.00,  vignette: 0.60, noise: 0.04, caBase: 0.0008, caMax: 0.0008 },
 };
 
 const LERP = 0.04;
@@ -154,7 +161,7 @@ export default function PostFX() {
   }), []);
 
   // Lerped grade state — single ref, mutated in place each frame.
-  const grade = useRef<Grade>({ ...GRADE.IDLE });
+  const grade = useRef<Grade>({ ...GRADE.VOID });
   const caVal = useRef(0.0015);
 
   useFrame(() => {
@@ -169,15 +176,11 @@ export default function PostFX() {
     g.vignette   += (target.vignette   - g.vignette)   * LERP;
     g.noise      += (target.noise      - g.noise)      * LERP;
 
+    // CA ramps up during DESCENT, stays flat otherwise
     let caTarget = target.caBase;
-    if (phase === 'THRESHOLD') {
+    if (phase === 'DESCENT') {
       const t = phaseTime(phaseStart);
-      caTarget = target.caBase + Math.min(t / 1.2, 1) * (target.caMax - target.caBase);
-    } else if (phase === 'VOID') {
-      caTarget = target.caMax;
-    } else if (phase === 'EMERGENCE') {
-      const t = phaseTime(phaseStart);
-      caTarget = Math.max(target.caBase, target.caMax - (t / 1.5) * (target.caMax - target.caBase));
+      caTarget = target.caBase + Math.min(t / 1.0, 1) * (target.caMax - target.caBase);
     }
     caVal.current += (caTarget - caVal.current) * 0.18;
 
@@ -192,10 +195,11 @@ export default function PostFX() {
     const v = caVal.current;
     (ca.offset as THREE.Vector2).set(v, v);
 
+    // Anamorphic streak: intense during DESCENT, subtle in cosmic scenes
     let streakTarget = 0.6;
-    if (phase === 'VOID' || phase === 'THRESHOLD') streakTarget = 1.4;
-    else if (phase === 'EMERGENCE') streakTarget = 1.1;
-    else if (phase === 'UNIVERSE' || phase === 'ASSEMBLY' || phase === 'FINAL') streakTarget = 0.75;
+    if (phase === 'DESCENT') streakTarget = 1.6;
+    else if (phase === 'EVENT_HORIZON') streakTarget = 0.8;
+    else if (phase === 'FORMULA_RINGS') streakTarget = 1.0;
     streak.intensity += (streakTarget - streak.intensity) * 0.05;
   });
 

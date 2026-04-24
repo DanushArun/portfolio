@@ -1,47 +1,118 @@
 import { create } from 'zustand';
 
-export type ScenePhase =
-  | 'IDLE'            // Black hole static, waiting for user click
-  | 'THRESHOLD'       // Dolly-zoom into event horizon (1.2s)
-  | 'VOID'            // Hyperspace transit through the singularity (3s)
-  | 'EMERGENCE'       // Decelerate, emerge into universe (1.5s)
-  | 'UNIVERSE'        // Free exploration of celestial bodies
-  | 'ASSEMBLY'        // Resume fragments assemble via gravity
-  | 'FINAL';          // Final constellation + contact
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase definitions — Nolan/Villeneuve cinematic journey
+// ─────────────────────────────────────────────────────────────────────────────
 
-export type FocusedBody = 'none' | 'mira' | 'emi' | 'veronica' | 'quantum' | 'formula';
+export type ScenePhase =
+  | 'VOID'           // 3.5s autonomous: stars crystallize, terminal boot, BH reveals
+  | 'EVENT_HORIZON'  // Hero: full-screen BH, mouse = physics, scroll approaches
+  | 'DESCENT'        // 3.2s: equation dissolves, darkness, amber point grows
+  | 'MIRA_PULSAR'    // Scene 1: 92ms clockwork, Mira AI
+  | 'DRIVEX_QUASAR'  // Scene 2: dual jets, DriveX agentic AI
+  | 'TWIN_BUILD'     // Scene 3: binary magnetar, drag to orbit, FuryX + Veronica
+  | 'FORMULA_RINGS'  // Scene 4: scroll velocity = ring speed, Formula Manipal
+  | 'QUANTUM_PLANET' // Scene 5: equation interaction + shatter, quantum research
+  | 'SINGULARITY';   // Act VII: convergence, monolith, contact
+
+// Ordered scene sequence after DESCENT (for scroll-snap advancement)
+export const COSMIC_SCENES: ScenePhase[] = [
+  'MIRA_PULSAR',
+  'DRIVEX_QUASAR',
+  'TWIN_BUILD',
+  'FORMULA_RINGS',
+  'QUANTUM_PLANET',
+  'SINGULARITY',
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Store
+// ─────────────────────────────────────────────────────────────────────────────
 
 type SceneStore = {
   phase: ScenePhase;
-  phaseStart: number;      // performance.now() when phase began
-  focusedBody: FocusedBody;
-  universeScroll: number;  // 0..1 scroll progress inside universe
-  assemblyProgress: number; // 0..1 jigsaw completion
+  phaseStart: number;       // performance.now() when phase began
+
+  // EVENT_HORIZON: normalized mouse position -1..1
+  mouseX: number;
+  mouseY: number;
+
+  // FORMULA_RINGS: scroll delta per frame for ring speed
+  scrollVelocity: number;
+
+  // TWIN_BUILD: orbit angle in radians (driven by drag)
+  orbitAngle: number;
+
+  // Whether the 92ms Pulsar metronome is running (true from MIRA_PULSAR onward)
+  pulsarActive: boolean;
+
+  // Current beat count since Pulsar started (increments every 92ms)
+  pulsarBeat: number;
+
+  // QUANTUM_PLANET: is shatter sequence playing
+  shatterActive: boolean;
+
+  // Actions
   setPhase: (p: ScenePhase) => void;
-  setFocus: (b: FocusedBody) => void;
-  setUniverseScroll: (v: number) => void;
-  setAssemblyProgress: (v: number) => void;
-  beginJourney: () => void;
+  setMouse: (x: number, y: number) => void;
+  setScrollVelocity: (v: number) => void;
+  setOrbitAngle: (a: number) => void;
+  setShatter: (active: boolean) => void;
+  tickPulsar: () => void;
+  advanceScene: () => void;    // advance to next cosmic scene
+  beginJourney: () => void;    // VOID → EVENT_HORIZON → DESCENT → MIRA_PULSAR
 };
 
-export const useScene = create<SceneStore>((set) => ({
-  phase: 'IDLE',
-  phaseStart: 0,
-  focusedBody: 'none',
-  universeScroll: 0,
-  assemblyProgress: 0,
+export const useScene = create<SceneStore>((set, get) => ({
+  phase: 'VOID',
+  phaseStart: performance.now(),
+  mouseX: 0,
+  mouseY: 0,
+  scrollVelocity: 0,
+  orbitAngle: 0,
+  pulsarActive: false,
+  pulsarBeat: 0,
+  shatterActive: false,
+
   setPhase: (phase) => set({ phase, phaseStart: performance.now() }),
-  setFocus: (focusedBody) => set({ focusedBody }),
-  setUniverseScroll: (universeScroll) => set({ universeScroll }),
-  setAssemblyProgress: (assemblyProgress) => set({ assemblyProgress }),
+
+  setMouse: (mouseX, mouseY) => set({ mouseX, mouseY }),
+
+  setScrollVelocity: (scrollVelocity) => set({ scrollVelocity }),
+
+  setOrbitAngle: (orbitAngle) => set({ orbitAngle }),
+
+  setShatter: (shatterActive) => set({ shatterActive }),
+
+  tickPulsar: () => set((s) => ({ pulsarBeat: s.pulsarBeat + 1 })),
+
+  advanceScene: () => {
+    const { phase } = get();
+    const idx = COSMIC_SCENES.indexOf(phase as ScenePhase);
+    if (idx === -1) return; // not in cosmic sequence
+    const next = COSMIC_SCENES[idx + 1];
+    if (next) {
+      set({ phase: next, phaseStart: performance.now() });
+    }
+    // SINGULARITY has no next — stays
+  },
+
   beginJourney: () => {
-    set({ phase: 'THRESHOLD', phaseStart: performance.now() });
-    // Auto-advance phases on timer
-    setTimeout(() => set({ phase: 'VOID', phaseStart: performance.now() }), 1200);
-    setTimeout(() => set({ phase: 'EMERGENCE', phaseStart: performance.now() }), 4200);
-    setTimeout(() => set({ phase: 'UNIVERSE', phaseStart: performance.now() }), 5700);
+    // VOID (3.5s) → EVENT_HORIZON
+    set({ phase: 'VOID', phaseStart: performance.now() });
+    setTimeout(() => {
+      set({ phase: 'EVENT_HORIZON', phaseStart: performance.now() });
+    }, 3500);
   },
 }));
 
-// Utility: time since phase began in seconds
-export const phaseTime = (phaseStart: number) => (performance.now() - phaseStart) / 1000;
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const phaseTime = (phaseStart: number) =>
+  (performance.now() - phaseStart) / 1000;
+
+// True for all phases that render the post-descent cosmic universe
+export const isCosmic = (phase: ScenePhase) =>
+  COSMIC_SCENES.includes(phase);
