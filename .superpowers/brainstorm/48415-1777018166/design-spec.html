@@ -1,0 +1,57 @@
+<div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+  <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Design Spec: The Event Horizon</h2>
+  <p class="subtitle" style="font-size: 1.2rem; margin-bottom: 2rem; color: var(--text-secondary);">
+    I completely get the vibe. It's that visceral, mathematical pull into the unknown. Here is the complete design specification for the portfolio.<br><br>
+    Review this carefully. If you approve, I'll write the formal spec document and we'll move to implementation planning.
+  </p>
+
+  <div class="cards" style="display: flex; flex-direction: column; gap: 1.5rem;">
+    
+    <div class="card" style="cursor: default;">
+      <div class="card-body">
+        <h3 style="margin-top: 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">1. The Transition (The Airlock)</h3>
+        <p style="color: var(--text-secondary); line-height: 1.5;">
+          <strong>The Scene:</strong> The site loads into pitch black. A hyper-realistic, wireframe-style black hole (accretion disk and event horizon) renders using Three.js/WebGL.<br>
+          <strong>The Physics:</strong> It uses custom GLSL shaders simulating gravitational lensing and photon rings around a singularity.<br>
+          <strong>The Action:</strong> Instead of a "Click to Enter" button, the user scrolls. As they scroll, the camera pushes forward, accelerating <em>into</em> the black hole. The FOV stretches, the wireframes warp dramatically (spaghettification), and the screen goes completely white/black at the singularity point, instantly snapping into the main Lab environment.
+        </p>
+      </div>
+    </div>
+
+    <div class="card" style="cursor: default;">
+      <div class="card-body">
+        <h3 style="margin-top: 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">2. The Main Experience (The Lab Corridors)</h3>
+        <p style="color: var(--text-secondary); line-height: 1.5;">
+          <strong>The HUD:</strong> You emerge inside "The Lab". It's a horizontal-scrolling experience (Lenis + GSAP). The background remains a mathematically precise, Orano-style wireframe grid that reacts to your scroll velocity (inertia) and cursor mass.<br>
+          <strong>The Content:</strong> Massive typography and frosted glassmorphic panels float over the wireframes. The panels contain your "Departments" (Agentic AI, Physics Engine, Formula EV).
+        </p>
+      </div>
+    </div>
+
+    <div class="card" style="cursor: default;">
+      <div class="card-body">
+        <h3 style="margin-top: 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">3. Tech Stack & Architecture</h3>
+        <p style="color: var(--text-secondary); line-height: 1.5;">
+          <strong>Framework:</strong> Next.js 14 (App Router), React, TypeScript.<br>
+          <strong>3D & Physics:</strong> Three.js, React Three Fiber (R3F), Custom GLSL Shaders (for gravitational lensing).<br>
+          <strong>Animation & Scroll:</strong> GSAP (ScrollTrigger), Lenis (smooth horizontal scrolling).<br>
+          <strong>Styling:</strong> Tailwind CSS (for the glassmorphic HUD overlays and typography).
+        </p>
+      </div>
+    </div>
+
+    <div class="card" style="cursor: default;">
+      <div class="card-body">
+        <h3 style="margin-top: 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">4. The Archive (Resume & GitHub)</h3>
+        <p style="color: var(--text-secondary); line-height: 1.5;">
+          At the end of the horizontal corridor is "The Archive". It pulls live data (or visually simulates it) from your DriveX and personal GitHubs, presented alongside a clean, interactive breakdown of your resume (Education, Skills, Certifications) mapped to the wireframe grid.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="margin-top: 2rem; text-align: center; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+    <p style="font-size: 1.1rem; color: var(--text-primary);">Reply in the terminal: <strong>Does this design spec hit the mark?</strong> If yes, I will write the formal design document!</p>
+  </div>
+</div>
