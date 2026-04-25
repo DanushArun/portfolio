@@ -62,6 +62,76 @@ function NavHint() {
 }
 
 /**
+ * LandingIdentity — large centered name that anchors the landing page.
+ * Portfolio visitors know immediately whose world they've entered.
+ * As the user scrolls toward the BH, the name drifts upward and fades,
+ * consumed by the singularity before Descent takes over.
+ */
+function LandingIdentity() {
+  const horizonProgress = useScene((s) => s.horizonProgress);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Name opacity: full until 30% scroll, then fades out as BH consumes it
+  const nameOpacity = visible ? Math.max(0, 1 - Math.max(0, horizonProgress - 0.3) / 0.5) : 0;
+  const lift = horizonProgress * 40; // px upward drift as BH pulls
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '18vh',
+      left: '50%',
+      transform: `translateX(-50%) translateY(-${lift}px)`,
+      opacity: nameOpacity,
+      transition: visible ? 'none' : 'opacity 1.8s cubic-bezier(0.16,1,0.3,1)',
+      textAlign: 'center',
+      pointerEvents: 'none',
+      zIndex: 15,
+      userSelect: 'none',
+    }}>
+      {/* Primary name — large, unmissable */}
+      <div style={{
+        fontFamily: 'var(--font-display, serif)',
+        fontWeight: 800,
+        fontSize: 'clamp(2.4rem, 6vw, 5rem)',
+        letterSpacing: '0.1em',
+        color: '#E8E4D8',
+        textTransform: 'uppercase',
+        lineHeight: 1,
+      }}>
+        DANUSH ARUN
+      </div>
+
+      {/* Amber divider line */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1.2em',
+        marginTop: '1.1rem',
+      }}>
+        <div style={{ height: 1, width: 48, background: 'rgba(255,168,50,0.5)' }} />
+        <div style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: 'clamp(0.55rem, 1.1vw, 0.75rem)',
+          letterSpacing: '0.32em',
+          color: 'rgba(232,228,216,0.4)',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+        }}>
+          AGENTIC AI  ·  SYSTEMS ENGINEER  ·  BUILDER
+        </div>
+        <div style={{ height: 1, width: 48, background: 'rgba(255,168,50,0.5)' }} />
+      </div>
+    </div>
+  );
+}
+
+/**
  * ScrollCTA — centered scroll-to-enter prompt.
  * Fades in after 2s, stays visible throughout EVENT_HORIZON.
  * The progress ring fills as the user scrolls, giving live feedback
@@ -247,22 +317,12 @@ export default function HUD() {
         </div>
 
         <div style={{ ...MONO, textAlign: 'right' }}>
-          {/* Landing page identity */}
-          {phase === 'EVENT_HORIZON' && (
-            <>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#E8E4D8', letterSpacing: '0.18em' }}>
-                DANUSH ARUN
-              </div>
-              <div style={{ color: 'rgba(232,228,216,0.28)', marginTop: 5, lineHeight: 1.8 }}>
-                AGENTIC AI · SYSTEMS ENGINEER
-              </div>
-            </>
-          )}
           {phase === 'DESCENT' && <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>TIME DILATION — ∞</div>}
         </div>
       </div>
 
       {/* ── Centered elements ── */}
+      {phase === 'EVENT_HORIZON' && <LandingIdentity />}
       {phase === 'EVENT_HORIZON' && <ScrollCTA />}
       {phase === 'FORMULA_RINGS' && <FormulaOverlay />}
 

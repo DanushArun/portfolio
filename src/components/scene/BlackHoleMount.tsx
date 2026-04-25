@@ -16,6 +16,8 @@ export interface BlackHoleMountProps {
   outerColor?: string;
   disableInteraction?: boolean;
   zIndex?: number;
+  /** Scroll-approach progress 0–1. Drives camera rush + chromatic distortion. */
+  progress?: number;
 }
 
 export default function BlackHoleMount({
@@ -23,6 +25,7 @@ export default function BlackHoleMount({
   outerColor,
   disableInteraction,
   zIndex = 1,
+  progress = 0,
 }: BlackHoleMountProps) {
   const hostRef   = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BlackHoleHandle | null>(null);
@@ -40,6 +43,11 @@ export default function BlackHoleMount({
       handleRef.current = null;
     };
   }, [innerColor, outerColor, disableInteraction]);
+
+  // Forward scroll progress into the vanilla Three.js canvas every frame.
+  useEffect(() => {
+    handleRef.current?.setProgress(progress);
+  }, [progress]);
 
   return (
     <div

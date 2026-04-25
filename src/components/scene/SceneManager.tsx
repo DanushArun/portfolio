@@ -53,8 +53,9 @@ const isBlackHolePhase = (p: string) =>
 const WHEEL_THRESHOLD = 900;
 
 export default function SceneManager() {
-  const phase = useScene((s) => s.phase);
-  const veil  = useScene((s) => s.veil);
+  const phase           = useScene((s) => s.phase);
+  const veil            = useScene((s) => s.veil);
+  const horizonProgress = useScene((s) => s.horizonProgress);
   const setMouse           = useScene((s) => s.setMouse);
   const setScrollVelocity  = useScene((s) => s.setScrollVelocity);
   const setHorizonProgress = useScene((s) => s.setHorizonProgress);
@@ -82,7 +83,8 @@ export default function SceneManager() {
     const { phase: p } = useScene.getState();
     if (p !== 'EVENT_HORIZON') return;
 
-    wheelAcc.current = Math.max(0, wheelAcc.current + e.deltaY);
+    // Only count downward scroll — once the user commits to entering, no going back.
+    wheelAcc.current = Math.min(WHEEL_THRESHOLD, wheelAcc.current + Math.max(0, e.deltaY));
     const progress = Math.min(1, wheelAcc.current / WHEEL_THRESHOLD);
     setHorizonProgress(progress);
 
@@ -138,6 +140,7 @@ export default function SceneManager() {
           zIndex={1}
           innerColor="#ffc066"
           outerColor="#5a1a08"
+          progress={phase === 'EVENT_HORIZON' ? horizonProgress : 0}
         />
       )}
 

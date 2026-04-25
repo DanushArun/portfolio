@@ -24,6 +24,8 @@ import {
 export interface BlackHoleHandle {
   readonly canvas: HTMLCanvasElement;
   destroy: () => void;
+  /** Drive the scroll-approach animation. 0 = at rest, 1 = threshold (DESCENT fires). */
+  setProgress: (p: number) => void;
 }
 
 export interface BlackHoleOptions {
@@ -277,6 +279,16 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   finalPlane.frustumCulled = false;
   finalScene.add(finalPlane);
 
+  // ── Scroll-approach state ────────────────────────────────────────────────────
+  // setProgress() is called from BlackHoleMount as the user scrolls during
+  // EVENT_HORIZON. At 0 the BH sits at rest; at 1 the user is at the threshold
+  // and DESCENT is about to fire. The animation disables OrbitControls and drives
+  // the camera radially toward the BH center, widening the FOV and ramping up
+  // chromatic aberration to simulate gravitational lensing pulling you in.
+  let externalProgress   = 0;
+  let approachOrigin: THREE.Vector3 | null = null;
+  const INITIAL_DIST     = camera.position.length(); // ≈ 7.35
+
   // ── Animation loop ──────────────────────────────────────────────────────────
   const t0 = performance.now();
   let raf = 0;
@@ -293,6 +305,50 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     if (stopped) return;
     const elapsed = (performance.now() - t0) / 1000;
     const t = elapsed * TIME_SCALE;
+
+    // ── Scroll-approach animation ────────────────────────────────────────────
+    if (externalProgress > 0) {
+      // Capture the orbital position the user was at when they first scrolled.
+      // We approach from that exact angle — makes the experience feel personal.
+      if (!approachOrigin) {
+        approachOrigin = camera.position.clone();
+        controls.enabled = false;
+      }
+
+      // Cubic ease-in: slow start → dramatic rush near the event horizon.
+      // Mirrors real gravitational acceleration — you barely feel it far out,
+      // then it grips you at the last moment.
+      const k = externalProgress * externalProgress * externalProgress;
+
+      // Camera rushes inward: initial orbit distance → 2.5 units from singularity
+      const originDist = approachOrigin.length();
+      const targetDist = originDist * (1 - k) + 2.5 * k;
+      camera.position.copy(approachOrigin).normalize().multiplyScalar(targetDist);
+      camera.lookAt(0, 0, 0);
+
+      // FOV widens (45° → 75°): creates the tunnel-rush immersion
+      camera.fov = THREE.MathUtils.lerp(45, 75, k);
+      camera.updateProjectionMatrix();
+
+      // Chromatic aberration ramps up quadratically — sci-fi gravitational lensing
+      finalUniforms.uRGBShiftRadius.value = 0.00001 + externalProgress * externalProgress * 0.006;
+
+      // Accretion disk grows to fill the frame as you close in
+      const diskScale = THREE.MathUtils.lerp(0.75, 1.3, k);
+      discMesh.scale.setScalar(diskScale);
+      partPoints.scale.setScalar(diskScale);
+    } else {
+      // At rest — restore neutral state if progress was reset
+      if (approachOrigin) {
+        approachOrigin = null;
+        controls.enabled = true;
+        camera.fov = 45;
+        camera.updateProjectionMatrix();
+        finalUniforms.uRGBShiftRadius.value = 0.00001;
+        discMesh.scale.setScalar(0.75);
+        partPoints.scale.setScalar(0.75);
+      }
+    }
 
     controls.update();
 
@@ -383,5 +439,9 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     }
   }
 
-  return { canvas: renderer.domElement, destroy };
+  return {
+    canvas: renderer.domElement,
+    destroy,
+    setProgress: (p: number) => { externalProgress = Math.max(0, Math.min(1, p)); },
+  };
 }
