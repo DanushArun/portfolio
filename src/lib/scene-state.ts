@@ -52,12 +52,23 @@ type SceneStore = {
   // QUANTUM_PLANET: is shatter sequence playing
   shatterActive: boolean;
 
+  // Cross-canvas transition veil: 0 = transparent, 1 = opaque black.
+  // Descent sets it to 1 just before the BH→cosmic canvas swap.
+  // SceneManager fades it back to 0 once the new scene has mounted.
+  veil: number;
+
+  // EVENT_HORIZON: 0–1 progress toward crossing the threshold (driven by wheel).
+  // Used by HUD to render a scroll-progress indicator on the landing page.
+  horizonProgress: number;
+
   // Actions
   setPhase: (p: ScenePhase) => void;
   setMouse: (x: number, y: number) => void;
   setScrollVelocity: (v: number) => void;
   setOrbitAngle: (a: number) => void;
   setShatter: (active: boolean) => void;
+  setVeil: (v: number) => void;
+  setHorizonProgress: (v: number) => void;
   tickPulsar: () => void;
   advanceScene: () => void;    // advance to next cosmic scene
   beginJourney: () => void;    // VOID → EVENT_HORIZON → DESCENT → MIRA_PULSAR
@@ -73,6 +84,8 @@ export const useScene = create<SceneStore>((set, get) => ({
   pulsarActive: false,
   pulsarBeat: 0,
   shatterActive: false,
+  veil: 0,
+  horizonProgress: 0,
 
   setPhase: (phase) => set({ phase, phaseStart: performance.now() }),
 
@@ -83,6 +96,10 @@ export const useScene = create<SceneStore>((set, get) => ({
   setOrbitAngle: (orbitAngle) => set({ orbitAngle }),
 
   setShatter: (shatterActive) => set({ shatterActive }),
+
+  setVeil: (veil) => set({ veil }),
+
+  setHorizonProgress: (horizonProgress) => set({ horizonProgress }),
 
   tickPulsar: () => set((s) => ({ pulsarBeat: s.pulsarBeat + 1 })),
 
@@ -98,8 +115,7 @@ export const useScene = create<SceneStore>((set, get) => ({
   },
 
   beginJourney: () => {
-    // VOID (3.5s) → EVENT_HORIZON
-    set({ phase: 'VOID', phaseStart: performance.now() });
+    set({ phase: 'VOID', phaseStart: performance.now(), veil: 0, horizonProgress: 0 });
     setTimeout(() => {
       set({ phase: 'EVENT_HORIZON', phaseStart: performance.now() });
     }, 3500);

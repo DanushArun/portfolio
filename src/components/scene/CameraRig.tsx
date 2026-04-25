@@ -21,16 +21,32 @@ function smoothstep(e0: number, e1: number, x: number) {
  * DESCENT        Rapid forward push into event horizon, FOV crush 50→120
  * Cosmic scenes  Each has its own cinematic camera position
  */
+// FOV to snap to at the START of each phase (prevents drift from DESCENT's 120° FOV)
+const PHASE_FOV: Record<string, number> = {
+  VOID: 50, EVENT_HORIZON: 50, DESCENT: 50,
+  MIRA_PULSAR: 55, DRIVEX_QUASAR: 60, TWIN_BUILD: 58,
+  FORMULA_RINGS: 80, QUANTUM_PLANET: 52, SINGULARITY: 48,
+};
+
 export default function CameraRig() {
   const { camera } = useThree();
-  const tmp    = useRef(new THREE.Vector3());
-  const breathe = useRef(Math.random() * 100);
+  const tmp      = useRef(new THREE.Vector3());
+  const breathe  = useRef(Math.random() * 100);
+  const prevPhase = useRef<string>('');
 
   useFrame((state, dt) => {
     const pcam = camera as THREE.PerspectiveCamera;
     const { phase, phaseStart } = useScene.getState();
     breathe.current += dt;
     const bt = breathe.current;
+
+    // Snap FOV on phase change so DESCENT's 120° doesn't bleed into the next scene
+    if (phase !== prevPhase.current) {
+      const snapFov = PHASE_FOV[phase] ?? 55;
+      pcam.fov = snapFov;
+      pcam.updateProjectionMatrix();
+      prevPhase.current = phase;
+    }
 
     switch (phase) {
       case 'VOID': {

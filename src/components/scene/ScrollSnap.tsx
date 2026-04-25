@@ -59,15 +59,7 @@ export default function ScrollSnap() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [advanceScene, setScrollVel]);
 
-  // Spacer gives the page scrollable height
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: 'absolute', top: 0, left: 0,
-        width: 1, height: '200vh',
-        pointerEvents: 'none', zIndex: 1,
-      }}
-    />
-  );
+  // In-flow spacer makes the document 200vh tall so window.scrollY can accumulate.
+  // All visual content is position:fixed so the user never sees this blank area.
+  return <div aria-hidden style={{ height: '200vh', pointerEvents: 'none' }} />;
 }
