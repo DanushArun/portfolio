@@ -132,3 +132,8 @@ export const phaseTime = (phaseStart: number) =>
 // True for all phases that render the post-descent cosmic universe
 export const isCosmic = (phase: ScenePhase) =>
   COSMIC_SCENES.includes(phase);
+
+// True when the R3F canvas should be mounted.
+// DESCENT → WarpScene runs inside the same canvas, avoiding a second canvas swap.
+export const isCosmicCanvas = (phase: ScenePhase) =>
+  phase === 'DESCENT' || COSMIC_SCENES.includes(phase);

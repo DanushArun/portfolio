@@ -89,12 +89,21 @@ export default function CameraRig() {
       }
 
       case 'DESCENT': {
+        // WarpScene is running in this canvas. Camera rushes forward through
+        // spacetime: starts at z=20 (wide view of warp field), accelerates to
+        // z=-8 (inside the event horizon), FOV widens for tunnel immersion.
         const t = phaseTime(phaseStart);
-        const k = smoothstep(0, 1.0, t);
-        // Punch through: camera goes to origin (center of BH), FOV crushes to 120
-        camera.position.set(0, 0, THREE.MathUtils.lerp(3.5, 0, k * k));
-        camera.lookAt(new THREE.Vector3(0, 0, -1));
-        pcam.fov = THREE.MathUtils.lerp(72, 120, k);
+        const k = smoothstep(0, 5.0, t);
+        // Cubic ease-in: slow at start, then gravitational acceleration takes over
+        const kk = k * k * k;
+        camera.position.set(
+          Math.sin(bt * 0.15) * 0.4 * (1 - kk), // slight lateral drift decays
+          Math.cos(bt * 0.10) * 0.2 * (1 - kk),
+          THREE.MathUtils.lerp(20, -8, kk),
+        );
+        camera.lookAt(new THREE.Vector3(0, 0, -200));
+        // FOV: 50° → 90° as you rush toward singularity
+        pcam.fov = THREE.MathUtils.lerp(50, 90, smoothstep(0, 3.5, t));
         pcam.updateProjectionMatrix();
         break;
       }

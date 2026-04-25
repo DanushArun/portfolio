@@ -287,7 +287,6 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   // chromatic aberration to simulate gravitational lensing pulling you in.
   let externalProgress   = 0;
   let approachOrigin: THREE.Vector3 | null = null;
-  const INITIAL_DIST     = camera.position.length(); // ≈ 7.35
 
   // ── Animation loop ──────────────────────────────────────────────────────────
   const t0 = performance.now();
@@ -308,46 +307,61 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
     // ── Scroll-approach animation ────────────────────────────────────────────
     if (externalProgress > 0) {
-      // Capture the orbital position the user was at when they first scrolled.
-      // We approach from that exact angle — makes the experience feel personal.
       if (!approachOrigin) {
         approachOrigin = camera.position.clone();
         controls.enabled = false;
       }
 
-      // Cubic ease-in: slow start → dramatic rush near the event horizon.
-      // Mirrors real gravitational acceleration — you barely feel it far out,
-      // then it grips you at the last moment.
-      const k = externalProgress * externalProgress * externalProgress;
+      // Full journey: camera travels from starting orbit all the way into the
+      // event horizon interior. Three segments mirror the visual reference:
+      //
+      //   p 0.00–0.45  Outer approach  (7.35 → 2.5 units)  BH fills frame
+      //   p 0.45–0.80  Disk crossing   (2.5  → 0.6 units)  Interstellar lensing
+      //   p 0.80–1.00  Interior dive   (0.6  → 0.1 units)  Darkness + aberration
+      //
+      // Cubic ease-in mimics gravitational acceleration: barely felt far out,
+      // then grips you completely near the photon sphere.
+      const k   = externalProgress * externalProgress * externalProgress;
 
-      // Camera rushes inward: initial orbit distance → 2.5 units from singularity
+      // Distance: starting orbit → 0.1 Rs (inside event horizon = darkness)
       const originDist = approachOrigin.length();
-      const targetDist = originDist * (1 - k) + 2.5 * k;
-      camera.position.copy(approachOrigin).normalize().multiplyScalar(targetDist);
+      const targetDist = originDist * (1 - k) + 0.1 * k;
+
+      // Azimuth: preserve the user's current orbital angle
+      const az = Math.atan2(approachOrigin.z, approachOrigin.x);
+
+      // Elevation: drift toward equatorial plane as approach deepens.
+      // At equatorial (y=0) the gravitational lensing is maximally spectacular —
+      // the disk wraps 360° and the photon ring is visible above and below.
+      const initEl = Math.atan2(
+        approachOrigin.y,
+        Math.sqrt(approachOrigin.x * approachOrigin.x + approachOrigin.z * approachOrigin.z),
+      );
+      const currEl = initEl * Math.max(0, 1 - k * 2.2); // drifts to equatorial by p≈0.65
+
+      const r  = targetDist * Math.cos(currEl);
+      camera.position.set(r * Math.cos(az), targetDist * Math.sin(currEl), r * Math.sin(az));
       camera.lookAt(0, 0, 0);
 
-      // FOV widens (45° → 75°): creates the tunnel-rush immersion
-      camera.fov = THREE.MathUtils.lerp(45, 75, k);
+      // FOV: 45° → 150° (extreme fisheye deep inside — tunnel/warp sensation)
+      camera.fov = THREE.MathUtils.lerp(45, 150, k * k);
       camera.updateProjectionMatrix();
 
-      // Chromatic aberration ramps up quadratically — sci-fi gravitational lensing
-      finalUniforms.uRGBShiftRadius.value = 0.00001 + externalProgress * externalProgress * 0.006;
+      // Chromatic aberration: ramps sharply past the photon sphere
+      finalUniforms.uRGBShiftRadius.value = 0.00001 + Math.pow(k, 1.5) * 0.030;
 
-      // Accretion disk grows to fill the frame as you close in
-      const diskScale = THREE.MathUtils.lerp(0.75, 1.3, k);
+      // Disc scale: grows from 0.75× to 1.3× (disk appears to expand as we close in)
+      const diskScale = THREE.MathUtils.lerp(0.75, 1.3, Math.min(1, externalProgress * 1.6));
       discMesh.scale.setScalar(diskScale);
       partPoints.scale.setScalar(diskScale);
-    } else {
-      // At rest — restore neutral state if progress was reset
-      if (approachOrigin) {
-        approachOrigin = null;
-        controls.enabled = true;
-        camera.fov = 45;
-        camera.updateProjectionMatrix();
-        finalUniforms.uRGBShiftRadius.value = 0.00001;
-        discMesh.scale.setScalar(0.75);
-        partPoints.scale.setScalar(0.75);
-      }
+    } else if (approachOrigin) {
+      approachOrigin = null;
+      controls.enabled = true;
+      camera.fov = 45;
+      camera.updateProjectionMatrix();
+      finalUniforms.uRGBShiftRadius.value = 0.00001;
+      discMesh.scale.setScalar(0.75);
+      partPoints.scale.setScalar(0.75);
     }
 
     controls.update();

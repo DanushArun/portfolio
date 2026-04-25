@@ -1,13 +1,5 @@
 'use client';
 
-/**
- * BlackHoleMount — React lifecycle bridge for the vanilla Bruno Simon experience.
- *
- * Mounts a single `<div>` with fixed inset:0; the createBlackHole factory
- * appends its own `<canvas>` inside. On unmount the factory's destroy() runs
- * and disposes every GL resource. No state, no re-renders.
- */
-
 import { useEffect, useRef } from 'react';
 import { createBlackHole, type BlackHoleHandle } from '@/lib/blackHole';
 
@@ -16,7 +8,7 @@ export interface BlackHoleMountProps {
   outerColor?: string;
   disableInteraction?: boolean;
   zIndex?: number;
-  /** Scroll-approach progress 0–1. Drives camera rush + chromatic distortion. */
+  /** Scroll-approach progress 0–1. Drives camera rush + distortion. */
   progress?: number;
 }
 
@@ -44,7 +36,6 @@ export default function BlackHoleMount({
     };
   }, [innerColor, outerColor, disableInteraction]);
 
-  // Forward scroll progress into the vanilla Three.js canvas every frame.
   useEffect(() => {
     handleRef.current?.setProgress(progress);
   }, [progress]);
@@ -53,12 +44,7 @@ export default function BlackHoleMount({
     <div
       ref={hostRef}
       aria-hidden
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex,
-        background: '#000',
-      }}
+      style={{ position: 'fixed', inset: 0, zIndex, background: '#000' }}
     />
   );
 }

@@ -310,10 +310,23 @@ void main()
     towardCenter *= - distortionIntensity * 2.0;
 
     vec2 distortedUv = vUv + towardCenter;
-    vec3 outColor = getRGBShiftedColor(uSpaceTexture, distortedUv, uRGBShiftRadius);
+
+    // Add radial blur during descent warp
+    vec3 outColor = vec3(0.0);
+    float blurSamples = 8.0;
+    float blurStrength = uRGBShiftRadius * 2.0; // Scale blur with RGB shift
+
+    for(float i = 0.0; i < blurSamples; i++)
+    {
+        float scale = 1.0 + (i / (blurSamples - 1.0) - 0.5) * blurStrength;
+        vec2 sampleUv = uBlackHolePosition + (distortedUv - uBlackHolePosition) * scale;
+        outColor += getRGBShiftedColor(uSpaceTexture, sampleUv, uRGBShiftRadius);
+    }
+    outColor /= blurSamples;
 
     pc_FragColor = vec4(outColor, 1.0);
-}`;
+}
+`;
 
 // ─── Noises (Perlin 3D periodic, render-once to texture) ─────────────────────
 export const noisesVert = `in vec3 position;

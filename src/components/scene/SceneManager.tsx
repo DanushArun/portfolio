@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Suspense } from 'react';
 import { useScene, isCosmic } from '@/lib/scene-state';
 import dynamic from 'next/dynamic';
 
@@ -10,7 +9,6 @@ import BlackHoleMount from './BlackHoleMount';
 import CameraRig from './CameraRig';
 
 const VoidPrologue      = dynamic(() => import('./VoidPrologue'), { ssr: false });
-const Descent           = dynamic(() => import('./Descent'),      { ssr: false });
 const MiraPulsar        = dynamic(() => import('./scenes/MiraPulsar'),    { ssr: false });
 const MiraPulsarOverlay = dynamic(
   () => import('./scenes/MiraPulsar').then((m) => ({ default: m.MiraPulsarOverlay })),
@@ -35,22 +33,30 @@ import GravityCursor from './GravityCursor';
 import ScrollSnap from './ScrollSnap';
 
 /**
- * Root cinematic orchestrator.
+ * ONE CONTINUOUS SHOT — no canvas swaps, no cut scenes.
  *
- *   VOID / EVENT_HORIZON / DESCENT  → vanilla Bruno Simon black hole canvas
- *   MIRA_PULSAR ... SINGULARITY     → R3F Canvas with the cosmic-scene component
+ * The Bruno Simon BH canvas IS the entire entry experience.
+ * Scroll accumulates and drives the camera from the starting orbit
+ * all the way into the event horizon interior — through the accretion
+ * disk, through the photon sphere, into total darkness.
  *
- * EVENT_HORIZON scroll mechanic: wheel events accumulate to WHEEL_THRESHOLD
- * before triggering DESCENT. This bypasses the OrbitControls / window.scrollY
- * conflict — OrbitControls intercepts wheel for (disabled) zoom but we read
- * raw deltaY directly from the event, independent of window.scrollY.
+ * Canvas lifecycle:
+ *   VOID / EVENT_HORIZON / DESCENT  → BH canvas (same canvas the whole time)
+ *   DESCENT ends after 1.2s         → veil covers swap, MIRA_PULSAR mounts
+ *   MIRA_PULSAR … SINGULARITY       → R3F canvas (cosmic scenes)
+ *
+ * The DESCENT phase is just the 1.2s pause inside the BH darkness before
+ * MIRA_PULSAR. The camera is already at 0.1 units (inside event horizon,
+ * total darkness) when DESCENT fires — the BH canvas shows nothing but black.
+ * The veil is therefore invisible anyway. Clean.
  */
 
-const isBlackHolePhase = (p: string) =>
-  p === 'VOID' || p === 'EVENT_HORIZON' || p === 'DESCENT';
+// Total wheel travel (px) to fly from orbit → event horizon interior.
+// Large enough that the journey feels like a real traversal, not a trigger.
+const WHEEL_THRESHOLD = 4800;
 
-// Cumulative wheel travel (px) the user must scroll to enter the BH.
-const WHEEL_THRESHOLD = 900;
+const isBHPhase = (p: string) =>
+  p === 'VOID' || p === 'EVENT_HORIZON' || p === 'DESCENT';
 
 export default function SceneManager() {
   const phase           = useScene((s) => s.phase);
@@ -60,34 +66,30 @@ export default function SceneManager() {
   const setScrollVelocity  = useScene((s) => s.setScrollVelocity);
   const setHorizonProgress = useScene((s) => s.setHorizonProgress);
 
-  const lastScrollY  = useRef(0);
-  const wheelAcc     = useRef(0); // running wheel delta for EVENT_HORIZON entry
+  const lastScrollY = useRef(0);
+  const wheelAcc    = useRef(0);
 
   const onMouseMove = useCallback((e: MouseEvent) => {
-    const x = (e.clientX / window.innerWidth)  * 2 - 1;
-    const y = (e.clientY / window.innerHeight) * 2 - 1;
-    setMouse(x, -y);
+    setMouse(
+      (e.clientX / window.innerWidth) * 2 - 1,
+      -((e.clientY / window.innerHeight) * 2 - 1),
+    );
   }, [setMouse]);
 
-  // Scroll velocity — used by FORMULA_RINGS ring speed and ScrollSnap
   const onScroll = useCallback(() => {
     const dy = window.scrollY - lastScrollY.current;
     lastScrollY.current = window.scrollY;
     setScrollVelocity(dy);
   }, [setScrollVelocity]);
 
-  // Wheel-based EVENT_HORIZON → DESCENT entry (independent of window.scrollY).
-  // OrbitControls captures the canvas's wheel events for zoom (which is disabled)
-  // but the event still bubbles to window, so raw deltaY is always available here.
+  // Scroll drives the camera all the way into the BH — continuously, like a
+  // video game. DESCENT only fires when the user has scrolled all the way in
+  // (camera is inside the event horizon, screen is already black).
   const onWheel = useCallback((e: WheelEvent) => {
-    const { phase: p } = useScene.getState();
-    if (p !== 'EVENT_HORIZON') return;
-
-    // Only count downward scroll — once the user commits to entering, no going back.
+    if (useScene.getState().phase !== 'EVENT_HORIZON') return;
     wheelAcc.current = Math.min(WHEEL_THRESHOLD, wheelAcc.current + Math.max(0, e.deltaY));
-    const progress = Math.min(1, wheelAcc.current / WHEEL_THRESHOLD);
+    const progress = wheelAcc.current / WHEEL_THRESHOLD;
     setHorizonProgress(progress);
-
     if (progress >= 1) {
       wheelAcc.current = 0;
       useScene.getState().setPhase('DESCENT');
@@ -105,47 +107,49 @@ export default function SceneManager() {
     };
   }, [onMouseMove, onScroll, onWheel]);
 
-  // Reset wheel accumulator when leaving EVENT_HORIZON so a back-navigation
-  // doesn't carry stale progress into the next visit.
   useEffect(() => {
-    if (phase !== 'EVENT_HORIZON') {
-      wheelAcc.current = 0;
-    }
+    if (phase !== 'EVENT_HORIZON') wheelAcc.current = 0;
   }, [phase]);
 
-  // Auto-start: VOID kicks off immediately on mount
   useEffect(() => {
     const { beginJourney, phase: p } = useScene.getState();
     if (p === 'VOID') beginJourney();
   }, []);
 
-  // After the BH→cosmic canvas swap, fade the veil out to reveal the new scene.
-  // 200ms gives the R3F Canvas time to mount and begin its first render.
+  // DESCENT: camera is already inside (screen black). Wait 1.2s then swap.
+  // The veil is just insurance — the screen is visually already black.
   useEffect(() => {
-    if (phase !== 'MIRA_PULSAR') return;
-    const timer = setTimeout(() => {
-      useScene.getState().setVeil(0);
-    }, 200);
-    return () => clearTimeout(timer);
+    if (phase !== 'DESCENT') return;
+    const cover = setTimeout(() => useScene.getState().setVeil(1), 1000);
+    const swap  = setTimeout(() => useScene.getState().setPhase('MIRA_PULSAR'), 1200);
+    return () => { clearTimeout(cover); clearTimeout(swap); };
   }, [phase]);
 
-  const showBlackHole = isBlackHolePhase(phase);
-  const showCosmic    = isCosmic(phase);
+  // After MIRA_PULSAR canvas mounts, fade the veil away.
+  useEffect(() => {
+    if (phase !== 'MIRA_PULSAR') return;
+    const t = setTimeout(() => useScene.getState().setVeil(0), 300);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  const showBH     = isBHPhase(phase);
+  const showCosmic = isCosmic(phase);
 
   return (
     <>
-      {showBlackHole && (
+      {/* ── Bruno Simon BH canvas — the entire entry experience ── */}
+      {showBH && (
         <BlackHoleMount
           zIndex={1}
           innerColor="#ffc066"
           outerColor="#5a1a08"
-          // Keep BH at full approach during DESCENT — the equation dissolves in
-          // front of the massive close-up singularity, then the veil covers it.
-          // Only reset when returning to VOID/EVENT_HORIZON (which never happens).
+          // During EVENT_HORIZON: scroll drives progress 0→1 (full journey in).
+          // During DESCENT: locked at 1 (camera inside, screen black).
           progress={phase === 'EVENT_HORIZON' ? horizonProgress : phase === 'DESCENT' ? 1 : 0}
         />
       )}
 
+      {/* ── R3F canvas — cosmic scenes only (mounts after BH journey ends) ── */}
       {showCosmic && (
         <Canvas
           dpr={[1, 1.5]}
@@ -166,28 +170,25 @@ export default function SceneManager() {
         </Canvas>
       )}
 
-      {/* Cross-canvas transition veil.
-          Descent snaps it to 1 (instant, covered by its own overlays) just before
-          the BH canvas unmounts and the R3F canvas mounts. SceneManager then
-          fades it back to 0 over 1.2s, giving a cinematic reveal of the new scene.
-          z:25 — above canvas (z:1) + vignette (z:9), below Descent overlays (z:30/31)
-          so the amber ball remains visible during stage 4 expansion. */}
+      {/* Veil — only active at the final BH→cosmic canvas swap.
+          Since the BH interior is already black at that point,
+          the veil is invisible and just ensures a clean swap. */}
       <div
         aria-hidden
         style={{
           position: 'fixed', inset: 0,
           background: '#000',
           opacity: veil,
-          transition: veil === 0 ? 'opacity 1.2s cubic-bezier(0.16,1,0.3,1)' : 'none',
+          transition: veil === 0 ? 'opacity 1.0s cubic-bezier(0.16,1,0.3,1)' : 'none',
           pointerEvents: 'none',
-          zIndex: 25,
+          zIndex: 50,
         }}
       />
 
+      {/* ── DOM overlays ── */}
       {showCosmic && <GravityCursor />}
       <HUD />
       {phase === 'VOID'         && <VoidPrologue />}
-      {phase === 'DESCENT'      && <Descent />}
       {phase === 'MIRA_PULSAR'  && <MiraPulsarOverlay />}
       <DriveXQuasarOverlay />
       <TwinBuildOverlay />
