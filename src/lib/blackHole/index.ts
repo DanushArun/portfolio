@@ -233,6 +233,110 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   starsPoints.frustumCulled = false;
   spaceScene.add(starsPoints);
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // EXTENDED JOURNEY — wormhole tunnel + new universe + neutron star
+  // The BH is at origin. The new universe lives on the other side at z = -200.
+  // Camera path travels continuously from BH-orbit → through BH → tunnel → pulsar.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // ── Wormhole tunnel: stack of glowing rings between BH (z=0) and new space ─
+  // Each ring is a thin torus positioned along z-axis. Their additive emission
+  // creates the "rushing through a tunnel" sensation when the camera traverses.
+  const TUNNEL_RINGS = 24;
+  const tunnelGroup  = new THREE.Group();
+  const tunnelMats: THREE.MeshBasicMaterial[] = [];
+  for (let i = 0; i < TUNNEL_RINGS; i++) {
+    const z = -8 - i * 7;          // -8 → -169
+    const radius = 1.6 + (i % 5) * 0.25;
+    const tubeR  = 0.04 + Math.random() * 0.05;
+    // Color cycles cool→warm along the tunnel
+    const hue    = 0.55 + i * 0.012;
+    const col    = new THREE.Color().setHSL(hue, 0.85, 0.55);
+    const mat    = new THREE.MeshBasicMaterial({
+      color:        col,
+      transparent:  true,
+      opacity:      0,
+      blending:     THREE.AdditiveBlending,
+      depthWrite:   false,
+    });
+    tunnelMats.push(mat);
+    const geo = new THREE.TorusGeometry(radius, tubeR, 6, 64);
+    const m   = new THREE.Mesh(geo, mat);
+    m.position.z = z;
+    // Slight random rotation for organic variation
+    m.rotation.z = Math.random() * Math.PI;
+    tunnelGroup.add(m);
+  }
+  spaceScene.add(tunnelGroup);
+
+  // ── Wormhole streaks: bright point particles streaming past in the tunnel ──
+  const TUNNEL_STREAKS = 4000;
+  const tunnelStreakGeo = new THREE.BufferGeometry();
+  {
+    const pos = new Float32Array(TUNNEL_STREAKS * 3);
+    const sz  = new Float32Array(TUNNEL_STREAKS);
+    for (let i = 0; i < TUNNEL_STREAKS; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const r     = 0.3 + Math.pow(Math.random(), 0.6) * 2.0;
+      pos[i * 3]     = Math.cos(theta) * r;
+      pos[i * 3 + 1] = Math.sin(theta) * r;
+      pos[i * 3 + 2] = -Math.random() * 175; // distributed along tunnel
+      sz[i] = 0.5 + Math.random() * 1.5;
+    }
+    tunnelStreakGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    tunnelStreakGeo.setAttribute('size',     new THREE.Float32BufferAttribute(sz, 1));
+  }
+  const tunnelStreakMat = new THREE.PointsMaterial({
+    size: 0.08,
+    sizeAttenuation: true,
+    color: new THREE.Color(0.85, 0.92, 1.0),
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const tunnelStreakPoints = new THREE.Points(tunnelStreakGeo, tunnelStreakMat);
+  tunnelStreakPoints.frustumCulled = false;
+  spaceScene.add(tunnelStreakPoints);
+
+  // ── Neutron star (the destination — MIRA_PULSAR) ──────────────────────────
+  const neutronGeo = new THREE.SphereGeometry(0.9, 48, 48);
+  const neutronMat = new THREE.MeshStandardMaterial({
+    color:             new THREE.Color('#8B3A1A'),
+    emissive:          new THREE.Color('#C84B20'),
+    emissiveIntensity: 2.2,
+    roughness:         0.7,
+  });
+  const neutronStar = new THREE.Mesh(neutronGeo, neutronMat);
+  neutronStar.position.set(0, 0, -210);
+  neutronStar.visible = false; // only revealed when journey progress is high
+  spaceScene.add(neutronStar);
+
+  // Point light at the neutron star — pulses with the beam
+  const neutronLight = new THREE.PointLight('#88ccff', 0, 80);
+  neutronLight.position.set(0, 0, -210);
+  spaceScene.add(neutronLight);
+
+  // Soft fill light for the neutron star
+  const neutronFill = new THREE.DirectionalLight('#2255aa', 0.6);
+  neutronFill.position.set(10, 5, -200);
+  spaceScene.add(neutronFill);
+
+  // ── Pulsar beam (BoxGeometry with shader, flashes every 92ms) ──────────────
+  const beamUni = { uAlpha: { value: 0.0 } };
+  const beamMat = new THREE.ShaderMaterial({
+    transparent:  true,
+    depthWrite:   false,
+    blending:     THREE.AdditiveBlending,
+    uniforms:     beamUni,
+    vertexShader:   'void main(){gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader: 'uniform float uAlpha;void main(){gl_FragColor=vec4(0.52,0.80,1.0,uAlpha);}',
+  });
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(80, 0.06, 0.06), beamMat);
+  beam.position.set(0, 0, -210);
+  beam.visible = false;
+  spaceScene.add(beam);
+
   // ── Distortion (active = camera-facing, mask = horizontal disc) ─────────────
   const distActiveMat = new THREE.RawShaderMaterial({
     glslVersion:    THREE.GLSL3,
@@ -305,55 +409,132 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     const elapsed = (performance.now() - t0) / 1000;
     const t = elapsed * TIME_SCALE;
 
-    // ── Scroll-approach animation ────────────────────────────────────────────
+    // ── Continuous journey camera path ───────────────────────────────────────
+    // ONE shot. Scroll progress 0..1 drives a single continuous camera path
+    // through the entire scene graph: BH-orbit → through BH → wormhole tunnel
+    // → emerge into new universe → settle near MIRA_PULSAR neutron star.
+    //
+    //   p 0.00–0.32  Approach BH      orbit → 0.1 units (pre-disk, gravity grip)
+    //   p 0.32–0.50  Through the BH   camera continues z+ → z- through origin
+    //   p 0.50–0.78  Wormhole tunnel  rushing through ring stack (z=-10 → -160)
+    //   p 0.78–1.00  Emerge & approach pulsar comes into view, camera settles
+    //
+    // No phase changes drive this. No canvas swap. One camera path.
     if (externalProgress > 0) {
       if (!approachOrigin) {
         approachOrigin = camera.position.clone();
         controls.enabled = false;
       }
+      const p = externalProgress;
 
-      // Full journey: camera travels from starting orbit all the way into the
-      // event horizon interior. Three segments mirror the visual reference:
-      //
-      //   p 0.00–0.45  Outer approach  (7.35 → 2.5 units)  BH fills frame
-      //   p 0.45–0.80  Disk crossing   (2.5  → 0.6 units)  Interstellar lensing
-      //   p 0.80–1.00  Interior dive   (0.6  → 0.1 units)  Darkness + aberration
-      //
-      // Cubic ease-in mimics gravitational acceleration: barely felt far out,
-      // then grips you completely near the photon sphere.
-      const k   = externalProgress * externalProgress * externalProgress;
+      // Smooth piecewise camera position based on journey segment
+      // Segment thresholds
+      const S1 = 0.32; // end of BH approach
+      const S2 = 0.50; // exit BH
+      const S3 = 0.78; // exit tunnel
+      // p > S3 → approach pulsar
 
-      // Distance: starting orbit → 0.1 Rs (inside event horizon = darkness)
-      const originDist = approachOrigin.length();
-      const targetDist = originDist * (1 - k) + 0.1 * k;
-
-      // Azimuth: preserve the user's current orbital angle
+      // BH approach phase (orbit → close to BH center, drifting equatorial)
       const az = Math.atan2(approachOrigin.z, approachOrigin.x);
-
-      // Elevation: drift toward equatorial plane as approach deepens.
-      // At equatorial (y=0) the gravitational lensing is maximally spectacular —
-      // the disk wraps 360° and the photon ring is visible above and below.
       const initEl = Math.atan2(
         approachOrigin.y,
         Math.sqrt(approachOrigin.x * approachOrigin.x + approachOrigin.z * approachOrigin.z),
       );
-      const currEl = initEl * Math.max(0, 1 - k * 2.2); // drifts to equatorial by p≈0.65
+      const originDist = approachOrigin.length();
 
-      const r  = targetDist * Math.cos(currEl);
-      camera.position.set(r * Math.cos(az), targetDist * Math.sin(currEl), r * Math.sin(az));
-      camera.lookAt(0, 0, 0);
+      let camX = 0, camY = 0, camZ = 0;
+      let lookAtZ = 0;
+      let fov = 45;
+      let rgbShift = 0.00001;
+      let diskScale = 0.75;
+      let tunnelI = 0;
+      let pulsarVisible = false;
 
-      // FOV: 45° → 150° (extreme fisheye deep inside — tunnel/warp sensation)
-      camera.fov = THREE.MathUtils.lerp(45, 150, k * k);
+      if (p < S1) {
+        // SEGMENT 1: BH approach (cubic ease-in for gravitational grip)
+        const sp = p / S1;            // 0..1
+        const k  = sp * sp * sp;
+        const dist = originDist * (1 - k) + 0.4 * k;
+        const el   = initEl * Math.max(0, 1 - k * 2.2);
+        const r    = dist * Math.cos(el);
+        camX = r * Math.cos(az);
+        camY = dist * Math.sin(el);
+        camZ = r * Math.sin(az);
+        lookAtZ = 0;
+        fov = THREE.MathUtils.lerp(45, 95, k);
+        rgbShift = 0.00001 + Math.pow(k, 1.5) * 0.012;
+        diskScale = THREE.MathUtils.lerp(0.75, 1.3, Math.min(1, sp * 1.6));
+      } else if (p < S2) {
+        // SEGMENT 2: Through the BH — camera passes through origin into z<0
+        const sp = (p - S1) / (S2 - S1); // 0..1
+        const k  = sp;                    // linear (we're punching through)
+        camX = 0;
+        camY = 0;
+        camZ = THREE.MathUtils.lerp(0.4, -8, k); // crosses origin around sp=0.5
+        lookAtZ = -100;
+        fov = THREE.MathUtils.lerp(95, 110, k);
+        rgbShift = 0.014 + (1 - Math.abs(0.5 - k) * 2) * 0.018; // peaks at the center
+        diskScale = 1.3;
+      } else if (p < S3) {
+        // SEGMENT 3: Wormhole tunnel — camera flies through the ring stack
+        const sp = (p - S2) / (S3 - S2); // 0..1
+        // Cubic ease-out — fast entry, decelerates at exit
+        const k  = 1 - Math.pow(1 - sp, 3);
+        camX = Math.sin(t * 0.4) * 0.05;     // tiny drift for organic feel
+        camY = Math.cos(t * 0.3) * 0.04;
+        camZ = THREE.MathUtils.lerp(-8, -165, k);
+        lookAtZ = -250;
+        fov = THREE.MathUtils.lerp(110, 75, k);
+        rgbShift = 0.024 - sp * 0.018;
+        diskScale = 1.3;
+        tunnelI = Math.sin(sp * Math.PI); // bell curve — peaks mid-tunnel
+        pulsarVisible = sp > 0.65;
+      } else {
+        // SEGMENT 4: Emerge & approach the neutron star
+        const sp = (p - S3) / (1 - S3); // 0..1
+        const k  = sp * sp * (3 - 2 * sp); // smoothstep
+        camX = 0;
+        camY = THREE.MathUtils.lerp(0, 1.2, k); // settle into MIRA_PULSAR view
+        camZ = THREE.MathUtils.lerp(-165, -195, k);
+        lookAtZ = -210;
+        fov = THREE.MathUtils.lerp(75, 55, k);
+        rgbShift = 0.006 * (1 - k) + 0.00001 * k;
+        diskScale = 1.3 - k * 0.55; // disc fades behind us
+        tunnelI = (1 - k) * 0.7;
+        pulsarVisible = true;
+      }
+
+      camera.position.set(camX, camY, camZ);
+      camera.lookAt(0, 0, lookAtZ);
+      camera.fov = fov;
       camera.updateProjectionMatrix();
+      finalUniforms.uRGBShiftRadius.value = rgbShift;
+      discMesh.scale.setScalar(Math.max(0.1, diskScale));
+      partPoints.scale.setScalar(Math.max(0.1, diskScale));
 
-      // Chromatic aberration: ramps sharply past the photon sphere
-      finalUniforms.uRGBShiftRadius.value = 0.00001 + Math.pow(k, 1.5) * 0.030;
+      // Tunnel rings: opacity ramps with tunnelI; subtle rotation animates
+      for (let i = 0; i < tunnelMats.length; i++) {
+        tunnelMats[i].opacity = tunnelI * (0.6 + (i % 4) * 0.1);
+      }
+      tunnelGroup.rotation.z += 0.004;
+      tunnelStreakMat.opacity = tunnelI * 0.85;
 
-      // Disc scale: grows from 0.75× to 1.3× (disk appears to expand as we close in)
-      const diskScale = THREE.MathUtils.lerp(0.75, 1.3, Math.min(1, externalProgress * 1.6));
-      discMesh.scale.setScalar(diskScale);
-      partPoints.scale.setScalar(diskScale);
+      // Neutron star + beam visibility
+      neutronStar.visible = pulsarVisible;
+      beam.visible        = pulsarVisible;
+      if (pulsarVisible) {
+        // Slow rotation
+        neutronStar.rotation.y += 0.04;
+        // 92ms beam pulse synced to wall-clock so it's stable across frames
+        const beatPhase = (performance.now() / 1000) % 0.092;
+        const age = beatPhase;
+        const a = age < 0.080 ? Math.exp(-age / 0.022) * 0.92 : 0.0;
+        beamUni.uAlpha.value = a;
+        neutronLight.intensity = a * 7;
+      } else {
+        beamUni.uAlpha.value = 0;
+        neutronLight.intensity = 0;
+      }
     } else if (approachOrigin) {
       approachOrigin = null;
       controls.enabled = true;
@@ -362,6 +543,11 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       finalUniforms.uRGBShiftRadius.value = 0.00001;
       discMesh.scale.setScalar(0.75);
       partPoints.scale.setScalar(0.75);
+      tunnelMats.forEach((m) => { m.opacity = 0; });
+      tunnelStreakMat.opacity = 0;
+      neutronStar.visible = false;
+      beam.visible = false;
+      neutronLight.intensity = 0;
     }
 
     controls.update();
@@ -434,6 +620,13 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     distActiveMesh.geometry.dispose();
     distMaskMesh.geometry.dispose();
     finalPlane.geometry.dispose();
+    tunnelGroup.children.forEach((c) => {
+      const m = c as THREE.Mesh;
+      m.geometry.dispose();
+    });
+    tunnelStreakGeo.dispose();
+    neutronGeo.dispose();
+    beam.geometry.dispose();
 
     // Materials
     discMat.dispose();
@@ -442,6 +635,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     distActiveMat.dispose();
     distMaskMat.dispose();
     finalMat.dispose();
+    tunnelMats.forEach((m) => m.dispose());
+    tunnelStreakMat.dispose();
+    neutronMat.dispose();
+    beamMat.dispose();
 
     if (noiseTex && (noiseTex as THREE.Texture).dispose) {
       (noiseTex as THREE.Texture).dispose();

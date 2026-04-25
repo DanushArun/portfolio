@@ -89,21 +89,36 @@ export default function CameraRig() {
       }
 
       case 'DESCENT': {
-        // WarpScene is running in this canvas. Camera rushes forward through
-        // spacetime: starts at z=20 (wide view of warp field), accelerates to
-        // z=-8 (inside the event horizon), FOV widens for tunnel immersion.
+        // WarpScene cinematic camera dolly.
+        // easeInQuart for acceleration (gravity grips you), easeOutCubic deceleration
+        // at the climax (the flash), settle for the reveal.
         const t = phaseTime(phaseStart);
-        const k = smoothstep(0, 5.0, t);
-        // Cubic ease-in: slow at start, then gravitational acceleration takes over
-        const kk = k * k * k;
+
+        // Dolly: 25 → -50 over 4s with quartic acceleration, then decelerate
+        const accel  = Math.min(1, t / 3.5);
+        const accelE = accel * accel * accel * accel; // easeInQuart
+        const decel  = Math.max(0, Math.min(1, (t - 3.5) / 1.0));
+        const decelE = 1 - Math.pow(1 - decel, 3);    // easeOutCubic
+        const z = 25 - (accelE * 65) - (decelE * 10);
+
+        // Subtle camera shake — decays as we go deeper into the warp
+        const shake = Math.max(0, 1 - t / 3.5);
         camera.position.set(
-          Math.sin(bt * 0.15) * 0.4 * (1 - kk), // slight lateral drift decays
-          Math.cos(bt * 0.10) * 0.2 * (1 - kk),
-          THREE.MathUtils.lerp(20, -8, kk),
+          Math.sin(bt * 1.7)  * 0.18 * shake,
+          Math.cos(bt * 1.3)  * 0.13 * shake,
+          z,
         );
-        camera.lookAt(new THREE.Vector3(0, 0, -200));
-        // FOV: 50° → 90° as you rush toward singularity
-        pcam.fov = THREE.MathUtils.lerp(50, 90, smoothstep(0, 3.5, t));
+        camera.lookAt(new THREE.Vector3(
+          Math.sin(bt * 0.4) * 0.4,
+          Math.cos(bt * 0.3) * 0.3,
+          -200,
+        ));
+
+        // FOV: starts at 60°, widens to 95° at peak velocity (tunnel immersion),
+        // then narrows back to 65° at the reveal (settles into MIRA_PULSAR FOV).
+        const fovWiden  = THREE.MathUtils.lerp(60, 95, smoothstep(0, 3.0, t));
+        const fovNarrow = smoothstep(3.5, 4.5, t) * 30;
+        pcam.fov = fovWiden - fovNarrow;
         pcam.updateProjectionMatrix();
         break;
       }

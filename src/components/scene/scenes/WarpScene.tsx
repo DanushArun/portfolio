@@ -1,235 +1,352 @@
 'use client';
 
 /**
- * WarpScene — Physically-grounded event horizon crossing, in THREE.js.
+ * WarpScene — "INTO THE VOID"
  *
- * Timeline (5.0s total):
- *   0.0–1.8s  Accretion disk crossing: intense orange-amber radiation flash.
- *             You've entered the equatorial plane of the disk at relativistic speed.
- *   0.4–3.8s  Relativistic beaming: 30k stars compress toward your forward direction.
- *             Real aberration formula — at v→c all photons blueshift and concentrate
- *             into a shrinking cone ahead. Stars shoot radially past in streams.
- *   1.6–3.4s  Einstein ring: gravitational lensing collapses ALL background light
- *             into a single bright ring around the singularity. The ring contracts
- *             as you pass through the photon sphere (r = 1.5 Rs).
- *   3.0–5.0s  Interior darkness: spacetime curvature produces gravitational waves —
- *             expanding metric perturbations visible as concentric blue-white rings.
- *             Stars reform in the distance (new universe).
- *   4.6s      Veil fires (covers DESCENT→MIRA_PULSAR scene swap within R3F canvas)
- *   5.0s      setPhase('MIRA_PULSAR')
+ * 5-second cinematic transition directed in the spirit of Nolan/Fraser.
+ * Picks up where the BH canvas left off (chromatic line on black) and
+ * carries the audience through a spacetime tunnel into MIRA_PULSAR.
+ *
+ *   BEAT 1 (0.0–1.0s)  THE TEAR        Reality rips open from horizontal line
+ *   BEAT 2 (0.8–2.7s)  THE TUNNEL      Spacetime conduit, FBM-warped walls, rings rushing
+ *   BEAT 3 (1.5–3.6s)  ACCELERATION    LineSegments2 streaks racing past at relativistic speed
+ *   BEAT 4 (3.4–4.0s)  THE FLASH       Anamorphic horizontal flare, overexposed peak
+ *   BEAT 5 (4.0–5.0s)  REVEAL          New universe stars + 200ms black before MIRA_PULSAR
+ *
+ * Post-processing: Bloom + Chromatic Aberration + Vignette (mounted at
+ * SceneManager level so it covers the whole canvas).
  */
 
 import { useRef, useMemo, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
 
 const DURATION = 5.0;
 
-function ss(e0: number, e1: number, x: number): number {
+// ─── Asymmetric easing (Nolan-style timing curves) ──────────────────────────
+const easeOutExpo  = (t: number) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+const easeInQuart  = (t: number) => t * t * t * t;
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+const ss = (e0: number, e1: number, x: number) => {
   const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
   return t * t * (3 - 2 * t);
-}
+};
+// pow rise / pow fall — asymmetric flash (not gaussian)
+const flashCurve = (t: number) =>
+  t < 0.5
+    ? Math.pow(t * 2, 6)            // sharp rise
+    : Math.pow(1 - (t - 0.5) * 2, 3); // gentler fall
 
-// ── Relativistic star burst ────────────────────────────────────────────────
-// Stars loop outward from origin along biased-forward directions.
-// Forward bias simulates relativistic aberration: at v→c the entire sky
-// contracts to a forward disc.
-const STARS_VERT = /* glsl */ `
-  attribute float aOff;
-  attribute float aSpd;
-  attribute vec3  aDir;
-  attribute float aSz;
+// ─── Tunnel shader: FBM-warped, vignette-faded ───────────────────────────────
+const TUNNEL_VERT = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const TUNNEL_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uIntensity;
+  varying vec2 vUv;
+
+  // Hash + noise + FBM (Inigo Quilez style)
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float noise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1,0)), u.x),
+               mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), u.x), u.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0; float a = 0.5;
+    for (int i = 0; i < 3; i++) { v += a * noise(p); p *= 2.0; a *= 0.5; }
+    return v;
+  }
+
+  void main() {
+    // vUv.y = along the tube (0 = front near camera, 1 = back/far)
+    // vUv.x = around the tube
+    float along  = vUv.y;
+    float around = vUv.x;
+
+    // FBM-warp the UV coordinates (kills "shader toy" sin look)
+    vec2 warpUv = vec2(around * 6.0, along * 4.0 - uTime * 0.6);
+    float warp  = fbm(warpUv) * 0.25;
+
+    // Concentric rings rushing forward (FBM-modulated, not pure sin)
+    float ring1 = sin((along - uTime * 1.4 + warp) * 80.0) * 0.5 + 0.5;
+    float ring2 = sin((along - uTime * 2.8 + warp * 0.5) * 30.0) * 0.5 + 0.5;
+    ring1 = pow(ring1, 3.0);
+    ring2 = pow(ring2, 6.0);
+
+    // Striations — broken-up by FBM
+    float stri = fbm(vec2(around * 18.0, along * 6.0 - uTime * 0.5));
+
+    // Vignette: corners go dark, central tube channel stays bright
+    // distFromCenter is the angular distance from the tube's "axis"
+    // For a tube viewed from inside, the "axis" runs along Y (UV.y)
+    // so x distance = abs(around - 0.5)
+    float distFromAxis = abs(around - 0.5) * 2.0;
+    float vignette = 1.0 - pow(distFromAxis, 2.5);
+
+    // Color gradient: deep cobalt distance → cyan → white-hot
+    vec3 deep = vec3(0.04, 0.08, 0.35);
+    vec3 mid  = vec3(0.18, 0.55, 1.0);
+    vec3 hot  = vec3(1.0, 0.92, 0.7);
+    vec3 col  = mix(deep, mid, smoothstep(0.0, 0.6, along));
+    col = mix(col, hot, ring1);
+    col += hot * ring2 * 0.9;
+    col *= 0.45 + stri * 0.9;
+
+    // Distance fade — far end darkens
+    float fade = 1.0 - smoothstep(0.0, 0.92, along);
+    col *= vignette * fade * uIntensity * 2.4;
+
+    gl_FragColor = vec4(col, fade * vignette * uIntensity);
+  }
+`;
+
+// ─── Streak shader (billboarded stretched planes) ────────────────────────────
+const STREAK_VERT = /* glsl */ `
+  attribute float aSeed;
+  attribute vec3  aBase;
   uniform float   uT;
-  uniform float   uBright;
-  varying float   vA;
+  uniform float   uSpeed;
+  uniform float   uIntensity;
+  varying float   vAlpha;
+  varying float   vLife;
 
   void main() {
-    float life = fract(aOff + uT * aSpd);
-    vec3  pos  = aDir * life * 60.0;
-    // Fade in at birth, fade out at death; overall brightness driven by uBright
-    vA = uBright
-       * smoothstep(0.0, 0.06, life)
-       * smoothstep(1.0, 0.55, life);
-    vec4 mv    = modelViewMatrix * vec4(pos, 1.0);
+    float life = fract(aSeed + uT * uSpeed);
+    vec3 pos = aBase;
+    pos.z = mix(-180.0, 25.0, life); // far → near (toward camera at z=0+)
+
+    vAlpha = uIntensity * smoothstep(0.0, 0.06, life) * smoothstep(1.0, 0.85, life);
+    vLife  = life;
+
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_Position  = projectionMatrix * mv;
-    gl_PointSize = aSz * 220.0 / max(-mv.z, 1.0);
-  }
-`;
-const STARS_FRAG = /* glsl */ `
-  varying float vA;
-  void main() {
-    if (vA < 0.01) discard;
-    float r = distance(gl_PointCoord, vec2(0.5));
-    if (r > 0.5) discard;
-    float a = vA * (1.0 - r * 2.0);
-    // Doppler: blue-white forward, amber at periphery — already handled by forward bias
-    gl_FragColor = vec4(0.94, 0.97, 1.0, a);
+    // Stretch by velocity — bigger when near camera (relativistic streak)
+    gl_PointSize = (3.0 + (1.0 - life) * 8.0) * 240.0 / max(-mv.z, 1.0);
   }
 `;
 
-const N = 30_000;
+const STREAK_FRAG = /* glsl */ `
+  varying float vAlpha;
+  varying float vLife;
+  void main() {
+    if (vAlpha < 0.01) discard;
+    vec2 uv = gl_PointCoord - 0.5;
+    // Streak: very narrow horizontal, tall vertical (stretched line)
+    uv.x *= 8.0;  // squish horizontal → narrow
+    float r = length(uv);
+    if (r > 0.5) discard;
+    float a = vAlpha * (1.0 - r * 2.0);
+    // Color: blue/cyan when far, white-hot when near
+    vec3 col = mix(vec3(0.55, 0.85, 1.0), vec3(1.0, 0.97, 0.92), 1.0 - vLife);
+    gl_FragColor = vec4(col, a);
+  }
+`;
+
+// ─── Anamorphic flare shader (Fraser signature horizontal streak) ────────────
+const FLARE_FRAG = /* glsl */ `
+  uniform float uIntensity;
+  varying vec2 vUv;
+  void main() {
+    vec2 c = vUv - 0.5;
+    // Horizontal anamorphic streak: very wide, very thin
+    float horiz = exp(-pow(c.y * 60.0, 2.0)) * exp(-pow(c.x * 1.5, 2.0));
+    // Central core
+    float core  = exp(-pow(length(c) * 8.0, 2.0));
+    float v = horiz * 1.5 + core * 0.8;
+    vec3 col = vec3(1.0, 0.97, 0.95) * v * uIntensity;
+    gl_FragColor = vec4(col, v * uIntensity);
+  }
+`;
+
+const FLARE_VERT = TUNNEL_VERT;
+
+// ─── COUNTS ─────────────────────────────────────────────────────────────────
+const STREAK_COUNT = 6000;
+const REVEAL_STARS = 4000;
 
 export default function WarpScene() {
-  const setPhase  = useScene((s) => s.setPhase);
+  const setPhase = useScene((s) => s.setPhase);
+  const setVeil  = useScene((s) => s.setVeil);
+  const { gl }   = useThree();
+
   const elapsed   = useRef(0);
   const fired     = useRef(false);
   const veilFired = useRef(false);
 
-  // ── Star burst geometry ────────────────────────────────────────────────────
-  const { sGeo, sMat } = useMemo(() => {
-    const off = new Float32Array(N);
-    const spd = new Float32Array(N);
-    const dir = new Float32Array(N * 3);
-    const sz  = new Float32Array(N);
+  const tearRef    = useRef<THREE.Mesh>(null);
+  const tunnelRef  = useRef<THREE.Mesh>(null);
+  const flareRef   = useRef<THREE.Mesh>(null);
+  const flashRef   = useRef<THREE.Mesh>(null);
 
-    for (let i = 0; i < N; i++) {
-      off[i] = Math.random();
-      spd[i] = 0.25 + Math.random() * 0.75;
-      sz[i]  = 0.6  + Math.random() * 1.4;
+  // ACES tone mapping for filmic look
+  useEffect(() => {
+    const prevTone     = gl.toneMapping;
+    const prevExposure = gl.toneMappingExposure;
+    gl.toneMapping = THREE.ACESFilmicToneMapping;
+    gl.toneMappingExposure = 1.15;
+    return () => {
+      gl.toneMapping = prevTone;
+      gl.toneMappingExposure = prevExposure;
+    };
+  }, [gl]);
 
-      // ~70 % of stars biased into forward hemisphere (aberration effect)
-      const fwd   = Math.random() < 0.70;
-      const phi   = fwd
-        ? Math.acos(1 - Math.random() * 0.85)       // tight forward cone
-        : Math.acos(1 - 0.85 - Math.random() * 1.15); // remaining hemisphere
+  // ── TEAR: bright thin plane, opens reality ─────────────────────────────────
+  const tearMat = useMemo(() => new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  }), []);
+  const tearGeo = useMemo(() => new THREE.PlaneGeometry(60, 1.2), []);
+
+  // ── TUNNEL ─────────────────────────────────────────────────────────────────
+  // Engineer's correction: 6 (front, near camera) → 40 (back, far) so it
+  // converges toward the vanishing point as you rush through.
+  const tunnelMat = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader: TUNNEL_VERT, fragmentShader: TUNNEL_FRAG,
+    uniforms: {
+      uTime:      { value: 0 },
+      uIntensity: { value: 0 },
+    },
+    transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.BackSide,
+  }), []);
+  const tunnelGeo = useMemo(
+    () => new THREE.CylinderGeometry(6, 40, 220, 64, 96, true),
+    [],
+  );
+
+  // ── STREAKS ────────────────────────────────────────────────────────────────
+  const { streakGeo, streakMat } = useMemo(() => {
+    const seeds = new Float32Array(STREAK_COUNT);
+    const base  = new Float32Array(STREAK_COUNT * 3);
+    const pos   = new Float32Array(STREAK_COUNT * 3);
+    for (let i = 0; i < STREAK_COUNT; i++) {
+      seeds[i] = Math.random();
       const theta = Math.random() * Math.PI * 2;
-
-      dir[i * 3]     = Math.sin(phi) * Math.cos(theta);
-      dir[i * 3 + 1] = Math.sin(phi) * Math.sin(theta);
-      dir[i * 3 + 2] = -Math.cos(phi); // -z = forward in Three.js default cam
+      const r = 4 + Math.pow(Math.random(), 0.5) * 35;
+      base[i * 3]     = Math.cos(theta) * r;
+      base[i * 3 + 1] = Math.sin(theta) * r;
+      base[i * 3 + 2] = 0;
     }
-
     const g = new THREE.BufferGeometry();
-    // position unused by shader but BufferGeometry requires one
-    g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(N * 3), 3));
-    g.setAttribute('aOff', new THREE.Float32BufferAttribute(off, 1));
-    g.setAttribute('aSpd', new THREE.Float32BufferAttribute(spd, 1));
-    g.setAttribute('aDir', new THREE.Float32BufferAttribute(dir, 3));
-    g.setAttribute('aSz',  new THREE.Float32BufferAttribute(sz,  1));
-    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 200);
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,  3));
+    g.setAttribute('aSeed',    new THREE.Float32BufferAttribute(seeds, 1));
+    g.setAttribute('aBase',    new THREE.Float32BufferAttribute(base,  3));
+    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 300);
 
     const m = new THREE.ShaderMaterial({
-      vertexShader: STARS_VERT, fragmentShader: STARS_FRAG,
-      uniforms: { uT: { value: 0 }, uBright: { value: 0 } },
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: STREAK_VERT, fragmentShader: STREAK_FRAG,
+      uniforms: {
+        uT:         { value: 0 },
+        uSpeed:     { value: 0.3 },
+        uIntensity: { value: 0 },
+      },
+      transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
-    return { sGeo: g, sMat: m };
+    return { streakGeo: g, streakMat: m };
   }, []);
-  useEffect(() => () => { sGeo.dispose(); sMat.dispose(); }, [sGeo, sMat]);
 
-  // ── Disk flash: massive plane, additive amber ──────────────────────────────
-  const diskMat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color(1.0, 0.55, 0.08),
-    side: THREE.DoubleSide, transparent: true, opacity: 0,
-    depthWrite: false, blending: THREE.AdditiveBlending,
+  // ── ANAMORPHIC FLARE ───────────────────────────────────────────────────────
+  const flareMat = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader: FLARE_VERT, fragmentShader: FLARE_FRAG,
+    uniforms: { uIntensity: { value: 0 } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   }), []);
-  useEffect(() => () => diskMat.dispose(), [diskMat]);
+  const flareGeo = useMemo(() => new THREE.PlaneGeometry(120, 60), []);
 
-  // ── Second disk flash (inner orange ring cross-section) ────────────────────
-  const disk2Mat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color(1.0, 0.85, 0.4),
-    side: THREE.DoubleSide, transparent: true, opacity: 0,
-    depthWrite: false, blending: THREE.AdditiveBlending,
+  // ── FLASH ──────────────────────────────────────────────────────────────────
+  const flashMat = useMemo(() => new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0,
+    side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
   }), []);
-  useEffect(() => () => disk2Mat.dispose(), [disk2Mat]);
+  const flashGeo = useMemo(() => new THREE.PlaneGeometry(800, 800), []);
 
-  // ── Einstein ring ──────────────────────────────────────────────────────────
-  const ringMat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color(2.8, 2.0, 1.0),
-    transparent: true, opacity: 0,
-    depthWrite: false, blending: THREE.AdditiveBlending,
-  }), []);
-  const ringRef = useRef<THREE.Mesh>(null);
-  useEffect(() => () => ringMat.dispose(), [ringMat]);
-
-  // ── Gravity waves ──────────────────────────────────────────────────────────
-  const GW = 8;
-  const gwMats = useMemo(() =>
-    Array.from({ length: GW }, (_, i) => new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0.55 + i * 0.05, 0.75, 1.0),
-      transparent: true, opacity: 0,
-      depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    })),
-  []);
-  const gwRefs = useRef<(THREE.Mesh | null)[]>(Array(GW).fill(null));
-  useEffect(() => () => gwMats.forEach(m => m.dispose()), [gwMats]);
-
-  // ── Re-emergence star field (far background) ───────────────────────────────
-  const { rGeo, rMat } = useMemo(() => {
-    const pos = new Float32Array(5000 * 3);
-    const sz  = new Float32Array(5000);
-    for (let i = 0; i < 5000; i++) {
-      const th = Math.random() * Math.PI * 2;
-      const ph = Math.acos(2 * Math.random() - 1);
-      const r  = 80 + Math.random() * 120;
-      pos[i*3]   = r * Math.sin(ph) * Math.cos(th);
-      pos[i*3+1] = r * Math.sin(ph) * Math.sin(th);
-      pos[i*3+2] = r * Math.cos(ph);
-      sz[i] = 0.5 + Math.random() * 1.5;
+  // ── REVEAL STARS ───────────────────────────────────────────────────────────
+  const { revealGeo, revealMat } = useMemo(() => {
+    const pos = new Float32Array(REVEAL_STARS * 3);
+    for (let i = 0; i < REVEAL_STARS; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      const r     = 90 + Math.random() * 220;
+      pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('size', new THREE.Float32BufferAttribute(sz, 1));
     const m = new THREE.PointsMaterial({
-      size: 0.25, sizeAttenuation: true,
-      color: new THREE.Color(0.9, 0.93, 1.0),
-      transparent: true, opacity: 0,
-      depthWrite: false, blending: THREE.AdditiveBlending,
+      size: 0.6, sizeAttenuation: true, color: 0xeef2ff,
+      transparent: true, opacity: 0, depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
-    return { rGeo: g, rMat: m };
+    return { revealGeo: g, revealMat: m };
   }, []);
-  useEffect(() => () => { rGeo.dispose(); rMat.dispose(); }, [rGeo, rMat]);
 
-  // ── Geometry ───────────────────────────────────────────────────────────────
-  const diskGeo  = useMemo(() => new THREE.PlaneGeometry(400, 400), []);
-  const disk2Geo = useMemo(() => new THREE.PlaneGeometry(80, 80), []);
-  const eGeo     = useMemo(() => new THREE.TorusGeometry(1, 0.14, 8, 256), []);
-  const gwGeo    = useMemo(() => new THREE.RingGeometry(0.97, 1.0, 192), []);
+  // ── Cleanup ────────────────────────────────────────────────────────────────
   useEffect(() => () => {
-    diskGeo.dispose(); disk2Geo.dispose(); eGeo.dispose(); gwGeo.dispose();
-  }, [diskGeo, disk2Geo, eGeo, gwGeo]);
+    tearMat.dispose();   tearGeo.dispose();
+    tunnelMat.dispose(); tunnelGeo.dispose();
+    streakMat.dispose(); streakGeo.dispose();
+    flareMat.dispose();  flareGeo.dispose();
+    flashMat.dispose();  flashGeo.dispose();
+    revealMat.dispose(); revealGeo.dispose();
+  }, [tearMat, tearGeo, tunnelMat, tunnelGeo, streakMat, streakGeo,
+      flareMat, flareGeo, flashMat, flashGeo, revealMat, revealGeo]);
 
-  // ── Frame loop ─────────────────────────────────────────────────────────────
+  // ── Frame loop — directorial timeline ──────────────────────────────────────
   useFrame((_, dt) => {
     elapsed.current = Math.min(elapsed.current + dt, DURATION + 0.5);
     const p = elapsed.current;
 
-    // Stars: 0.4–3.8s
-    sMat.uniforms.uT.value     += dt * 0.38;
-    sMat.uniforms.uBright.value = ss(0.4, 1.4, p) * ss(3.8, 2.8, p);
-
-    // Disk flash: peaks at 0.7s, gone by 2.0s
-    diskMat.opacity  = ss(0.0, 0.4, p) * ss(2.0, 0.9, p) * 0.72;
-    // Brighter inner cross-section: peaks at 0.5s
-    disk2Mat.opacity = ss(0.0, 0.3, p) * ss(1.6, 0.6, p) * 0.55;
-
-    // Einstein ring: appears at 1.6s, contracts from r=24→0.4, gone at 3.4s
-    ringMat.opacity = ss(1.6, 2.3, p) * ss(3.4, 2.8, p) * 0.92;
-    if (ringRef.current) {
-      const scale = THREE.MathUtils.lerp(24, 0.4, ss(1.6, 3.4, p));
-      ringRef.current.scale.setScalar(Math.max(scale, 0.01));
+    // ─ BEAT 1 (0.0–1.0s) — TEAR
+    // easeOutExpo = snappy reality-tearing motion
+    const tearK = easeOutExpo(ss(0.0, 1.0, p));
+    const tearOpacity = ss(0.0, 0.25, p) * ss(1.4, 0.7, p) * 1.0;
+    tearMat.opacity = tearOpacity;
+    if (tearRef.current) {
+      // Grows wider, taller, rotates from horizontal to vertical
+      tearRef.current.scale.set(1 + tearK * 7, 1 + tearK * 50, 1);
+      tearRef.current.rotation.z = tearK * Math.PI * 0.5;
     }
 
-    // Gravity waves: 3.0s → 8 waves, 0.38s apart
-    for (let i = 0; i < GW; i++) {
-      const wt = Math.max(0, p - 3.0 - i * 0.38);
-      const wr = wt * 16;
-      const wa = Math.max(0, 1 - wt / 1.3) * ss(3.0, 3.5, p);
-      const mesh = gwRefs.current[i];
-      if (mesh) {
-        mesh.scale.setScalar(Math.max(0.001, wr));
-        (mesh.material as THREE.MeshBasicMaterial).opacity = wa * 0.5;
-      }
+    // ─ BEAT 2 (0.8–2.7s) — TUNNEL
+    const tunnelI = ss(0.8, 1.6, p) * ss(3.6, 2.7, p);
+    tunnelMat.uniforms.uTime.value     += dt;
+    tunnelMat.uniforms.uIntensity.value = tunnelI;
+    if (tunnelRef.current) {
+      tunnelRef.current.rotation.z += dt * 0.35;
+      // Pull tunnel toward camera as the rush deepens
+      tunnelRef.current.position.z = THREE.MathUtils.lerp(-110, -40, ss(0.8, 3.0, p));
     }
 
-    // Re-emergence stars: fade in from 3.8s
-    rMat.opacity = ss(3.8, 5.0, p) * 0.6;
+    // ─ BEAT 3 (1.5–3.6s) — STREAKS
+    streakMat.uniforms.uT.value     += dt;
+    streakMat.uniforms.uIntensity.value = ss(1.5, 2.0, p) * ss(3.8, 3.2, p);
+    streakMat.uniforms.uSpeed.value     = 0.3 + easeInQuart(ss(1.5, 3.5, p)) * 0.9;
 
-    // Veil pre-fires at 4.6s to cover the scene swap (DESCENT→MIRA_PULSAR)
-    if (p >= 4.6 && !veilFired.current) {
+    // ─ BEAT 4 (3.4–4.0s) — ANAMORPHIC FLARE + FLASH
+    const flashWindow = ss(3.4, 3.55, p) * ss(4.05, 3.85, p);
+    const flashShape  = flashCurve(ss(3.4, 4.0, p));
+    flareMat.uniforms.uIntensity.value = flashShape * 1.4;
+    flashMat.opacity = flashShape * 0.95;
+
+    // ─ BEAT 5 (4.0–5.0s) — REVEAL
+    // 200ms of pure black between flash death and reveal birth (4.0–4.2)
+    revealMat.opacity = ss(4.2, 5.0, p) * 0.7;
+
+    // Pre-fire veil at 4.5s to cover the MIRA_PULSAR scene swap
+    if (p >= 4.5 && !veilFired.current) {
       veilFired.current = true;
-      useScene.getState().setVeil(1);
+      setVeil(1);
     }
 
     if (p >= DURATION && !fired.current) {
@@ -240,33 +357,31 @@ export default function WarpScene() {
 
   return (
     <>
-      {/* Very faint ambient — interior should feel dark */}
-      <ambientLight intensity={0.012} />
+      <ambientLight intensity={0.015} />
 
-      {/* Accretion disk crossing flash — large plane facing camera */}
-      <mesh geometry={diskGeo}  material={diskMat}  position={[0, 0, -12]} frustumCulled={false} />
-      <mesh geometry={disk2Geo} material={disk2Mat} position={[0, 0, -4]}  frustumCulled={false} />
+      {/* TEAR — picks up the BH chromatic-line aesthetic */}
+      <mesh ref={tearRef} geometry={tearGeo} material={tearMat} position={[0, 0, -3]} />
 
-      {/* Relativistic star burst */}
-      <points geometry={sGeo} material={sMat} frustumCulled={false} />
+      {/* TUNNEL — spacetime conduit */}
+      <mesh
+        ref={tunnelRef}
+        geometry={tunnelGeo}
+        material={tunnelMat}
+        rotation={[Math.PI / 2, 0, 0]}
+        position={[0, 0, -110]}
+      />
 
-      {/* Einstein ring — contracts as photon sphere passes */}
-      <mesh ref={ringRef} geometry={eGeo} material={ringMat} position={[0, 0, -10]} frustumCulled={false} />
+      {/* STREAKS — relativistic stars */}
+      <points geometry={streakGeo} material={streakMat} frustumCulled={false} />
 
-      {/* Gravitational wave pulses */}
-      {gwMats.map((m, i) => (
-        <mesh
-          key={i}
-          ref={(el) => { gwRefs.current[i] = el; }}
-          geometry={gwGeo}
-          material={m}
-          rotation={[Math.PI / 2, 0, 0]}
-          frustumCulled={false}
-        />
-      ))}
+      {/* ANAMORPHIC FLARE — Fraser signature */}
+      <mesh ref={flareRef} geometry={flareGeo} material={flareMat} position={[0, 0, -2]} />
 
-      {/* Re-emergence field */}
-      <points geometry={rGeo} material={rMat} frustumCulled={false} />
+      {/* FLASH — overexposed climax */}
+      <mesh ref={flashRef} geometry={flashGeo} material={flashMat} position={[0, 0, -1.5]} />
+
+      {/* REVEAL — new universe */}
+      <points geometry={revealGeo} material={revealMat} />
     </>
   );
 }
