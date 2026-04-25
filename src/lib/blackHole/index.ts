@@ -286,12 +286,37 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     tunnelStreakGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     tunnelStreakGeo.setAttribute('size',     new THREE.Float32BufferAttribute(sz, 1));
   }
-  const tunnelStreakMat = new THREE.PointsMaterial({
-    size: 0.08,
-    sizeAttenuation: true,
-    color: new THREE.Color(0.85, 0.92, 1.0),
+  // Custom shader — clamps gl_PointSize so close streaks don't balloon into
+  // chunky pixel blocks. They stay sub-4px at any distance and use opacity
+  // for distance-based brightness instead. Star-like, not blocky.
+  const tunnelStreakMat = new THREE.ShaderMaterial({
+    uniforms: { uOpacity: { value: 0 } },
+    vertexShader: /* glsl */`
+      attribute float size;
+      varying float vDist;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vDist = -mv.z;
+        gl_Position = projectionMatrix * mv;
+        // Pixel size: would be size*30/dist with attenuation, clamp to [0.6, 3.5]
+        float ps = size * 28.0 / max(vDist, 0.5);
+        gl_PointSize = clamp(ps, 0.6, 3.5);
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform float uOpacity;
+      varying float vDist;
+      void main() {
+        float r = distance(gl_PointCoord, vec2(0.5));
+        if (r > 0.5) discard;
+        float a = (1.0 - r * 2.0) * uOpacity;
+        // Distance brightness: closer streaks brighter, far ones dim.
+        // Inverted Doppler — feels like rushing through them.
+        a *= clamp(1.4 - vDist * 0.006, 0.25, 1.4);
+        gl_FragColor = vec4(0.95, 0.97, 1.0, a);
+      }
+    `,
     transparent: true,
-    opacity: 0,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
@@ -384,12 +409,30 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   finalPlane.frustumCulled = false;
   finalScene.add(finalPlane);
 
+  // ── Continuous-curve helpers — used by the journey camera path ──────────────
+  // smoothstep with explicit edges
+  const ss = (e0: number, e1: number, x: number) => {
+    const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+    return t * t * (3 - 2 * t);
+  };
+  // Keyframe interpolation: walks through sorted [p, value] pairs and
+  // smoothsteps between adjacent ones. Single continuous curve across all
+  // of p ∈ [0, 1]. Adjacent segments naturally agree at boundaries because
+  // they share the same endpoint value. No piecewise discontinuities.
+  const lerpKf = (p: number, kfs: [number, number][]): number => {
+    if (p <= kfs[0][0]) return kfs[0][1];
+    if (p >= kfs[kfs.length - 1][0]) return kfs[kfs.length - 1][1];
+    for (let i = 0; i < kfs.length - 1; i++) {
+      const [pa, va] = kfs[i];
+      const [pb, vb] = kfs[i + 1];
+      if (p >= pa && p <= pb) {
+        return va + (vb - va) * ss(pa, pb, p);
+      }
+    }
+    return kfs[kfs.length - 1][1];
+  };
+
   // ── Scroll-approach state ────────────────────────────────────────────────────
-  // setProgress() is called from BlackHoleMount as the user scrolls during
-  // EVENT_HORIZON. At 0 the BH sits at rest; at 1 the user is at the threshold
-  // and DESCENT is about to fire. The animation disables OrbitControls and drives
-  // the camera radially toward the BH center, widening the FOV and ramping up
-  // chromatic aberration to simulate gravitational lensing pulling you in.
   let externalProgress   = 0;
   let approachOrigin: THREE.Vector3 | null = null;
 
@@ -411,31 +454,16 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     const t = elapsed * TIME_SCALE;
 
     // ── Continuous journey camera path ───────────────────────────────────────
-    // ONE shot. Scroll progress 0..1 drives a single continuous camera path
-    // through the entire scene graph: BH-orbit → through BH → wormhole tunnel
-    // → emerge into new universe → settle near MIRA_PULSAR neutron star.
-    //
-    //   p 0.00–0.32  Approach BH      orbit → 0.1 units (pre-disk, gravity grip)
-    //   p 0.32–0.50  Through the BH   camera continues z+ → z- through origin
-    //   p 0.50–0.78  Wormhole tunnel  rushing through ring stack (z=-10 → -160)
-    //   p 0.78–1.00  Emerge & approach pulsar comes into view, camera settles
-    //
-    // No phase changes drive this. No canvas swap. One camera path.
+    // ONE shot — every value below is a SINGLE continuous function of p.
+    // No segments. No piecewise jumps at boundaries. Every variable is
+    // interpolated through keyframes with smoothstep, so adjacent frames
+    // can't disagree about where the camera is or what's visible.
     if (externalProgress > 0) {
       if (!approachOrigin) {
         approachOrigin = camera.position.clone();
         controls.enabled = false;
       }
       const p = externalProgress;
-
-      // Smooth piecewise camera position based on journey segment
-      // Segment thresholds
-      const S1 = 0.32; // end of BH approach
-      const S2 = 0.50; // exit BH
-      const S3 = 0.78; // exit tunnel
-      // p > S3 → approach pulsar
-
-      // BH approach phase (orbit → close to BH center, drifting equatorial)
       const az = Math.atan2(approachOrigin.z, approachOrigin.x);
       const initEl = Math.atan2(
         approachOrigin.y,
@@ -443,103 +471,143 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       );
       const originDist = approachOrigin.length();
 
-      let camX = 0, camY = 0, camZ = 0;
-      let lookAtZ = 0;
-      let fov = 45;
-      let rgbShift = 0.00001;
-      let diskScale = 0.75;
-      let tunnelI = 0;
-      let pulsarVisible = false;
-      let dopplerBoost = 0; // forward-direction brightening (Schnittman 2024)
+      // Off-axis position (orbit) — only meaningful in p < ~0.30
+      const offDist = THREE.MathUtils.lerp(originDist, 1.0, ss(0, 0.28, p));
+      const offEl   = initEl * (1 - ss(0, 0.28, p));
+      const offR    = offDist * Math.cos(offEl);
+      const offX = offR * Math.cos(az);
+      const offY = offDist * Math.sin(offEl);
+      const offZ = offR * Math.sin(az);
 
-      if (p < S1) {
-        // SEGMENT 1: BH approach (cubic ease-in for gravitational grip)
-        const sp = p / S1;            // 0..1
-        const k  = sp * sp * sp;
-        const dist = originDist * (1 - k) + 0.4 * k;
-        const el   = initEl * Math.max(0, 1 - k * 2.2);
-        const r    = dist * Math.cos(el);
-        camX = r * Math.cos(az);
-        camY = dist * Math.sin(el);
-        camZ = r * Math.sin(az);
-        lookAtZ = 0;
-        fov = THREE.MathUtils.lerp(45, 95, k);
-        rgbShift = 0.00001 + Math.pow(k, 1.5) * 0.012;
-        diskScale = THREE.MathUtils.lerp(0.75, 1.3, Math.min(1, sp * 1.6));
-        // Doppler boost ramps as camera accelerates inward (NASA Schnittman)
-        dopplerBoost = k * 0.55;
-      } else if (p < S2) {
-        // SEGMENT 2: Through the BH — camera passes through origin into z<0
-        const sp = (p - S1) / (S2 - S1); // 0..1
-        const k  = sp;                    // linear (we're punching through)
-        camX = 0;
-        camY = 0;
-        camZ = THREE.MathUtils.lerp(0.4, -8, k); // crosses origin around sp=0.5
-        lookAtZ = -100;
-        fov = THREE.MathUtils.lerp(95, 110, k);
-        rgbShift = 0.014 + (1 - Math.abs(0.5 - k) * 2) * 0.018; // peaks at the center
-        diskScale = 1.3;
-        // Doppler boost peaks at horizon crossing — camera is at relativistic v
-        dopplerBoost = 0.55 + (1 - Math.abs(0.5 - k) * 2) * 0.35;
-      } else if (p < S3) {
-        // SEGMENT 3: Wormhole tunnel — camera flies through the ring stack
-        const sp = (p - S2) / (S3 - S2); // 0..1
-        // Cubic ease-out — fast entry, decelerates at exit
-        const k  = 1 - Math.pow(1 - sp, 3);
-        camX = Math.sin(t * 0.4) * 0.05;     // tiny drift for organic feel
-        camY = Math.cos(t * 0.3) * 0.04;
-        camZ = THREE.MathUtils.lerp(-8, -165, k);
-        lookAtZ = -250;
-        fov = THREE.MathUtils.lerp(110, 75, k);
-        rgbShift = 0.024 - sp * 0.018;
-        diskScale = 1.3;
-        tunnelI = Math.sin(sp * Math.PI); // bell curve — peaks mid-tunnel
-        pulsarVisible = sp > 0.65;
-      } else {
-        // SEGMENT 4: Emerge & approach the neutron star
-        const sp = (p - S3) / (1 - S3); // 0..1
-        const k  = sp * sp * (3 - 2 * sp); // smoothstep
-        camX = 0;
-        camY = THREE.MathUtils.lerp(0, 1.2, k); // settle into MIRA_PULSAR view
-        camZ = THREE.MathUtils.lerp(-165, -195, k);
-        lookAtZ = -210;
-        fov = THREE.MathUtils.lerp(75, 55, k);
-        rgbShift = 0.006 * (1 - k) + 0.00001 * k;
-        diskScale = 1.3 - k * 0.55; // disc fades behind us
-        tunnelI = (1 - k) * 0.7;
-        pulsarVisible = true;
-      }
+      // Continuous on-axis Z keyframes — the journey's spatial spine.
+      // Camera Z position is one smooth curve from orbit-Z to pulsar-view-Z.
+      const onZ = lerpKf(p, [
+        [0.00,  originDist],   // start: distance away from BH along view axis
+        [0.20,  3.0],
+        [0.32,  0.40],         // converging to BH approach
+        [0.50, -8.0],          // through the singularity
+        [0.65, -90.0],          // mid-tunnel
+        [0.78, -160.0],         // exiting tunnel
+        [0.92, -190.0],
+        [1.00, -198.0],         // settled near pulsar (10u in front)
+      ]);
 
+      // Off→on-axis blend: 100% off-axis at p=0, 100% on-axis by p=0.32
+      const onWeight = ss(0.18, 0.32, p);
+      const settleY  = lerpKf(p, [
+        [0.78, 0.0],
+        [1.00, 1.2],
+      ]);
+      const camX = offX * (1 - onWeight);
+      const camY = offY * (1 - onWeight) + settleY * onWeight;
+      const camZ = offZ * (1 - onWeight) + onZ   * onWeight;
+
+      // Continuous lookAt — single smooth curve down -z axis, settles up at pulsar
+      const lookZ = lerpKf(p, [
+        [0.00,    0.0],
+        [0.20,    0.0],
+        [0.35, -100.0],
+        [0.55, -200.0],
+        [0.78, -240.0],
+        [1.00, -210.0],
+      ]);
+      const lookY = lerpKf(p, [
+        [0.00, 0.0],
+        [0.92, 0.0],
+        [1.00, 0.6],
+      ]);
+
+      // Continuous FOV — one curve, no segment seams
+      const fov = lerpKf(p, [
+        [0.00, 45.0],
+        [0.30, 90.0],
+        [0.45, 110.0],
+        [0.65, 90.0],
+        [0.85, 65.0],
+        [1.00, 55.0],
+      ]);
+
+      // Continuous chromatic aberration (peaks at horizon crossing)
+      const rgbShift = lerpKf(p, [
+        [0.00, 0.00001],
+        [0.30, 0.012],
+        [0.42, 0.030],   // peak — light is being torn apart
+        [0.55, 0.020],
+        [0.78, 0.005],
+        [1.00, 0.00001],
+      ]);
+
+      // Continuous Doppler boost (Schnittman 2024 — forward brightening)
+      const dopplerBoost = lerpKf(p, [
+        [0.00, 0.00],
+        [0.30, 0.55],
+        [0.42, 0.90],   // peak — relativistic
+        [0.55, 0.65],
+        [0.78, 0.20],
+        [1.00, 0.00],
+      ]);
+
+      // Disc scale — grows as we approach, fades behind us in tunnel
+      const diskScale = lerpKf(p, [
+        [0.00, 0.75],
+        [0.30, 1.30],
+        [0.55, 1.30],
+        [0.78, 0.85],
+        [1.00, 0.40],
+      ]);
+
+      // Tunnel ring/streak intensity — fades in mid-approach, peaks in tunnel,
+      // fades out as we emerge. No on/off — pure cross-fade.
+      const tunnelI = lerpKf(p, [
+        [0.00, 0.0],
+        [0.32, 0.0],
+        [0.42, 0.55],   // entering — just past BH crossing
+        [0.62, 1.00],
+        [0.78, 0.85],
+        [0.90, 0.30],
+        [1.00, 0.0],
+      ]);
+
+      // Pulsar visibility — DIM from segment 3 (visible far ahead in tunnel),
+      // bright at the destination. Cross-fade, no hard reveal.
+      const pulsarOp = lerpKf(p, [
+        [0.00, 0.0],
+        [0.55, 0.0],
+        [0.72, 0.30],
+        [0.88, 0.85],
+        [1.00, 1.00],
+      ]);
+
+      // Apply
       camera.position.set(camX, camY, camZ);
-      camera.lookAt(0, 0, lookAtZ);
+      camera.lookAt(0, lookY, lookZ);
       camera.fov = fov;
       camera.updateProjectionMatrix();
       finalUniforms.uRGBShiftRadius.value = rgbShift;
       finalUniforms.uDopplerBoost.value   = dopplerBoost;
-      discMesh.scale.setScalar(Math.max(0.1, diskScale));
-      partPoints.scale.setScalar(Math.max(0.1, diskScale));
+      discMesh.scale.setScalar(Math.max(0.05, diskScale));
+      partPoints.scale.setScalar(Math.max(0.05, diskScale));
 
-      // Tunnel rings: opacity ramps with tunnelI; subtle rotation animates
       for (let i = 0; i < tunnelMats.length; i++) {
-        tunnelMats[i].opacity = tunnelI * (0.6 + (i % 4) * 0.1);
+        tunnelMats[i].opacity = tunnelI * (0.5 + (i % 4) * 0.12);
       }
       tunnelGroup.rotation.z += 0.004;
-      tunnelStreakMat.opacity = tunnelI * 0.85;
+      tunnelStreakMat.uniforms.uOpacity.value = tunnelI * 0.85;
 
-      // Neutron star + beam visibility
-      neutronStar.visible = pulsarVisible;
-      beam.visible        = pulsarVisible;
-      if (pulsarVisible) {
-        // Slow rotation
+      // Pulsar — visible and pulsing whenever pulsarOp > epsilon (cross-fades in)
+      const pulsarOn = pulsarOp > 0.005;
+      neutronStar.visible = pulsarOn;
+      beam.visible        = pulsarOn;
+      if (pulsarOn) {
         neutronStar.rotation.y += 0.04;
-        // 92ms beam pulse synced to wall-clock so it's stable across frames
+        neutronMat.emissiveIntensity = 2.2 * pulsarOp;
+        // 92ms wall-clock locked beat — stable across frames
         const beatPhase = (performance.now() / 1000) % 0.092;
-        const age = beatPhase;
-        const a = age < 0.080 ? Math.exp(-age / 0.022) * 0.92 : 0.0;
-        beamUni.uAlpha.value = a;
-        neutronLight.intensity = a * 7;
+        const a = beatPhase < 0.080 ? Math.exp(-beatPhase / 0.022) * 0.92 : 0.0;
+        beamUni.uAlpha.value     = a * pulsarOp;
+        neutronLight.intensity   = a * 7 * pulsarOp;
       } else {
-        beamUni.uAlpha.value = 0;
+        beamUni.uAlpha.value   = 0;
         neutronLight.intensity = 0;
       }
     } else if (approachOrigin) {
@@ -552,7 +620,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       discMesh.scale.setScalar(0.75);
       partPoints.scale.setScalar(0.75);
       tunnelMats.forEach((m) => { m.opacity = 0; });
-      tunnelStreakMat.opacity = 0;
+      tunnelStreakMat.uniforms.uOpacity.value = 0;
       neutronStar.visible = false;
       beam.visible = false;
       neutronLight.intensity = 0;

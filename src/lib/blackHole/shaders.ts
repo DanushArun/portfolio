@@ -129,8 +129,11 @@ void main()
     vec4 modelViewPosition = modelViewMatrix * vec4(newPosition, 1.0);
     gl_Position = projectionMatrix * modelViewPosition;
 
-    gl_PointSize = aSize * uSize * uViewHeight;
-    gl_PointSize *= (1.0 / - modelViewPosition.z);
+    // Pixel size with distance attenuation, but CLAMPED so close particles
+    // don't balloon into chunky pixel blocks when the camera is at the disc.
+    // Particles stay sub-5px at any distance — star-like, not blob-like.
+    float ps = aSize * uSize * uViewHeight / max(- modelViewPosition.z, 0.4);
+    gl_PointSize = clamp(ps, 0.6, 5.0);
 
     vColor = mix(uInnerColor, uOuterColor, outerProgress);
 
