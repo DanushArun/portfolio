@@ -90,7 +90,6 @@ export default function SceneManager() {
 
     if (progress >= 1) {
       wheelAcc.current = 0;
-      setHorizonProgress(0);
       useScene.getState().setPhase('DESCENT');
     }
   }, [setHorizonProgress]);
@@ -140,7 +139,10 @@ export default function SceneManager() {
           zIndex={1}
           innerColor="#ffc066"
           outerColor="#5a1a08"
-          progress={phase === 'EVENT_HORIZON' ? horizonProgress : 0}
+          // Keep BH at full approach during DESCENT — the equation dissolves in
+          // front of the massive close-up singularity, then the veil covers it.
+          // Only reset when returning to VOID/EVENT_HORIZON (which never happens).
+          progress={phase === 'EVENT_HORIZON' ? horizonProgress : phase === 'DESCENT' ? 1 : 0}
         />
       )}
 
