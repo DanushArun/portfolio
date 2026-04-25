@@ -284,6 +284,9 @@ uniform sampler2D uSpaceTexture;
 uniform sampler2D uDistortionTexture;
 uniform vec2 uBlackHolePosition;
 uniform float uRGBShiftRadius;
+// Relativistic forward Doppler boost (Schnittman 2024 plunge): the direction
+// of camera motion brightens at high velocities. 0 = at rest, ~1 = near c.
+uniform float uDopplerBoost;
 
 layout(location = 0) out vec4 pc_FragColor;
 
@@ -323,6 +326,17 @@ void main()
         outColor += getRGBShiftedColor(uSpaceTexture, sampleUv, uRGBShiftRadius);
     }
     outColor /= blurSamples;
+
+    // Relativistic forward Doppler boost — pixels near the direction of motion
+    // (toward BH center) brighten and shift toward the blue. Real physics:
+    // brightness ∝ D^(3+α). We approximate with an exponential falloff from
+    // the BH screen position. Falls off naturally at the periphery.
+    float distFromForward = length(vUv - uBlackHolePosition);
+    float forwardWeight = exp(-distFromForward * 3.5);
+    float boost = 1.0 + uDopplerBoost * forwardWeight * 0.85;
+    outColor *= boost;
+    // Subtle blue-shift in the brightest part of the forward beam
+    outColor.b += uDopplerBoost * forwardWeight * 0.12;
 
     pc_FragColor = vec4(outColor, 1.0);
 }

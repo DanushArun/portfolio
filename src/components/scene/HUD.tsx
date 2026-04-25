@@ -1,6 +1,6 @@
 'use client';
 
-import { useScene, phaseTime } from '@/lib/scene-state';
+import { useScene } from '@/lib/scene-state';
 import { useEffect, useState } from 'react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -211,120 +211,38 @@ function ScrollCTA() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FORMULA_RINGS data overlay
-// ─────────────────────────────────────────────────────────────────────────────
-
-const RING_DATA: { text: string; accent: boolean }[] = [
-  { text: 'FM23e ELECTRIC VEHICLE',         accent: false },
-  { text: 'MOTOR: KV-80 · 500 RPM/V',       accent: false },
-  { text: 'OPERATIONS LEAD: 2022–2024',      accent: false },
-  { text: '',                                accent: false },
-  { text: 'PATH PLANNING: AUTONOMOUS',       accent: false },
-  { text: 'ACCURACY IMPROVEMENT: +40%',      accent: true  },
-  { text: '',                                accent: false },
-  { text: 'FORMULA BHARAT 2024: 1ST PLACE',  accent: true  },
-  { text: 'COST & MANUFACTURING: 1ST PLACE', accent: true  },
-  { text: 'SPONSORSHIP: ₹60 LAKH',          accent: true  },
-];
-
-function FormulaOverlay() {
-  const scrollVelocity = useScene((s) => s.scrollVelocity);
-  const visible = Math.abs(scrollVelocity) < 50;
-
-  return (
-    <div style={{
-      position:      'fixed',
-      top:           '50%',
-      right:         '5vw',
-      transform:     'translateY(-50%)',
-      opacity:       visible ? 1 : 0,
-      transition:    'opacity 400ms ease-out',
-      pointerEvents: 'none',
-      zIndex:        10,
-      fontFamily:    'var(--font-mono, monospace)',
-      fontSize:      '10px',
-      letterSpacing: '0.22em',
-      lineHeight:    1.65,
-      textTransform: 'uppercase',
-    }}>
-      {RING_DATA.map((line, i) =>
-        line.text === '' ? (
-          <div key={i} style={{ height: '0.8em' }} />
-        ) : (
-          <div key={i} style={{ color: line.accent ? '#B8FF3C' : '#E8E4D8' }}>
-            {line.text}
-          </div>
-        )
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main HUD
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function HUD() {
-  const phase      = useScene((s) => s.phase);
-  const phaseStart = useScene((s) => s.phaseStart);
-  const pulsarBeat = useScene((s) => s.pulsarBeat);
-  const [, tick]   = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 92);
-    return () => clearInterval(id);
-  }, []);
-
-  const pt = phaseTime(phaseStart);
+  const phase = useScene((s) => s.phase);
 
   return (
     <>
-      {/* ── Top strip ── */}
+      {/* Top strip — silent during the flight. Only the project name on arrival. */}
       <div style={{ ...STRIP, top: 0 }}>
-        <div style={MONO}>
-          {phase === 'VOID'           && 'SCHWARZSCHILD METRIC — INITIALIZING'}
-          {phase === 'DESCENT'        && 'EVENT HORIZON — CROSSING'}
-          {phase === 'MIRA_PULSAR'    && 'MIRA — VOICE AI AGENT'}
-          {phase === 'DRIVEX_QUASAR'  && 'DRIVEX — AGENTIC SYSTEMS'}
-          {phase === 'TWIN_BUILD'     && 'FURYX × VERONICA — TWIN BUILD'}
-          {phase === 'FORMULA_RINGS'  && 'FM23e — FORMULA BHARAT 2024'}
-          {phase === 'QUANTUM_PLANET' && 'QUANTUM RESEARCH — BLEEDING EDGE'}
-          {phase === 'SINGULARITY'    && 'DANUSH ARUN — 2026'}
+        <div style={{ ...MONO, opacity: 0.55 }}>
+          {phase === 'MIRA_PULSAR' && 'MIRA  /  VOICE AI'}
+          {phase === 'DRIVEX_QUASAR'  && 'DRIVEX  /  AGENTIC SYSTEMS'}
+          {phase === 'TWIN_BUILD'     && 'FURYX × VERONICA'}
+          {phase === 'FORMULA_RINGS'  && 'FORMULA MANIPAL'}
+          {phase === 'QUANTUM_PLANET' && 'QUANTUM RESEARCH'}
+          {phase === 'SINGULARITY'    && 'DANUSH ARUN'}
         </div>
-        <div style={{ ...MONO, color: 'rgba(255,255,255,0.35)' }}>
-          {phase === 'MIRA_PULSAR' && (
-            <span style={{ color: '#B8FF3C' }}>
-              {'92ms · BEAT ' + String(pulsarBeat).padStart(4, '0')}
-            </span>
-          )}
-          {phase === 'DESCENT' && (
-            <span style={{ opacity: 0.5 }}>{pt.toFixed(2)}s</span>
-          )}
-        </div>
+        <div />
       </div>
 
-      {/* ── Bottom strip ── */}
+      {/* Bottom strip — only the landing nav hint and a quiet identity. */}
       <div style={{ ...STRIP, bottom: 0 }}>
         <div style={MONO}>
-          {/* Landing page: creative nav guide */}
           {phase === 'EVENT_HORIZON' && <NavHint />}
-
-          {/* Cosmic scenes — contextual prompts */}
-          {phase === 'MIRA_PULSAR'    && <div style={{ color: 'rgba(232,228,216,0.35)' }}>SPACEBAR · FIRE MANUAL PULSE</div>}
-          {phase === 'TWIN_BUILD'     && <div style={{ color: 'rgba(232,228,216,0.35)' }}>DRAG TO ORBIT THE BINARY SYSTEM</div>}
-          {phase === 'FORMULA_RINGS'  && <div style={{ color: '#B8FF3C', opacity: 0.7 }}>SCROLL VELOCITY CONTROLS RING SPEED</div>}
-          {phase === 'QUANTUM_PLANET' && <div style={{ color: 'rgba(232,228,216,0.35)' }}>CLICK EQUATIONS · DRAG PANELS</div>}
         </div>
-
-        <div style={{ ...MONO, textAlign: 'right' }}>
-          {phase === 'DESCENT' && <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>TIME DILATION — ∞</div>}
-        </div>
+        <div />
       </div>
 
-      {/* ── Centered elements ── */}
+      {/* Centered identity — landing only. */}
       {phase === 'EVENT_HORIZON' && <LandingIdentity />}
       {phase === 'EVENT_HORIZON' && <ScrollCTA />}
-      {phase === 'FORMULA_RINGS' && <FormulaOverlay />}
 
       {/* Keyframes for ScrollCTA bounce animation */}
       <style>{`

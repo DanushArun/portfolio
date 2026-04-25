@@ -369,6 +369,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     uDistortionTexture: { value: distortionRT.texture },
     uBlackHolePosition: { value: new THREE.Vector2() },
     uRGBShiftRadius:    { value: 0.00001 },
+    uDopplerBoost:      { value: 0.0 },
   };
   const finalMat = new THREE.RawShaderMaterial({
     glslVersion:    THREE.GLSL3,
@@ -449,6 +450,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       let diskScale = 0.75;
       let tunnelI = 0;
       let pulsarVisible = false;
+      let dopplerBoost = 0; // forward-direction brightening (Schnittman 2024)
 
       if (p < S1) {
         // SEGMENT 1: BH approach (cubic ease-in for gravitational grip)
@@ -464,6 +466,8 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         fov = THREE.MathUtils.lerp(45, 95, k);
         rgbShift = 0.00001 + Math.pow(k, 1.5) * 0.012;
         diskScale = THREE.MathUtils.lerp(0.75, 1.3, Math.min(1, sp * 1.6));
+        // Doppler boost ramps as camera accelerates inward (NASA Schnittman)
+        dopplerBoost = k * 0.55;
       } else if (p < S2) {
         // SEGMENT 2: Through the BH — camera passes through origin into z<0
         const sp = (p - S1) / (S2 - S1); // 0..1
@@ -475,6 +479,8 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         fov = THREE.MathUtils.lerp(95, 110, k);
         rgbShift = 0.014 + (1 - Math.abs(0.5 - k) * 2) * 0.018; // peaks at the center
         diskScale = 1.3;
+        // Doppler boost peaks at horizon crossing — camera is at relativistic v
+        dopplerBoost = 0.55 + (1 - Math.abs(0.5 - k) * 2) * 0.35;
       } else if (p < S3) {
         // SEGMENT 3: Wormhole tunnel — camera flies through the ring stack
         const sp = (p - S2) / (S3 - S2); // 0..1
@@ -509,6 +515,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       camera.fov = fov;
       camera.updateProjectionMatrix();
       finalUniforms.uRGBShiftRadius.value = rgbShift;
+      finalUniforms.uDopplerBoost.value   = dopplerBoost;
       discMesh.scale.setScalar(Math.max(0.1, diskScale));
       partPoints.scale.setScalar(Math.max(0.1, diskScale));
 
@@ -541,6 +548,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       camera.fov = 45;
       camera.updateProjectionMatrix();
       finalUniforms.uRGBShiftRadius.value = 0.00001;
+      finalUniforms.uDopplerBoost.value   = 0;
       discMesh.scale.setScalar(0.75);
       partPoints.scale.setScalar(0.75);
       tunnelMats.forEach((m) => { m.opacity = 0; });

@@ -9,7 +9,7 @@
  * so downstream scenes can use the 92ms metronome.
  */
 
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
@@ -95,26 +95,60 @@ function StarScene({ onBeat }: { onBeat: () => void }) {
   );
 }
 
-// DOM overlay — exported so SceneManager can mount it outside the Canvas
+// Portfolio overlay — restrained. Project title, one-line brief, no data dump.
+// Fades in 800ms after arrival; stays quiet so the visual is the hero.
 export function MiraPulsarOverlay() {
-  const beats = useScene((s) => s.pulsarBeat);
-  const n = Math.min(beats, DATA_LINES.length);
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
-    <div style={{
-      position: 'fixed', bottom: '14vh', left: '4vw',
-      zIndex: 15, fontFamily: 'var(--font-mono, monospace)',
-      fontSize: 11, letterSpacing: '0.22em', lineHeight: 2.0,
-      pointerEvents: 'none', textTransform: 'uppercase',
-    }}>
-      {DATA_LINES.slice(0, n).map((l, i) => (
-        <div key={i} style={{ display: 'flex', gap: '1.5em' }}>
-          <span style={{ color: 'rgba(232,228,216,0.35)', minWidth: '7em' }}>{l.label}</span>
-          <span style={{ color: l.accent ? '#B8FF3C' : '#E8E4D8' }}>{l.value}</span>
-        </div>
-      ))}
-      {n > 0 && n < DATA_LINES.length && (
-        <span style={{ color: 'rgba(232,228,216,0.45)' }}>▋</span>
-      )}
+    <div
+      style={{
+        position: 'fixed',
+        left: '6vw',
+        bottom: '12vh',
+        zIndex: 15,
+        pointerEvents: 'none',
+        opacity: show ? 1 : 0,
+        transform: show ? 'translateY(0)' : 'translateY(8px)',
+        transition: 'opacity 1.4s cubic-bezier(0.16,1,0.3,1), transform 1.4s cubic-bezier(0.16,1,0.3,1)',
+      }}
+    >
+      <div style={{
+        fontFamily: 'var(--font-mono, monospace)',
+        fontSize: 10, letterSpacing: '0.32em',
+        color: 'rgba(232,228,216,0.4)',
+        textTransform: 'uppercase',
+        marginBottom: '0.75rem',
+      }}>
+        01  ·  Mira
+      </div>
+      <div style={{
+        fontFamily: 'var(--font-display, serif)',
+        fontWeight: 800,
+        fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
+        letterSpacing: '0.04em',
+        color: '#E8E4D8',
+        lineHeight: 1.05,
+        textTransform: 'uppercase',
+        marginBottom: '0.6rem',
+      }}>
+        Voice AI Agent
+      </div>
+      <div style={{
+        fontFamily: 'var(--font-sans, sans-serif)',
+        fontSize: 'clamp(0.78rem, 1vw, 0.92rem)',
+        fontWeight: 300,
+        color: 'rgba(232,228,216,0.55)',
+        maxWidth: '32ch',
+        lineHeight: 1.55,
+      }}>
+        Real-time agentic conversation under 100ms latency.
+        Production at DriveX.
+      </div>
     </div>
   );
 }
