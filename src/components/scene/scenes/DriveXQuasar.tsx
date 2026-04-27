@@ -96,6 +96,13 @@ function JetParticles({ direction, color, mouseX, mouseY, seed, turbulence }: Je
     [color, turbulence],
   );
 
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
+
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     timeRef.current += dt;
