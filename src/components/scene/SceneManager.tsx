@@ -4,6 +4,8 @@ import { useEffect, useRef, useCallback, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useScene, isCosmic, type ScenePhase } from '@/lib/scene-state';
 import dynamic from 'next/dynamic';
+import { useAudio } from '@/hooks/useAudio';
+import AudioToggle from '@/components/ui/AudioToggle';
 
 import BlackHoleMount from './BlackHoleMount';
 import CameraRig from './CameraRig';
@@ -118,6 +120,8 @@ export default function SceneManager() {
     if (p === 'VOID') beginJourney();
   }, []);
 
+  useAudio();
+
   // The BH canvas drives everything from VOID through MIRA_PULSAR.
   // It only unmounts when the user moves PAST MIRA_PULSAR into other planets.
   const showBH       = phase === 'VOID' || phase === 'EVENT_HORIZON' ||
@@ -179,6 +183,7 @@ export default function SceneManager() {
       <DriveXQuasarOverlay />
       <TwinBuildOverlay />
       {showR3F && <ScrollSnap />}
+      <AudioToggle />
     </>
   );
 }
