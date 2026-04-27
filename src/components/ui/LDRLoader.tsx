@@ -2,59 +2,78 @@
 
 import React, { useEffect, useState } from 'react';
 
-// --- THEMATIC SYMBOLS ---
+// --- INTENSE THEMATIC SYMBOLS ---
 
 const Singularity = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
-    <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 2v2M12 20v2M2 12h2M20 12h2" stroke="currentColor" strokeWidth="1" />
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" width="100%" height="100%">
+    <circle cx="50" cy="50" r="15" fill="currentColor" />
+    <ellipse cx="50" cy="50" rx="40" ry="10" strokeWidth="2" transform="rotate(15 50 50)" />
+    <ellipse cx="50" cy="50" rx="38" ry="8" transform="rotate(-15 50 50)" opacity="0.6" />
+    <ellipse cx="50" cy="50" rx="42" ry="12" transform="rotate(45 50 50)" opacity="0.3" />
+    <circle cx="50" cy="50" r="25" strokeDasharray="2 4" opacity="0.5" />
   </svg>
 );
 
-const Quantum = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
-    <circle cx="12" cy="12" r="2" />
-    <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(60 12 12)" />
-    <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(120 12 12)" />
+const Wormhole = () => (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" width="100%" height="100%">
+    {Array.from({length: 10}).map((_, i) => (
+      <ellipse key={i} cx="50" cy="50" rx={10 + i*4} ry={4 + i*2} opacity={1 - i*0.08} />
+    ))}
+    <path d="M 50 10 C 20 40, 40 45, 50 50 C 60 45, 80 40, 50 10" opacity="0.5"/>
+    <path d="M 50 90 C 20 60, 40 55, 50 50 C 60 55, 80 60, 50 90" opacity="0.5"/>
   </svg>
 );
 
-const Spacetime = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
-    <path d="M2 6h20M2 12h20M2 18h20M6 2v20M12 2v20M18 2v20" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-    <circle cx="12" cy="12" r="4" fill="black" stroke="currentColor" strokeWidth="2" />
+const EventHorizon = () => (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" width="100%" height="100%">
+    <circle cx="50" cy="50" r="20" fill="currentColor" />
+    <path d="M 10 50 A 40 40 0 0 1 90 50" strokeWidth="2" />
+    <path d="M 15 50 A 35 35 0 0 0 85 50" opacity="0.6" />
+    <path d="M 20 50 A 30 30 0 0 1 80 50" strokeDasharray="1 3" />
+    <circle cx="50" cy="50" r="45" opacity="0.2" />
   </svg>
 );
 
-const Delta = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
-    <path d="M12 4L2 20h20L12 4z" fill="none" stroke="currentColor" strokeWidth="2" />
-    <path d="M12 8l-6 10h12l-6-10z" />
+const Quasar = () => (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" width="100%" height="100%">
+    <circle cx="50" cy="50" r="8" fill="currentColor" />
+    <path d="M 50 42 L 50 5" strokeWidth="3" strokeLinecap="round"/>
+    <path d="M 50 58 L 50 95" strokeWidth="3" strokeLinecap="round"/>
+    <path d="M 45 50 L 10 50 M 55 50 L 90 50" strokeDasharray="2 4"/>
+    <ellipse cx="50" cy="50" rx="30" ry="6" opacity="0.8"/>
+    <ellipse cx="50" cy="50" rx="20" ry="4" strokeWidth="2"/>
   </svg>
 );
 
-const Flux = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
-    <path d="M4 12h16M14 6l6 6-6 6M4 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+const Magnetar = () => (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" width="100%" height="100%">
+    <circle cx="50" cy="50" r="10" fill="currentColor" />
+    <path d="M 50 40 C 0 0, 0 100, 50 60" opacity="0.6"/>
+    <path d="M 50 40 C 100 0, 100 100, 50 60" opacity="0.6"/>
+    <path d="M 50 30 C -20 -20, -20 120, 50 70" opacity="0.3"/>
+    <path d="M 50 30 C 120 -20, 120 120, 50 70" opacity="0.3"/>
+    <line x1="50" y1="10" x2="50" y2="90" strokeDasharray="4 4" opacity="0.5"/>
   </svg>
 );
 
-const Orbit = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="100%" height="100%">
-    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 2" />
-    <circle cx="20" cy="12" r="3" />
+const BinaryMerger = () => (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" width="100%" height="100%">
+    <circle cx="35" cy="50" r="8" fill="currentColor" />
+    <circle cx="65" cy="50" r="8" fill="currentColor" />
+    <path d="M 35 42 C 50 30, 65 42, 65 42" strokeWidth="2"/>
+    <path d="M 35 58 C 50 70, 65 58, 65 58" strokeWidth="2"/>
+    <ellipse cx="50" cy="50" rx="40" ry="20" opacity="0.4" transform="rotate(30 50 50)"/>
+    <ellipse cx="50" cy="50" rx="40" ry="20" opacity="0.4" transform="rotate(-30 50 50)"/>
   </svg>
 );
 
 const icons = [
   <Singularity key="s" />, 
-  <Quantum key="q" />, 
-  <Spacetime key="st" />, 
-  <Delta key="d" />, 
-  <Flux key="f" />, 
-  <Orbit key="o" />
+  <Wormhole key="w" />, 
+  <EventHorizon key="eh" />, 
+  <Quasar key="q" />, 
+  <Magnetar key="m" />, 
+  <BinaryMerger key="bm" />
 ];
 
 export default function LDRLoader() {
@@ -88,7 +107,7 @@ export default function LDRLoader() {
         </div>
       )}
 
-      <div className={`relative w-20 h-20 text-white transition-transform duration-75 ${glitch ? 'scale-110 translate-x-1 rotate-1' : 'scale-100'}`}>
+      <div className={`relative w-32 h-32 text-white transition-transform duration-75 ${glitch ? 'scale-110 translate-x-1 rotate-1' : 'scale-100'}`}>
         {icons[index]}
         
         {/* Chromatic Aberration Glitch */}
@@ -102,10 +121,6 @@ export default function LDRLoader() {
             </div>
           </>
         )}
-      </div>
-
-      <div className="absolute bottom-16 font-mono text-[9px] tracking-[0.5em] text-white/30 uppercase">
-        Establishing Metric Framework
       </div>
     </div>
   );

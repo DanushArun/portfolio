@@ -321,7 +321,7 @@ export function DriveXQuasarOverlay() {
   const startRef = useRef(0);
 
   useEffect(() => {
-    if (phase !== 'DRIVEX_QUASAR') return;
+    if (phase !== 'BINARY_MERGER') return;
     startRef.current = performance.now();
     setParticleLife(0);
 
@@ -346,7 +346,7 @@ export function DriveXQuasarOverlay() {
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  if (phase !== 'DRIVEX_QUASAR') return null;
+  if (phase !== 'BINARY_MERGER') return null;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 25, pointerEvents: 'none' }}>

@@ -75,6 +75,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
   // ── Camera ──────────────────────────────────────────────────────────────────
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+  // Restore original off-axis angle
   camera.position.set(3, 2.5, 5);
   camera.lookAt(0, 0, 0);
   spaceScene.add(camera);
@@ -89,7 +90,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   controls.maxDistance = 12;
   controls.enabled = !opts.disableInteraction;
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.3;
+  controls.autoRotateSpeed = 0.15; // Slow, majestic rotation
 
   // ── Render targets ──────────────────────────────────────────────────────────
   const spaceRT = new THREE.WebGLRenderTarget(width * 2, height * 2, {
@@ -234,6 +235,157 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   const starsPoints = new THREE.Points(starGeo, starsMat);
   starsPoints.frustumCulled = false;
   spaceScene.add(starsPoints);
+
+  // ── Text Particles ("DANUSH ARUN") ──────────────────────────────────────────
+  let textPoints: THREE.Points | null = null;
+  const initTextParticles = async () => {
+    // Wait for fonts to load
+    await document.fonts.ready;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, 2048, 512);
+    // Editorial italic — Instrument Serif italic 400. Fluid strokes,
+    // yummy editorial vibe. Replaces the heavy 900-weight Cormorant.
+    ctx.font = 'italic 400 240px "Instrument Serif", "Cormorant Garamond", "Times New Roman", serif';
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.letterSpacing = '12px';
+    ctx.fillText('Danush Arun', 1024, 256);
+
+    const imgData = ctx.getImageData(0, 0, 2048, 512).data;
+    const positions = [];
+    const originalPos = [];
+    const randoms = [];
+    
+    // Orient the text plane to face the camera HORIZONTALLY (Y-axis pivot only).
+    //
+    // Why not a full lookAt-style rotation: the previous setFromUnitVectors
+    // mapped (0,0,1) → camPos.normalize() = (0.49, 0.41, 0.81). That rotation
+    // axis is diagonal (perpendicular to both the original and target normal),
+    // which tilts the text's horizontal X-axis off world-horizontal. The
+    // parabolic curve is symmetric in nx, but a tilted X-axis canted the whole
+    // shape, so the left side rose and the right side dropped.
+    //
+    // Constraining the rotation to the world Y-axis keeps the text's local X
+    // parallel to world horizontal. The parabola then renders symmetrically
+    // from any camera height.
+    const initialCamPos = new THREE.Vector3(3, 2.5, 5);
+    const angleY = Math.atan2(initialCamPos.x, initialCamPos.z);
+    const quaternion = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      angleY
+    );
+
+    for(let y = 0; y < 512; y += 6) {
+      for(let x = 0; x < 2048; x += 6) {
+        const i = (y * 2048 + x) * 4;
+        if (imgData[i] > 128) {
+           // Normalized coordinates (-1 to +1)
+           const nx = (x / 2048) * 2.0 - 1.0;
+           const ny = -(y / 512) * 2.0 + 1.0;
+           
+           // Base width and height mapping
+           // Total width 8 units (down from 10) — guarantees the text
+           // stays inside the desktop viewport on every aspect ratio.
+           const px = nx * 4.0;
+
+           // Uniform stroke — no thickness variation that bloated the edges.
+           // Italic Instrument Serif already has its own beautiful contrast.
+           let py = ny * 0.8;
+
+           // Parabolic arch over the top of the black hole's upper limb.
+           // Coefficient unchanged — the curve already hugs the rim correctly,
+           // it was just being fought by the bold weight + thickness multiplier.
+           py -= Math.pow(nx, 2.0) * 1.2;
+
+           // Elevation to sit just above the disk rim
+           py += 1.8;
+           
+           const pz = 0;
+           
+           const pos = new THREE.Vector3(px, py, pz);
+           // Face the initial camera
+           pos.applyQuaternion(quaternion);
+
+           positions.push(pos.x, pos.y, pos.z);
+           originalPos.push(pos.x, pos.y, pos.z);
+           randoms.push(Math.random(), Math.random(), Math.random());
+        }
+      }
+    }
+
+    const textGeo = new THREE.BufferGeometry();
+    textGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    textGeo.setAttribute('aOriginal', new THREE.Float32BufferAttribute(originalPos, 3));
+    textGeo.setAttribute('aRandom', new THREE.Float32BufferAttribute(randoms, 3));
+    
+    const textMat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime: { value: 0 },
+        uProgress: { value: 0 },
+        uColor: { value: new THREE.Color('#F2EEE7') },
+        uDestColor: { value: new THREE.Color('#ff8040') }
+      },
+      vertexShader: `
+        uniform float uTime;
+        uniform float uProgress;
+        attribute vec3 aOriginal;
+        attribute vec3 aRandom;
+        varying vec3 vColor;
+        varying float vAlpha;
+        
+        void main() {
+          float pull = pow(uProgress, 2.5);
+          vec3 targetPos = vec3(0.0, 0.0, 0.0);
+          float individualPull = clamp(pull * (1.0 + aRandom.x * 0.5), 0.0, 1.0);
+          
+          vec3 pos = aOriginal;
+          
+          // Pull effect towards world origin (0,0,0)
+          pos = mix(pos, targetPos, individualPull);
+          
+          if (individualPull > 0.1) {
+             vec3 dir = normalize(targetPos - aOriginal);
+             pos += dir * sin(uTime * 10.0 + aRandom.z * 10.0) * 0.2 * individualPull;
+          }
+          
+          pos += (aRandom - 0.5) * 0.1 * individualPull;
+          
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          
+          gl_PointSize = (4.0 * (1.0 - individualPull)) + (sin(uTime * 8.0 + aRandom.x * 100.0) * 1.0 + 1.0);
+          vAlpha = 1.0 - pow(individualPull, 4.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform vec3 uDestColor;
+        uniform float uProgress;
+        varying float vAlpha;
+        void main() {
+          float r = distance(gl_PointCoord, vec2(0.5));
+          if (r > 0.5) discard;
+          vec3 finalColor = mix(uColor, uDestColor, pow(uProgress, 2.0));
+          gl_FragColor = vec4(finalColor, vAlpha * (1.0 - r * 2.0));
+        }
+      `
+    });
+    
+    textPoints = new THREE.Points(textGeo, textMat);
+    textPoints.frustumCulled = false;
+    spaceScene.add(textPoints);
+  };
+  
+  initTextParticles();
 
   // ──────────────────────────────────────────────────────────────────────────
   // EXTENDED JOURNEY — wormhole tunnel + new universe + neutron star
@@ -490,62 +642,58 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
       // λ adapts to actual R0 so the decay rate is always correct regardless of
       // where the user happened to be orbiting when they started scrolling.
-      const lambda = Math.log(R0 / 2.0) / 0.55; // r(0.55) = 2.0 exactly
+      const lambda = Math.log(R0 / 0.5) / 0.55; // Pass through r=0.5 at p=0.55
 
       if (p < 0.55) {
-        // ── PHASE A — The big approach (55% of total scroll)
-        //
-        // r(p) = R₀·exp(−λp)  — exponential decay = perceptually uniform BH growth.
-        // Unlike cubic ease-in (barely moves at first), every scroll tick here
-        // gives a visible increase in apparent BH angular size because the BH
-        // shadow is ~1/r: size grows at the same rate as the camera approaches.
-        //
-        // θ(p) = θ₀·exp(−9p)  — elevation drifts rapidly to equatorial so the
-        // disk starts wrapping (Interstellar-style side view) by mid-approach.
+        // ── PHASE A — The big approach
+        // Maintain user's angle (th0) much more, only drifting slightly to equator
+        // to show the disk's depth without flattening it into a line.
         const r = R0 * Math.exp(-lambda * p);
-        const th = th0 * Math.exp(-9.0 * p);
+        const th = mix(th0, 0.0, Math.pow(p / 0.55, 2.5) * 0.7); // Only 70% drift to equator
         camX = r * Math.cos(th) * Math.cos(phi);
         camY = r * Math.sin(th);
         camZ = r * Math.cos(th) * Math.sin(phi);
-        lookX = 0; lookY = 0; lookZ = 0; // always looking at BH
-        fov = 45 + 40 * (p / 0.55);      // 45° → 85° (linear, smooth widening)
-        rgbShift = 0.00001 + 0.015 * Math.pow(p / 0.55, 2); // 0.00001 → 0.015
-        dopplerBoost = 0.60 * (p / 0.55);                        // 0 → 0.60
-        diskScale = 0.75 + 0.55 * (p / 0.55);                 // 0.75 → 1.30
+        
+        lookX = 0; lookY = 0; lookZ = 0;
+        fov = 45 + 50 * (p / 0.55);      // 45° → 95°
+        rgbShift = 0.00001 + 0.02 * Math.pow(p / 0.55, 3);
+        dopplerBoost = 0.8 * (p / 0.55);
+        diskScale = 0.75; // KEEP SCALE CONSTANT - dive into the hole, don't grow the model
       } else if (p < 0.65) {
-        // ── PHASE B — Convergence (off-axis → on-axis, 10% of scroll)
-        //
-        // At p=0.55 the camera is at equatorial (θ≈0), r=2.0.
-        // Position = (2·cos(φ), 0, 2·sin(φ)).  Blend to (0, 0, 0.4) on-axis.
-        const w = ss(0.55, 0.65, p);
-        const xOff = 2.0 * Math.cos(phi);
-        const yOff = 0.0; // equatorial
-        const zOff = 2.0 * Math.sin(phi);
-        camX = xOff * (1 - w);
-        camY = yOff * (1 - w);
-        camZ = zOff * (1 - w) + 0.4 * w;
-        lookX = 0; lookY = 0; lookZ = -100 * w;
-        fov = 85 + 5 * w;            // 85 → 90
-        rgbShift = 0.015 + 0.015 * w; // 0.015 → 0.030
-        dopplerBoost = 0.60 + 0.30 * w;  // 0.60 → 0.90
-        diskScale = 1.30;
+        // ── PHASE B — Entering the Event Horizon
+        // Dive through the center towards the tunnel
+        const u = ss(0.55, 0.65, p);
+        const rStart = R0 * Math.exp(-lambda * 0.55);
+        const thStart = mix(th0, 0.0, 0.7);
+        
+        // Final approach to origin and then past it
+        const posStart = new THREE.Vector3(
+          rStart * Math.cos(thStart) * Math.cos(phi),
+          rStart * Math.sin(thStart),
+          rStart * Math.cos(thStart) * Math.sin(phi)
+        );
+        const posEnd = new THREE.Vector3(0, 0, -2); // Just past origin
+        
+        const pos = new THREE.Vector3().lerpVectors(posStart, posEnd, u);
+        camX = pos.x; camY = pos.y; camZ = pos.z;
+        
+        lookX = 0; lookY = 0; lookZ = -100 * u;
+        fov = 95 + 15 * u;
+        rgbShift = 0.02 + 0.04 * u;
+        dopplerBoost = 0.8 + 0.4 * u;
+        diskScale = 0.75 * (1.0 - u); // Fade disk out as we pass through
       } else if (p < 0.78) {
-        // ── PHASE C — Crossing the horizon (13% of scroll)
-        //
-        // Interstellar-style wormhole distortion. Severe FOV warping and chromatic aberration.
+        // ── PHASE C — The Crossing
         const u = (p - 0.65) / 0.13;
         camX = 0; camY = 0;
-        camZ = 0.4 - 8.4 * u;
+        camZ = -2 - 12 * u; // Speeding up through the throat
         lookX = 0; lookY = 0; lookZ = -100 - 100 * u;
         
-        // Aggressive FOV warp: 90 -> 130, peaking higher in the middle
-        fov = 90 + 40 * u + 20 * Math.sin(u * Math.PI);
-        
-        // Extreme chromatic aberration and Doppler boost
-        rgbShift = 0.030 - 0.010 * u + 0.060 * Math.sin(u * Math.PI);
-        dopplerBoost = 0.90 - 0.25 * u + 0.40 * Math.sin(u * Math.PI);
-        diskScale = 1.30;
-        streakI = Math.pow(u, 1.5); // Ramps up aggressively
+        fov = 110 + 40 * u + 20 * Math.sin(u * Math.PI);
+        rgbShift = 0.06 - 0.04 * u;
+        dopplerBoost = 1.2 - 0.5 * u;
+        diskScale = 0; // Disk is gone
+        streakI = Math.pow(u, 1.2);
       } else if (p < 0.90) {
         // ── PHASE D — Inter-region transit (12% of scroll, cubic ease-out)
         //
@@ -553,13 +701,13 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         const u = (p - 0.78) / 0.12;
         const k = 1 - Math.pow(1 - u, 3);
         camX = 0; camY = 0;
-        camZ = -8 - 65 * k;              // -8 → -73
+        camZ = -14 - 59 * k;             // Transition smoothly from Phase C end (-14)
         lookX = 0; lookY = 0; lookZ = -200 - 50 * u; // -200 → -250
         
-        fov = 130 - 55 * k;              // 130 → 75
+        fov = 150 - 75 * k;              // 150 → 75
         rgbShift = 0.020 - 0.018 * u;
         dopplerBoost = 0.65 - 0.45 * u;
-        diskScale = 1.30 - 0.45 * u;
+        diskScale = 0;
         streakI = 1.0 - Math.pow(u, 2);  // Decays from peak
       } else {
         // ── PHASE E — Pulsar arrival (10% of scroll, smoothstep)
@@ -640,6 +788,16 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     // Update uniforms
     discMat.uniforms.uTime.value = t;
     partMat.uniforms.uTime.value = t + 9999.0;
+    
+    if (textPoints) {
+      const mat = textPoints.material as THREE.ShaderMaterial;
+      mat.uniforms.uTime.value = t;
+      // Text gets sucked in between progress 0.0 and 0.5
+      mat.uniforms.uProgress.value = Math.max(0, Math.min(1, externalProgress * 2.0));
+      
+      // Hide text entirely once sucked in
+      textPoints.visible = externalProgress < 0.6;
+    }
 
     // Camera azimuth (angle around the disc spin axis) drives Doppler boost
     const camAz = Math.atan2(camera.position.z, camera.position.x);

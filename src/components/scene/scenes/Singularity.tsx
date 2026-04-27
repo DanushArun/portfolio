@@ -163,7 +163,7 @@ function ScrambleText({ active }: ScrambleProps) {
 
 export default function Singularity() {
   const phase  = useScene((s) => s.phase);
-  const active = phase === 'SINGULARITY';
+  const active = phase === 'CYGNUS_LOOP';
 
   const [overlayGone,      setOverlayGone]      = useState(false);
   // orbsTraveling: orbs are moving from edge → center (opacity 1, position transitioning)

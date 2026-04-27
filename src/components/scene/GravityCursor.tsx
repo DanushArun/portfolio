@@ -5,7 +5,7 @@ import { useScene } from '@/lib/scene-state';
 
 export default function GravityCursor() {
   const phase  = useScene((s) => s.phase);
-  const active = phase === 'EVENT_HORIZON';
+  const active = phase === 'CROSSING';
 
   const divRef   = useRef<HTMLDivElement>(null);
   const truePos  = useRef({ x: 0, y: 0 });

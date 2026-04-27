@@ -71,7 +71,7 @@ export default function Descent() {
           useScene.getState().setVeil(1);
         }
       } else {
-        setPhase('MIRA_PULSAR');
+        setPhase('BOSON_STAR');
         return;
       }
 

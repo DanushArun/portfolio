@@ -8,65 +8,17 @@ export default function Overlays() {
 
   return (
     <div style={{ pointerEvents: 'none', position: 'fixed', inset: 0, zIndex: 10 }}>
-      
+
       {/* 00: COVER */}
-      <div className={`stage ${phase === 'COVER' ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`} style={{ transition: 'opacity 0.8s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <div className="relative group" style={{
-          /* 
-             RELATIVISTIC TIDAL MODELING:
-             1. Y-Translation: Accelerated pull (t^2)
-             2. ScaleY: Inverse-cube spaghettification (1 + t^4)
-             3. Skew: Gravitational Lensing / Light Bending
-          */
-          transform: `
-            translateY(${Math.pow(horizonProgress, 2.5) * 80}vh)
-            scaleY(${1 + Math.pow(horizonProgress, 4) * 12})
-            scaleX(${1 - Math.pow(horizonProgress, 2) * 0.9})
-            skewX(${horizonProgress * 20}deg)
-          `,
-          opacity: 1 - Math.pow(horizonProgress, 5),
-          filter: `
-            blur(${horizonProgress * 4}px) 
-            brightness(${1 + horizonProgress * 2})
-          `,
-          transformOrigin: 'center bottom',
-          transition: 'transform 0.05s linear, opacity 0.05s linear, filter 0.05s linear',
-        }}>
-          <h1 className="text-center relative z-10 animate-gravitational-pull" style={{ 
-            fontSize: 'clamp(3rem, 12vw, 10rem)', 
-            /* Redshift gradient: White -> Sodium -> Deep Crimson -> Black */
-            color: horizonProgress < 0.3
-              ? `color-mix(in srgb, var(--color-paper), var(--color-sodium) ${horizonProgress * 333}%)`
-              : horizonProgress < 0.7
-                ? `color-mix(in srgb, var(--color-sodium), #800 ${ (horizonProgress - 0.3) * 250 }%)`
-                : `color-mix(in srgb, #800, black ${ (horizonProgress - 0.7) * 333 }%)`,
-            fontFamily: 'var(--font-syncopate), sans-serif',
-            fontWeight: 700,
-            letterSpacing: `${0.1 + Math.pow(horizonProgress, 2) * 1.5}em`,
-            lineHeight: 0.9,
-            textTransform: 'uppercase',
-            /* Glow increases as energy is compressed, then fades */
-            filter: `drop-shadow(0 0 ${10 + horizonProgress * 50}px rgba(210,79,27,${0.5 * (1 - horizonProgress)}))`,
-          }}>DANUSH ARUN</h1>
-          
-          {/* Chromatic Lensing Ghost */}
-          <h1 className="text-center absolute inset-0 z-0 opacity-0 group-hover:opacity-40 text-cyan-500 animate-glitch-2" style={{ 
-            fontSize: 'clamp(3rem, 12vw, 10rem)', 
-            fontFamily: 'var(--font-syncopate), sans-serif',
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            lineHeight: 0.9,
-            textTransform: 'uppercase',
-            pointerEvents: 'none',
-            transform: `translate(${-horizonProgress * 20}px, ${horizonProgress * 10}px) scale(1.05)`,
-          }}>DANUSH ARUN</h1>
-        </div>
-        
-        <div className="voice-composer text-center" style={{ 
-          position: 'absolute', 
-          bottom: '12vh', 
-          fontSize: '10px', 
-          color: 'var(--color-lead)', 
+      <div className={`stage ${phase === 'COVER' ? 'opacity-100' : 'opacity-0'}`} style={{ transition: 'opacity 0.8s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', pointerEvents: 'none' }}>
+        {/* DANUSH ARUN text is now rendered as a particle system inside the BlackHole WebGL scene */}
+
+        {/* The Prompt — also being pulled in, but slower */}
+        <div className="voice-composer text-center" style={{
+          position: 'absolute',
+          bottom: '12vh',
+          fontSize: '10px',
+          color: 'var(--color-lead)',
           animation: 'blink 2s infinite',
           opacity: 1 - horizonProgress * 2,
           transform: `translateY(${Math.pow(horizonProgress, 2) * 40}vh) scale(${1 - horizonProgress})`
@@ -74,7 +26,7 @@ export default function Overlays() {
       </div>
 
       {/* 01: APPROACH */}
-      <div className={`stage ${phase === 'APPROACH' ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`} style={{ transition: 'opacity 0.8s', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+      <div className={`stage ${phase === 'APPROACH' ? 'opacity-100' : 'opacity-0'}`} style={{ transition: 'opacity 0.8s', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', pointerEvents: 'none' }}>
         {/* Can put "A six-year fall through engineering." here if desired */}
       </div>
 
@@ -112,7 +64,7 @@ export default function Overlays() {
         <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', justifyContent: 'space-between' }}>
           <div style={{ maxWidth: '350px' }}>
             <span className="voice-composer eyebrow" style={{ color: 'var(--color-lead)', marginBottom: '1rem', display: 'block' }}>JET ALPHA // ARCHITECTURE</span>
-            <h2 className="voice-director title-serif" style={{ fontSize: 'clamp(3rem, 6vw, 5rem)', color: 'var(--color-paper)', marginBottom: '1.5rem' }}>Agentic<br/>Systems</h2>
+            <h2 className="voice-director title-serif" style={{ fontSize: 'clamp(3rem, 6vw, 5rem)', color: 'var(--color-paper)', marginBottom: '1.5rem' }}>Agentic<br />Systems</h2>
             <ul className="voice-composer data-list" style={{ listStyle: 'none', lineHeight: 2, color: 'var(--color-bone)' }}>
               <li><span style={{ color: 'var(--color-lead)', display: 'inline-block', width: '80px' }}>ROLE</span> TECHNICAL APM</li>
               <li><span style={{ color: 'var(--color-lead)', display: 'inline-block', width: '80px' }}>FOCUS</span> HIGH-SCALE AUTOMATION</li>
@@ -120,7 +72,7 @@ export default function Overlays() {
           </div>
           <div style={{ maxWidth: '350px', textAlign: 'right' }}>
             <span className="voice-composer eyebrow" style={{ color: 'var(--color-lead)', marginBottom: '1rem', display: 'block' }}>JET BETA // ENGINEERING</span>
-            <h2 className="voice-director title-serif" style={{ fontSize: 'clamp(3rem, 6vw, 5rem)', color: 'var(--color-paper)', marginBottom: '1.5rem' }}>Conversion<br/>Pipelines</h2>
+            <h2 className="voice-director title-serif" style={{ fontSize: 'clamp(3rem, 6vw, 5rem)', color: 'var(--color-paper)', marginBottom: '1.5rem' }}>Conversion<br />Pipelines</h2>
             <ul className="voice-composer data-list" style={{ listStyle: 'none', lineHeight: 2, color: 'var(--color-bone)', textAlign: 'left', display: 'inline-block' }}>
               <li><span style={{ color: 'var(--color-lead)', display: 'inline-block', width: '80px' }}>ROLE</span> SOFTWARE ENGINEER</li>
               <li><span style={{ color: 'var(--color-lead)', display: 'inline-block', width: '80px' }}>FOCUS</span> WEBHOOK ORCHESTRATION</li>
@@ -161,7 +113,7 @@ export default function Overlays() {
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-lead)', paddingBottom: '1rem', marginBottom: '1rem' }}>
             <h2 className="voice-director" style={{ fontSize: '2rem', color: 'var(--color-paper)' }}>Manifest of Danush Arun</h2>
             <div className="voice-composer" style={{ fontSize: '10px', color: 'var(--color-lead)', textAlign: 'right' }}>
-              DOC. NO. 2026/PM-DA<br/>
+              DOC. NO. 2026/PM-DA<br />
               FILED · BENGALURU · IST
             </div>
           </div>
@@ -184,7 +136,8 @@ export default function Overlays() {
         </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes blink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
         @keyframes gravitational-pull {
           0% { transform: translateY(0) scale(1) skewX(0deg); filter: blur(0px) drop-shadow(0 0 10px rgba(255,255,255,0.3)); }

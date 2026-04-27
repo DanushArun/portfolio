@@ -497,7 +497,7 @@ export function TwinBuildOverlay() {
     setOrbitAngle(useScene.getState().orbitAngle + dx * DRAG_SENSITIVITY);
   }, [setOrbitAngle]);
 
-  if (phase !== 'TWIN_BUILD') return null;
+  if (phase !== 'EINSTEIN_CROSS') return null;
 
   const band = classifyAngle(orbitAngle);
 
