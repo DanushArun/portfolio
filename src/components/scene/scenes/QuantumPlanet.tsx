@@ -139,53 +139,70 @@ function PlanetMesh({
 // ShatterOverlay — 8 000 luminous dots, scatter then fade
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DOT_COUNT = 8000;
-
-type Dot = { x: number; y: number };
-
-function buildDots(): Dot[] {
-  const dots: Dot[] = [];
-  for (let i = 0; i < DOT_COUNT; i++) {
-    dots.push({ x: Math.random() * 100, y: Math.random() * 100 });
-  }
-  return dots;
-}
-
 type ShatterPhase = 'scatter' | 'converge' | 'done';
 
-function ShatterOverlay({ phase }: { phase: ShatterPhase }) {
-  const dots = useMemo(buildDots, []);
+function ShatterCanvas({ phase }: { phase: ShatterPhase }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef<number>(0);
+
+  useEffect(() => {
+    if (phase === 'done' || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx    = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const DOT_COUNT = 8000;
+    const dots = Array.from({ length: DOT_COUNT }, () => ({
+      x:  Math.random() * canvas.width,
+      y:  Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 320,
+      vy: (Math.random() - 0.5) * 320,
+    }));
+
+    const startTime = performance.now();
+
+    function draw() {
+      const elapsed = (performance.now() - startTime) / 1000;
+      if (elapsed >= 0.8) return;
+
+      ctx!.clearRect(0, 0, canvas.width, canvas.height);
+
+      const t     = elapsed < 0.4 ? elapsed / 0.4 : 1 - (elapsed - 0.4) / 0.4;
+      const alpha = elapsed < 0.1 ? elapsed / 0.1
+                  : elapsed < 0.4 ? 1
+                  : Math.max(0, 1 - (elapsed - 0.4) / 0.4);
+
+      ctx!.fillStyle = `rgba(212,175,55,${(alpha * 0.85).toFixed(3)})`;
+
+      for (const dot of dots) {
+        const cx = dot.x + dot.vx * t * 0.4;
+        const cy = dot.y + dot.vy * t * 0.4;
+        ctx!.fillRect(cx - 1, cy - 1, 2, 2);
+      }
+
+      rafRef.current = requestAnimationFrame(draw);
+    }
+
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [phase]);
+
   if (phase === 'done') return null;
 
   return (
-    <div
+    <canvas
+      ref={canvasRef}
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
+        position:      'fixed',
+        inset:         0,
+        zIndex:        100,
         pointerEvents: 'none',
-        overflow: 'hidden',
       }}
-    >
-      {dots.map((d, i) => (
-        <div
-          key={i}
-          style={{
-            position: 'absolute',
-            left: `${d.x}%`,
-            top: `${d.y}%`,
-            width: 2,
-            height: 2,
-            borderRadius: '50%',
-            background: EQUATION_GOLD,
-            boxShadow: `0 0 4px 1px ${EQUATION_GOLD}`,
-            opacity: phase === 'converge' ? 0 : 0.85,
-            transition: phase === 'converge' ? 'opacity 0.35s ease-in' : 'none',
-            willChange: 'opacity',
-          }}
-        />
-      ))}
-    </div>
+    />
   );
 }
 
@@ -479,7 +496,7 @@ function DOMOverlay({
           />
         );
       })}
-      <ShatterOverlay phase={shatterPhase} />
+      <ShatterCanvas phase={shatterPhase} />
     </>,
     document.body,
   ) as React.ReactNode;
