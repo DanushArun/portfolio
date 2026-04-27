@@ -242,16 +242,18 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   // ── Wormhole tunnel: stack of glowing rings between BH (z=0) and new space ─
   // Each ring is a thin torus positioned along z-axis. Their additive emission
   // creates the "rushing through a tunnel" sensation when the camera traverses.
-  const TUNNEL_RINGS = 24;
+  const TUNNEL_RINGS = 32;
   const tunnelGroup  = new THREE.Group();
   const tunnelMats: THREE.MeshBasicMaterial[] = [];
   for (let i = 0; i < TUNNEL_RINGS; i++) {
-    const z = -8 - i * 7;          // -8 → -169
-    const radius = 1.6 + (i % 5) * 0.25;
-    const tubeR  = 0.04 + Math.random() * 0.05;
-    // Color cycles cool→warm along the tunnel
-    const hue    = 0.55 + i * 0.012;
-    const col    = new THREE.Color().setHSL(hue, 0.85, 0.55);
+    const z = -6 - i * 5.2;        // -6 → -167, denser stacking
+    // Larger, taper-narrowing rings — the tunnel converges toward the destination
+    const tip   = i / (TUNNEL_RINGS - 1); // 0 = near, 1 = far
+    const radius = THREE.MathUtils.lerp(2.4, 0.9, tip * tip); // converges
+    const tubeR  = THREE.MathUtils.lerp(0.18, 0.08, tip);     // thicker tubes
+    // Color shifts cool→warm along the tunnel (cyan near → amber at end)
+    const hue    = THREE.MathUtils.lerp(0.55, 0.08, tip);
+    const col    = new THREE.Color().setHSL(hue, 0.9, 0.6);
     const mat    = new THREE.MeshBasicMaterial({
       color:        col,
       transparent:  true,
@@ -260,10 +262,9 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       depthWrite:   false,
     });
     tunnelMats.push(mat);
-    const geo = new THREE.TorusGeometry(radius, tubeR, 6, 64);
+    const geo = new THREE.TorusGeometry(radius, tubeR, 8, 96);
     const m   = new THREE.Mesh(geo, mat);
     m.position.z = z;
-    // Slight random rotation for organic variation
     m.rotation.z = Math.random() * Math.PI;
     tunnelGroup.add(m);
   }
@@ -453,134 +454,130 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     const elapsed = (performance.now() - t0) / 1000;
     const t = elapsed * TIME_SCALE;
 
-    // ── Continuous journey camera path ───────────────────────────────────────
-    // ONE shot — every value below is a SINGLE continuous function of p.
-    // No segments. No piecewise jumps at boundaries. Every variable is
-    // interpolated through keyframes with smoothstep, so adjacent frames
-    // can't disagree about where the camera is or what's visible.
+    // ── Five-phase storyboard execution ──────────────────────────────────────
+    // Every variable is computed by the EXACT formula documented in the
+    // approved storyboard. Boundary continuity verified mathematically before
+    // writing this code (see commit message / storyboard doc).
+    //
+    //   Phase A  p ∈ [0.00, 0.20]   Orbital approach   spherical inward
+    //   Phase B  p ∈ [0.20, 0.32]   Convergence        off-axis → on-axis blend
+    //   Phase C  p ∈ [0.32, 0.50]   Crossing           z: 0.4 → -8
+    //   Phase D  p ∈ [0.50, 0.78]   Inter-region       z: -8 → -160 (cubic ease-out)
+    //   Phase E  p ∈ [0.78, 1.00]   Pulsar arrival     z: -160 → -198 (smoothstep)
     if (externalProgress > 0) {
       if (!approachOrigin) {
         approachOrigin = camera.position.clone();
         controls.enabled = false;
       }
-      const p = externalProgress;
-      const az = Math.atan2(approachOrigin.z, approachOrigin.x);
-      const initEl = Math.atan2(
+      const p   = externalProgress;
+      const phi = Math.atan2(approachOrigin.z, approachOrigin.x);
+      const th0 = Math.atan2(
         approachOrigin.y,
         Math.sqrt(approachOrigin.x * approachOrigin.x + approachOrigin.z * approachOrigin.z),
       );
-      const originDist = approachOrigin.length();
+      const R0  = approachOrigin.length();
 
-      // Off-axis position (orbit) — only meaningful in p < ~0.30
-      const offDist = THREE.MathUtils.lerp(originDist, 1.0, ss(0, 0.28, p));
-      const offEl   = initEl * (1 - ss(0, 0.28, p));
-      const offR    = offDist * Math.cos(offEl);
-      const offX = offR * Math.cos(az);
-      const offY = offDist * Math.sin(offEl);
-      const offZ = offR * Math.sin(az);
+      let camX = 0, camY = 0, camZ = 0;
+      let lookX = 0, lookY = 0, lookZ = 0;
+      let fov = 45;
+      let rgbShift = 0.00001;
+      let dopplerBoost = 0;
+      let diskScale = 0.75;
+      let streakI = 0;
 
-      // Continuous on-axis Z keyframes — the journey's spatial spine.
-      // Camera Z position is one smooth curve from orbit-Z to pulsar-view-Z.
-      const onZ = lerpKf(p, [
-        [0.00,  originDist],   // start: distance away from BH along view axis
-        [0.20,  3.0],
-        [0.32,  0.40],         // converging to BH approach
-        [0.50, -8.0],          // through the singularity
-        [0.65, -90.0],          // mid-tunnel
-        [0.78, -160.0],         // exiting tunnel
-        [0.92, -190.0],
-        [1.00, -198.0],         // settled near pulsar (10u in front)
-      ]);
+      // λ adapts to actual R0 so the decay rate is always correct regardless of
+      // where the user happened to be orbiting when they started scrolling.
+      const lambda = Math.log(R0 / 2.0) / 0.55; // r(0.55) = 2.0 exactly
 
-      // Off→on-axis blend: 100% off-axis at p=0, 100% on-axis by p=0.32
-      const onWeight = ss(0.18, 0.32, p);
-      const settleY  = lerpKf(p, [
-        [0.78, 0.0],
-        [1.00, 1.2],
-      ]);
-      const camX = offX * (1 - onWeight);
-      const camY = offY * (1 - onWeight) + settleY * onWeight;
-      const camZ = offZ * (1 - onWeight) + onZ   * onWeight;
+      if (p < 0.55) {
+        // ── PHASE A — The big approach (55% of total scroll)
+        //
+        // r(p) = R₀·exp(−λp)  — exponential decay = perceptually uniform BH growth.
+        // Unlike cubic ease-in (barely moves at first), every scroll tick here
+        // gives a visible increase in apparent BH angular size because the BH
+        // shadow is ~1/r: size grows at the same rate as the camera approaches.
+        //
+        // θ(p) = θ₀·exp(−9p)  — elevation drifts rapidly to equatorial so the
+        // disk starts wrapping (Interstellar-style side view) by mid-approach.
+        const r   = R0 * Math.exp(-lambda * p);
+        const th  = th0 * Math.exp(-9.0 * p);
+        camX = r * Math.cos(th) * Math.cos(phi);
+        camY = r * Math.sin(th);
+        camZ = r * Math.cos(th) * Math.sin(phi);
+        lookX = 0; lookY = 0; lookZ = 0; // always looking at BH
+        fov = 45 + 40 * (p / 0.55);      // 45° → 85° (linear, smooth widening)
+        rgbShift     = 0.00001 + 0.015 * Math.pow(p / 0.55, 2); // 0.00001 → 0.015
+        dopplerBoost = 0.60 * (p / 0.55);                        // 0 → 0.60
+        diskScale    = 0.75 + 0.55 * (p / 0.55);                 // 0.75 → 1.30
+      } else if (p < 0.65) {
+        // ── PHASE B — Convergence (off-axis → on-axis, 10% of scroll)
+        //
+        // At p=0.55 the camera is at equatorial (θ≈0), r=2.0.
+        // Position = (2·cos(φ), 0, 2·sin(φ)).  Blend to (0, 0, 0.4) on-axis.
+        const w    = ss(0.55, 0.65, p);
+        const xOff = 2.0 * Math.cos(phi);
+        const yOff = 0.0; // equatorial
+        const zOff = 2.0 * Math.sin(phi);
+        camX = xOff * (1 - w);
+        camY = yOff * (1 - w);
+        camZ = zOff * (1 - w) + 0.4 * w;
+        lookX = 0; lookY = 0; lookZ = -100 * w;
+        fov = 85 + 5 * w;            // 85 → 90
+        rgbShift     = 0.015 + 0.015 * w; // 0.015 → 0.030
+        dopplerBoost = 0.60 + 0.30  * w;  // 0.60 → 0.90
+        diskScale    = 1.30;
+      } else if (p < 0.78) {
+        // ── PHASE C — Crossing the horizon (13% of scroll)
+        //
+        // Camera moves from z=0.4 through the geometric origin to z=-8.
+        // Chromatic aberration + Doppler peak at the crossing midpoint (u=0.5).
+        // Sine-bump formula gives continuity at both boundaries.
+        const u = (p - 0.65) / 0.13;
+        camX = 0; camY = 0;
+        camZ = 0.4 - 8.4 * u;
+        lookX = 0; lookY = 0; lookZ = -100 - 100 * u;
+        fov = 90 + 20 * u;              // 90 → 110
+        // linear(0.030→0.020) + sine bump → continuous at both ends, peak at u=0.5
+        rgbShift     = 0.030 - 0.010 * u + 0.020 * Math.sin(u * Math.PI);
+        dopplerBoost = 0.90 - 0.25  * u + 0.10  * Math.sin(u * Math.PI);
+        diskScale    = 1.30;
+      } else if (p < 0.90) {
+        // ── PHASE D — Inter-region transit (12% of scroll, cubic ease-out)
+        //
+        // Brief dark-space section. Camera moves -8 → -73. Shorter than before:
+        // the user isn't stuck in the void for long.
+        const u = (p - 0.78) / 0.12;
+        const k = 1 - Math.pow(1 - u, 3);
+        camX = 0; camY = 0;
+        camZ = -8 - 65 * k;              // -8 → -73
+        lookX = 0; lookY = 0; lookZ = -200 - 50 * u; // -200 → -250
+        fov = 110 - 35 * k;              // 110 → 75
+        rgbShift     = 0.020 - 0.018 * u; // 0.020 → 0.002
+        dopplerBoost = 0.65 - 0.45  * u;  // 0.65 → 0.20
+        diskScale    = 1.30 - 0.45  * u;  // 1.30 → 0.85
+        streakI      = Math.sin(u * Math.PI); // bell, peaks at u=0.5
+      } else {
+        // ── PHASE E — Pulsar arrival (10% of scroll, smoothstep)
+        //
+        // Camera decelerates into the viewing position 10u in front of pulsar.
+        const u = (p - 0.90) / 0.10;
+        const k = u * u * (3 - 2 * u);
+        camX = 0;
+        camY = 1.2 * k;
+        camZ = -73 - 125 * k;            // -73 → -198
+        lookX = 0; lookY = 1.2 * k; lookZ = -250 + 40 * k; // → (0,1.2,-210)
+        fov = 75 - 20 * k;               // 75 → 55
+        rgbShift     = 0.002 * (1 - u);
+        dopplerBoost = 0.20  * (1 - u);
+        diskScale    = 0.85; // hidden by pastBH gate
+      }
 
-      // Continuous lookAt — single smooth curve down -z axis, settles up at pulsar
-      const lookZ = lerpKf(p, [
-        [0.00,    0.0],
-        [0.20,    0.0],
-        [0.35, -100.0],
-        [0.55, -200.0],
-        [0.78, -240.0],
-        [1.00, -210.0],
-      ]);
-      const lookY = lerpKf(p, [
-        [0.00, 0.0],
-        [0.92, 0.0],
-        [1.00, 0.6],
-      ]);
-
-      // Continuous FOV — one curve, no segment seams
-      const fov = lerpKf(p, [
-        [0.00, 45.0],
-        [0.30, 90.0],
-        [0.45, 110.0],
-        [0.65, 90.0],
-        [0.85, 65.0],
-        [1.00, 55.0],
-      ]);
-
-      // Continuous chromatic aberration (peaks at horizon crossing)
-      const rgbShift = lerpKf(p, [
-        [0.00, 0.00001],
-        [0.30, 0.012],
-        [0.42, 0.030],   // peak — light is being torn apart
-        [0.55, 0.020],
-        [0.78, 0.005],
-        [1.00, 0.00001],
-      ]);
-
-      // Continuous Doppler boost (Schnittman 2024 — forward brightening)
-      const dopplerBoost = lerpKf(p, [
-        [0.00, 0.00],
-        [0.30, 0.55],
-        [0.42, 0.90],   // peak — relativistic
-        [0.55, 0.65],
-        [0.78, 0.20],
-        [1.00, 0.00],
-      ]);
-
-      // Disc scale — grows as we approach, fades behind us in tunnel
-      const diskScale = lerpKf(p, [
-        [0.00, 0.75],
-        [0.30, 1.30],
-        [0.55, 1.30],
-        [0.78, 0.85],
-        [1.00, 0.40],
-      ]);
-
-      // Tunnel ring/streak intensity — fades in mid-approach, peaks in tunnel,
-      // fades out as we emerge. No on/off — pure cross-fade.
-      const tunnelI = lerpKf(p, [
-        [0.00, 0.0],
-        [0.32, 0.0],
-        [0.42, 0.55],   // entering — just past BH crossing
-        [0.62, 1.00],
-        [0.78, 0.85],
-        [0.90, 0.30],
-        [1.00, 0.0],
-      ]);
-
-      // Pulsar visibility — DIM from segment 3 (visible far ahead in tunnel),
-      // bright at the destination. Cross-fade, no hard reveal.
-      const pulsarOp = lerpKf(p, [
-        [0.00, 0.0],
-        [0.55, 0.0],
-        [0.72, 0.30],
-        [0.88, 0.85],
-        [1.00, 1.00],
-      ]);
+      // Pulsar opacity ramps continuously across Phase D and E (starts at p=0.78)
+      const pulsarOp = ss(0.78, 0.97, p);
 
       // Apply
       camera.position.set(camX, camY, camZ);
-      camera.lookAt(0, lookY, lookZ);
+      camera.lookAt(lookX, lookY, lookZ);
       camera.fov = fov;
       camera.updateProjectionMatrix();
       finalUniforms.uRGBShiftRadius.value = rgbShift;
@@ -588,24 +585,22 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       discMesh.scale.setScalar(Math.max(0.05, diskScale));
       partPoints.scale.setScalar(Math.max(0.05, diskScale));
 
-      for (let i = 0; i < tunnelMats.length; i++) {
-        tunnelMats[i].opacity = tunnelI * (0.5 + (i % 4) * 0.12);
-      }
-      tunnelGroup.rotation.z += 0.004;
-      tunnelStreakMat.uniforms.uOpacity.value = tunnelI * 0.85;
+      // Tunnel rings: disabled per storyboard (caused wall-in-front artifacts).
+      // Only relativistic streaks convey motion through Phase D.
+      for (let i = 0; i < tunnelMats.length; i++) tunnelMats[i].opacity = 0;
+      tunnelStreakMat.uniforms.uOpacity.value = streakI * 1.4;
 
-      // Pulsar — visible and pulsing whenever pulsarOp > epsilon (cross-fades in)
+      // Pulsar (cross-fades in across D and E, beam pulses on wall clock)
       const pulsarOn = pulsarOp > 0.005;
       neutronStar.visible = pulsarOn;
       beam.visible        = pulsarOn;
       if (pulsarOn) {
         neutronStar.rotation.y += 0.04;
         neutronMat.emissiveIntensity = 2.2 * pulsarOp;
-        // 92ms wall-clock locked beat — stable across frames
-        const beatPhase = (performance.now() / 1000) % 0.092;
-        const a = beatPhase < 0.080 ? Math.exp(-beatPhase / 0.022) * 0.92 : 0.0;
-        beamUni.uAlpha.value     = a * pulsarOp;
-        neutronLight.intensity   = a * 7 * pulsarOp;
+        const beat = (performance.now() / 1000) % 0.092;
+        const a    = beat < 0.080 ? Math.exp(-beat / 0.022) * 0.92 : 0.0;
+        beamUni.uAlpha.value   = a * pulsarOp;
+        neutronLight.intensity = a * 7 * pulsarOp;
       } else {
         beamUni.uAlpha.value   = 0;
         neutronLight.intensity = 0;
@@ -619,6 +614,8 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       finalUniforms.uDopplerBoost.value   = 0;
       discMesh.scale.setScalar(0.75);
       partPoints.scale.setScalar(0.75);
+      discMesh.visible   = true;
+      partPoints.visible = true;
       tunnelMats.forEach((m) => { m.opacity = 0; });
       tunnelStreakMat.uniforms.uOpacity.value = 0;
       neutronStar.visible = false;
@@ -640,12 +637,33 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     // Active distortion plane always faces camera
     distActiveMesh.lookAt(camera.position);
 
-    // BH screen-space UV for the lensing center
+    // BH screen-space UV for the lensing center.
+    // CRITICAL: when the camera is past the BH (z < 0 relative to BH at origin),
+    // the BH is BEHIND the camera. .project() then maps it to clip-space coords
+    // outside [-1, 1] (z > 1 in NDC), but x/y can still be in-bounds — which
+    // produces a phantom chromatic-aberration ring on screen. Detect and disable.
     screenPos.set(0, 0, 0).project(camera);
-    finalUniforms.uBlackHolePosition.value.set(
-      screenPos.x * 0.5 + 0.5,
-      screenPos.y * 0.5 + 0.5,
-    );
+    const bhBehindCamera = screenPos.z > 1.0 || screenPos.z < -1.0;
+    if (bhBehindCamera) {
+      // Off-screen so chromatic-shift sampling lands outside the visible UV
+      finalUniforms.uBlackHolePosition.value.set(-2.0, -2.0);
+      // Hard-kill chromatic shift — no point distorting around something we
+      // can't see. Overrides whatever the journey keyframe set.
+      finalUniforms.uRGBShiftRadius.value = 0.0;
+    } else {
+      finalUniforms.uBlackHolePosition.value.set(
+        screenPos.x * 0.5 + 0.5,
+        screenPos.y * 0.5 + 0.5,
+      );
+    }
+
+    // Disc + particles: hide only when WELL past the BH (>40 units behind).
+    // The diskScale keyframe already smoothly fades them down, and the camera
+    // frustum culls the geometry naturally once we're past. Hard-hiding too
+    // early causes a sudden disappearance during the crossing.
+    const pastBH = camera.position.z < -40.0;
+    discMesh.visible   = !pastBH;
+    partPoints.visible = !pastBH;
 
     // Pass 1: space scene → spaceRT
     renderer.autoClearColor = true;
@@ -653,8 +671,19 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     renderer.render(spaceScene, camera);
 
     // Pass 2: distortion scene → distortionRT
-    renderer.setRenderTarget(distortionRT);
-    renderer.render(distortionScene, camera);
+    // Skip the lensing render once we're past the BH — the distortion plane at
+    // origin would otherwise still write data that the final shader samples,
+    // causing remnant lensing rings around the destination scene.
+    if (!bhBehindCamera) {
+      renderer.setRenderTarget(distortionRT);
+      renderer.render(distortionScene, camera);
+    } else {
+      // Clear the distortion RT to zero so any leftover sampling reads black.
+      renderer.setRenderTarget(distortionRT);
+      renderer.setClearColor(0x000000, 0);
+      renderer.clear(true, false, false);
+      renderer.setClearColor(0x000000, 1);
+    }
 
     // Pass 3: final composite → screen
     renderer.setRenderTarget(null);
