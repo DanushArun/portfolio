@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 
 import BlackHoleMount from './BlackHoleMount';
 import CameraRig from './CameraRig';
+import PostFX from './PostFX';
 
 const VoidPrologue      = dynamic(() => import('./VoidPrologue'), { ssr: false });
 const MiraPulsarOverlay = dynamic(
@@ -153,6 +154,7 @@ export default function SceneManager() {
             {phase === 'FORMULA_RINGS'  && <FormulaRings />}
             {phase === 'QUANTUM_PLANET' && <QuantumPlanet />}
             {phase === 'SINGULARITY'    && <Singularity />}
+            <PostFX />
           </Suspense>
         </Canvas>
       )}

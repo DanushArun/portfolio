@@ -36,6 +36,7 @@ void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1
 
 function StarScene({ onBeat }: { onBeat: () => void }) {
   const starRef    = useRef<THREE.Mesh>(null);
+  const beamRef    = useRef<THREE.Mesh>(null);
   const lightRef   = useRef<THREE.PointLight>(null);
   const lastBeat   = useRef(0);
   const lastBeamOn = useRef(-1);
@@ -71,6 +72,11 @@ function StarScene({ onBeat }: { onBeat: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (beamRef.current) beamRef.current.layers.enable(1);
+    if (starRef.current) starRef.current.layers.enable(1);
+  }, []);
+
   return (
     <>
       <ambientLight intensity={0.04} color="#001122" />
@@ -82,7 +88,7 @@ function StarScene({ onBeat }: { onBeat: () => void }) {
         <meshStandardMaterial color="#8B3A1A" emissive="#C84B20" emissiveIntensity={2.5} roughness={0.7} />
       </mesh>
 
-      <mesh geometry={beamGeo}>
+      <mesh ref={beamRef} geometry={beamGeo}>
         <shaderMaterial
           vertexShader={PLAIN_VERT}
           fragmentShader={BEAM_FRAG}
