@@ -117,9 +117,6 @@ export const useScene = create<SceneStore>((set, get) => ({
 
   beginJourney: () => {
     set({ phase: 'COVER', phaseStart: performance.now(), veil: 0, horizonProgress: 0 });
-    setTimeout(() => {
-      set({ phase: 'APPROACH', phaseStart: performance.now() });
-    }, 3500);
   },
 }));
 

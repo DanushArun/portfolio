@@ -154,6 +154,7 @@ export default function FormulaRings() {
   }, [geometry]);
 
   useFrame((_state, dt) => {
+    if (useScene.getState().phase !== 'HAUMEA') return;
     const raw = Math.abs(useScene.getState().scrollVelocity);
 
     // Fast rise, slow fall — snappy on scroll, graceful decay

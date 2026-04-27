@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Cormorant_Garamond, Instrument_Serif, JetBrains_Mono, Syncopate } from "next/font/google";
 import "./globals.css";
 
 /**
@@ -9,6 +9,13 @@ import "./globals.css";
  *   DOP (Body)         : Instrument Serif (All body is italic)
  *   Composer (System)  : JetBrains Mono (HUD, labels, telemetry)
  */
+const syncopate = Syncopate({
+  variable: "--font-syncopate",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+});
+
 const cormorant = Cormorant_Garamond({
   variable: "--font-director",
   subsets: ["latin"],
@@ -50,7 +57,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <div
-          className={`${cormorant.variable} ${instrument.variable} ${jetbrains.variable}`}
+          className={`${cormorant.variable} ${instrument.variable} ${jetbrains.variable} ${syncopate.variable}`}
         >
           {children}
         </div>

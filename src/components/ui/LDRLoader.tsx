@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useScene } from '@/lib/scene-state';
 
 // --- THEMATIC SYMBOLS ---
 
@@ -58,79 +57,55 @@ const icons = [
   <Orbit key="o" />
 ];
 
-export default function VoidPrologue() {
+export default function LDRLoader() {
   const [index, setIndex] = useState(0);
   const [glitch, setGlitch] = useState(false);
-  const [opacity, setOpacity] = useState(1);
-  const [mounted, setMounted] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % icons.length);
-      if (Math.random() > 0.5) {
+      if (Math.random() > 0.6) {
         setGlitch(true);
-        setTimeout(() => setGlitch(false), 30);
+        setTimeout(() => setGlitch(false), 40);
       }
-    }, 70); // Faster cycle than the loader for intensity
+    }, 90);
 
-    // Fade out after 3s
-    const fadeTimeout = setTimeout(() => {
-      setOpacity(0);
-    }, 3000);
-
-    // Unmount after fade
-    const unmountTimeout = setTimeout(() => {
-      setMounted(false);
-    }, 3800);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(fadeTimeout);
-      clearTimeout(unmountTimeout);
-    };
+    return () => clearInterval(interval);
   }, []);
 
-  if (!mounted) return null;
-
   return (
-    <div 
-      className="fixed inset-0 bg-[#020203] flex items-center justify-center z-[100] overflow-hidden pointer-events-none"
-      style={{ 
-        opacity,
-        transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
-      }}
-    >
+    <div className="fixed inset-0 bg-[#020203] flex items-center justify-center z-[100] overflow-hidden">
       {/* Scanline effect */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.05]" 
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
            style={{ background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))', backgroundSize: '100% 2px, 3px 100%' }} />
 
       {/* Background glitch lines */}
       {glitch && (
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-0 w-full h-px bg-white/20" />
-          <div className="absolute top-2/3 left-0 w-full h-1 bg-white/10" />
+          <div className="absolute top-1/3 left-0 w-full h-px bg-white/20" />
+          <div className="absolute top-2/3 left-0 w-full h-[2px] bg-white/10" />
           <div className="absolute top-1/2 left-0 w-full h-px bg-white/30" />
         </div>
       )}
 
-      <div className={`relative w-24 h-24 text-white transition-transform duration-75 ${glitch ? 'scale-110 translate-x-1' : 'scale-100'}`}>
+      <div className={`relative w-20 h-20 text-white transition-transform duration-75 ${glitch ? 'scale-110 translate-x-1 rotate-1' : 'scale-100'}`}>
         {icons[index]}
         
         {/* Chromatic Aberration Glitch */}
         {glitch && (
           <>
-            <div className="absolute inset-0 text-[#ff00ff] opacity-50 translate-x-2 translate-y-1 mix-blend-screen">
+            <div className="absolute inset-0 text-[#ff00ff] opacity-70 translate-x-1 translate-y-1 mix-blend-screen">
               {icons[index]}
             </div>
-            <div className="absolute inset-0 text-[#00ffff] opacity-50 -translate-x-2 -translate-y-1 mix-blend-screen">
+            <div className="absolute inset-0 text-[#00ffff] opacity-70 -translate-x-1 -translate-y-1 mix-blend-screen">
               {icons[index]}
             </div>
           </>
         )}
       </div>
 
-      <div className="absolute bottom-12 font-mono text-[10px] tracking-[0.4em] text-white/40 uppercase">
-        INITIALISING SINGULARITY
+      <div className="absolute bottom-16 font-mono text-[9px] tracking-[0.5em] text-white/30 uppercase">
+        Establishing Metric Framework
       </div>
     </div>
   );

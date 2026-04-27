@@ -45,6 +45,7 @@ function StarScene({ onBeat }: { onBeat: () => void }) {
   const beamGeo    = useMemo(() => new THREE.BoxGeometry(80, 0.06, 0.06), []);
 
   useFrame((state) => {
+    if (useScene.getState().phase !== 'STRANGEON') return;
     const t  = state.clock.elapsedTime;
     const fire = (t - lastBeat.current >= BEAT_S) || manual.current;
     if (fire) {
