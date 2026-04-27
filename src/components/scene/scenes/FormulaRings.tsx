@@ -37,7 +37,10 @@ varying float vSpeed;
 void main() {
   float angle = aAngle + uTime * aSpeed;
 
-  float x = cos(angle) * aRadius;
+  // T-08 The Stretch: lateral deformation (scaleX) bound to scroll velocity.
+  // Deforms into a rugby-ball ellipse on scroll velocity, reverts to circle when speed = 0.
+  float stretch = 1.0 + min(uSpeed * 2.5, 1.4);
+  float x = cos(angle) * aRadius * stretch;
   float z = sin(angle) * aRadius;
 
   vec4 mvPosition = modelViewMatrix * vec4(x, aY, z, 1.0);
@@ -49,8 +52,8 @@ void main() {
   gl_PointSize     = (base + speedBoost) * (120.0 / -mvPosition.z);
 
   // Fade at inner and outer ring edges
-  float span       = ${(RING_OUTER - RING_INNER).toFixed(1)};
-  float normalized = (aRadius - ${RING_INNER.toFixed(1)}) / span;
+  float span       = 32.0;
+  float normalized = (aRadius - 8.0) / span;
   float edgeFade   = smoothstep(0.0, 0.06, normalized) * smoothstep(1.0, 0.92, normalized);
 
   vAlpha = edgeFade * (0.55 + 0.45 * aSpeed * 6.0);

@@ -62,29 +62,58 @@ const EQUATIONS: EquationDef[] = [
 type EquationId = EquationDef['id'];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Atmosphere shader
+// Boson Star Shader (Replaces standard PlanetMesh)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ATM_VERT = /* glsl */ `
+const BOSON_VERT = /* glsl */ `
 varying vec3 vNormal;
+varying vec3 vViewPosition;
+varying vec2 vUv;
 void main() {
+  vUv = uv;
   vNormal = normalize(normalMatrix * normal);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  vViewPosition = -mvPosition.xyz;
+  gl_Position = projectionMatrix * mvPosition;
 }
 `;
 
-const ATM_FRAG = /* glsl */ `
-precision highp float;
+const BOSON_FRAG = /* glsl */ `
+uniform float uTime;
 varying vec3 vNormal;
+varying vec3 vViewPosition;
+varying vec2 vUv;
+
 void main() {
-  float rim = pow(1.0 - max(dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0), 2.8);
-  gl_FragColor = vec4(vec3(0.86, 0.82, 1.0) * rim, rim * 0.45);
+  // T-03 Lensing: Erase shell line-by-line over time
+  // Create a high-frequency horizontal banding pattern
+  float lines = sin(gl_FragCoord.y * 0.8 + uTime * 5.0);
+  
+  // Outer shell dissolves based on a slow sine wave cycle
+  float eraseCycle = (sin(uTime * 0.4) + 1.0) * 0.5; // 0 to 1
+  
+  // The core is a dense, glowing interior sphere
+  vec3 normal = normalize(vNormal);
+  vec3 viewDir = normalize(vViewPosition);
+  float fresnel = dot(normal, viewDir);
+  
+  // "Light bends inward" - extreme edge glow (inverse fresnel)
+  float rim = pow(1.0 - max(fresnel, 0.0), 3.0);
+  
+  // Core glow (solid center)
+  float core = smoothstep(0.4, 0.9, fresnel);
+  
+  // The shell erases line-by-line when lines < eraseCycle
+  if (rim < 0.8 && core < 0.2 && lines < eraseCycle * 2.0 - 1.0) {
+    discard; // Erases the outer shell
+  }
+  
+  vec3 shellColor = vec3(0.1, 0.2, 0.4) * rim * 2.0;
+  vec3 coreColor = vec3(0.9, 0.8, 1.0) * core * 1.5;
+  
+  gl_FragColor = vec4(shellColor + coreColor, 1.0);
 }
 `;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PlanetMesh — WebGL body, shares world position via ref
-// ─────────────────────────────────────────────────────────────────────────────
 
 function PlanetMesh({
   positionRef,
@@ -92,10 +121,14 @@ function PlanetMesh({
   positionRef: React.MutableRefObject<THREE.Vector3>;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const atmUniforms = useMemo(() => ({}), []);
+  
+  const uniforms = useMemo(() => ({
+    uTime: { value: 0 }
+  }), []);
 
   useFrame((_, dt) => {
     if (!meshRef.current) return;
+    uniforms.uTime.value += dt;
     meshRef.current.position.x -= DRIFT_SPEED * dt;
     if (meshRef.current.position.x < END_X) {
       meshRef.current.position.x = START_X;
@@ -108,29 +141,15 @@ function PlanetMesh({
     <group>
       <mesh ref={meshRef} position={[START_X, PLANET_Y, PLANET_Z]}>
         <sphereGeometry args={[PLANET_RADIUS, 64, 64]} />
-        <meshStandardMaterial
-          color={PLANET_COLOR}
-          roughness={0.55}
-          metalness={0.05}
-          emissive="#ffffff"
-          emissiveIntensity={0.04}
+        <shaderMaterial
+          vertexShader={BOSON_VERT}
+          fragmentShader={BOSON_FRAG}
+          uniforms={uniforms}
+          transparent={true}
+          side={THREE.DoubleSide}
         />
-        {/* Atmosphere rim — back-facing, additive blend */}
-        <mesh scale={1.12}>
-          <sphereGeometry args={[PLANET_RADIUS, 48, 48]} />
-          <shaderMaterial
-            vertexShader={ATM_VERT}
-            fragmentShader={ATM_FRAG}
-            uniforms={atmUniforms}
-            transparent
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-          />
-        </mesh>
       </mesh>
-      <pointLight position={[-6, 4, 8]} intensity={1.8} color="#cce0ff" />
-      <ambientLight intensity={0.18} />
+      <pointLight position={[0, 0, 0]} intensity={1.5} color="#cce0ff" />
     </group>
   );
 }

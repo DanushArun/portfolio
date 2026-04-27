@@ -1,46 +1,44 @@
 import type { Metadata, Viewport } from "next";
-import { Syne, Space_Grotesk, Space_Mono } from "next/font/google";
+import { Cormorant_Garamond, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 /**
- * Typography — three families, self-hosted at build time by next/font.
+ * Typography — Three Voices
  *
- *   Syne 800            → display-only headings (hero, section titles)
- *   Space Grotesk 300-700 → body + UI sans
- *   Space Mono 400/700  → labels, coordinates, telemetry
- *
- * Each family is exposed as a CSS custom property so globals.css can
- * compose them with string fallbacks. This avoids FOUT inside GSAP
- * timelines that query computed styles during animation setup.
+ *   Director (Display) : Cormorant Garamond (fallback for PP Editorial New)
+ *   DOP (Body)         : Instrument Serif (All body is italic)
+ *   Composer (System)  : JetBrains Mono (HUD, labels, telemetry)
  */
-const syne = Syne({
-  variable: "--font-syne",
+const cormorant = Cormorant_Garamond({
+  variable: "--font-director",
   subsets: ["latin"],
-  weight: ["800"],
+  weight: ["300", "400", "600"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const instrument = Instrument_Serif({
+  variable: "--font-dop",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+  weight: ["400"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
-const spaceMono = Space_Mono({
-  variable: "--font-space-mono",
+const jetbrains = JetBrains_Mono({
+  variable: "--font-composer",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["300", "400", "500"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Danush Arun",
-  description: "Software Engineer · Agentic AI · Electromagnetic Physics",
+  description: "The Astronaut Who Went Through",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0D10",
+  themeColor: "#0A0A0A",
   width: "device-width",
   initialScale: 1,
 };
@@ -52,7 +50,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <div
-          className={`${syne.variable} ${spaceGrotesk.variable} ${spaceMono.variable}`}
+          className={`${cormorant.variable} ${instrument.variable} ${jetbrains.variable}`}
         >
           {children}
         </div>

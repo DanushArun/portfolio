@@ -1,31 +1,29 @@
-/* ---------------------------------------------------------------
- * Google Fonts — Syne (display), Space Grotesk (sans), Space Mono (mono)
- * Loaded via next/font in layout.tsx for self-hosting; this @import
- * is a resilient fallback for preview tools and dev overlays that
- * bypass the font CSS variables.
- *
- * Must precede `@import "tailwindcss"` — Tailwind inlines its entire
- * preflight as regular rules, and CSS requires every @import to sit
- * above any non-@import rule.
- * --------------------------------------------------------------- */
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap");
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------
  * Design tokens — the field system
  * --------------------------------------------------------------- */
 :root {
-  /* Palette — three colors, never more. Lime is spent no more
-     than six times across the entire site. */
-  --graphite: #0B0D10;
-  --lime:     #B8FF3C;
-  --cream:    #E8E4D8;
+  /* THE 4 VALUES */
+  --color-void: #020203; /* Absolute pitch black for deepest space */
+  --color-paper: #F2EEE7; /* Ambient outside / day-for-night */
+  --color-ink: #0A0A0A; /* Everything inside / event horizon black */
+  --color-lead: #6F6A60; /* System labels / carbon-paper (40% ink) */
+  --color-sodium: #D24F1B; /* The only accent / use sparingly */
+
+  /* Legacy aliases to keep things running until we refactor all components */
+  --graphite: var(--color-ink);
+  --lime: var(--color-sodium);
+  --cream: var(--color-paper);
+  --bone: #E8E4D8;
+  --ash: #8A857B;
+  --radium: #B8FF3C;
 
   /* Typography stacks. Variables are assigned by next/font at runtime;
      the string fallbacks keep the cascade intact during hydration. */
-  --font-display: var(--font-syne), "Syne", sans-serif;
-  --font-sans:    var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
-  --font-mono:    var(--font-space-mono), "Space Mono", ui-monospace, monospace;
+  --font-director: var(--font-director), "Cormorant Garamond", Georgia, serif;
+  --font-dop: var(--font-dop), "Instrument Serif", Georgia, serif;
+  --font-composer: var(--font-composer), "JetBrains Mono", ui-monospace, monospace;
 
   /* Easing — six named curves. Never reach for CSS `ease` or `linear`. */
   --ease-instrument: cubic-bezier(0.16, 1, 0.3, 1);
@@ -36,15 +34,25 @@
   --ease-dismiss:    cubic-bezier(0.4, 0, 1, 1);
 }
 
-/* Expose tokens to Tailwind v4's theme layer so utilities like
-   `bg-graphite`, `text-cream`, `font-display` resolve without config. */
+/* Expose tokens to Tailwind v4's theme layer */
 @theme inline {
+  --color-void: var(--color-void);
+  --color-paper: var(--color-paper);
+  --color-ink: var(--color-ink);
+  --color-lead: var(--color-lead);
+  --color-sodium: var(--color-sodium);
+  --color-bone: var(--bone);
+  --color-ash: var(--ash);
+  --color-radium: var(--radium);
+  
+  --font-director: var(--font-director);
+  --font-dop: var(--font-dop);
+  --font-composer: var(--font-composer);
+
+  /* Legacy aliases for Tailwind */
   --color-graphite: var(--graphite);
-  --color-lime:     var(--lime);
-  --color-cream:    var(--cream);
-  --font-display:   var(--font-display);
-  --font-sans:      var(--font-sans);
-  --font-mono:      var(--font-mono);
+  --color-lime: var(--lime);
+  --color-cream: var(--cream);
 }
 
 /* ---------------------------------------------------------------
@@ -60,8 +68,9 @@
 }
 
 html {
-  background: var(--graphite);
-  /* Lenis owns scroll; native smooth-behavior fights the RAF loop. */
+  background: var(--color-ink);
+  /* Native smooth-behavior fights the RAF loop if we use custom scroll, 
+     but for native continuous scroll it's fine. We use standard scrolling now. */
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
@@ -70,15 +79,36 @@ html {
 }
 
 body {
-  background: var(--graphite);
-  color: var(--cream);
-  font-family: var(--font-sans);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-dop); /* Default to DOP body voice */
+  font-style: italic; /* "All body is italic - always" */
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.35;
   overflow-x: hidden;
-  /* Custom cursor is drawn by a dedicated component elsewhere. */
   cursor: none;
   min-height: 100svh;
+}
+
+/* Typography Utility Classes */
+.voice-director {
+  font-family: var(--font-director);
+  font-style: normal;
+  letter-spacing: -0.02em;
+  line-height: 0.86;
+}
+
+.voice-dop {
+  font-family: var(--font-dop);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.voice-composer {
+  font-family: var(--font-composer);
+  font-style: normal;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 /* Links/buttons/inputs inherit cleanly rather than using UA defaults. */
@@ -107,23 +137,23 @@ button {
 }
 
 /* ---------------------------------------------------------------
- * Selection — lime block, graphite glyphs. One of the six lime uses.
+ * Selection
  * --------------------------------------------------------------- */
 ::selection {
-  background: var(--lime);
-  color: var(--graphite);
+  background: var(--color-sodium);
+  color: var(--color-paper);
 }
 
 /* ---------------------------------------------------------------
- * Focus — never invisible, never UA blue. Lime ring, thin.
+ * Focus
  * --------------------------------------------------------------- */
 :focus-visible {
-  outline: 1px solid var(--lime);
+  outline: 1px solid var(--color-sodium);
   outline-offset: 2px;
 }
 
 /* ---------------------------------------------------------------
- * Scrollbar — hidden. Lenis + custom indicator handle scroll feedback.
+ * Scrollbar — hidden
  * --------------------------------------------------------------- */
 ::-webkit-scrollbar {
   width: 0;

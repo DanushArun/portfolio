@@ -532,33 +532,35 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       } else if (p < 0.78) {
         // ── PHASE C — Crossing the horizon (13% of scroll)
         //
-        // Camera moves from z=0.4 through the geometric origin to z=-8.
-        // Chromatic aberration + Doppler peak at the crossing midpoint (u=0.5).
-        // Sine-bump formula gives continuity at both boundaries.
+        // Interstellar-style wormhole distortion. Severe FOV warping and chromatic aberration.
         const u = (p - 0.65) / 0.13;
         camX = 0; camY = 0;
         camZ = 0.4 - 8.4 * u;
         lookX = 0; lookY = 0; lookZ = -100 - 100 * u;
-        fov = 90 + 20 * u;              // 90 → 110
-        // linear(0.030→0.020) + sine bump → continuous at both ends, peak at u=0.5
-        rgbShift = 0.030 - 0.010 * u + 0.020 * Math.sin(u * Math.PI);
-        dopplerBoost = 0.90 - 0.25 * u + 0.10 * Math.sin(u * Math.PI);
+        
+        // Aggressive FOV warp: 90 -> 130, peaking higher in the middle
+        fov = 90 + 40 * u + 20 * Math.sin(u * Math.PI);
+        
+        // Extreme chromatic aberration and Doppler boost
+        rgbShift = 0.030 - 0.010 * u + 0.060 * Math.sin(u * Math.PI);
+        dopplerBoost = 0.90 - 0.25 * u + 0.40 * Math.sin(u * Math.PI);
         diskScale = 1.30;
+        streakI = Math.pow(u, 1.5); // Ramps up aggressively
       } else if (p < 0.90) {
         // ── PHASE D — Inter-region transit (12% of scroll, cubic ease-out)
         //
-        // Brief dark-space section. Camera moves -8 → -73. Shorter than before:
-        // the user isn't stuck in the void for long.
+        // Blast through the tunnel. High velocity streaks and rings.
         const u = (p - 0.78) / 0.12;
         const k = 1 - Math.pow(1 - u, 3);
         camX = 0; camY = 0;
         camZ = -8 - 65 * k;              // -8 → -73
         lookX = 0; lookY = 0; lookZ = -200 - 50 * u; // -200 → -250
-        fov = 110 - 35 * k;              // 110 → 75
-        rgbShift = 0.020 - 0.018 * u; // 0.020 → 0.002
-        dopplerBoost = 0.65 - 0.45 * u;  // 0.65 → 0.20
-        diskScale = 1.30 - 0.45 * u;  // 1.30 → 0.85
-        streakI = Math.sin(u * Math.PI); // bell, peaks at u=0.5
+        
+        fov = 130 - 55 * k;              // 130 → 75
+        rgbShift = 0.020 - 0.018 * u;
+        dopplerBoost = 0.65 - 0.45 * u;
+        diskScale = 1.30 - 0.45 * u;
+        streakI = 1.0 - Math.pow(u, 2);  // Decays from peak
       } else {
         // ── PHASE E — Pulsar arrival (10% of scroll, smoothstep)
         //
@@ -588,10 +590,16 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       discMesh.scale.setScalar(Math.max(0.05, diskScale));
       partPoints.scale.setScalar(Math.max(0.05, diskScale));
 
-      // Tunnel rings: disabled per storyboard (caused wall-in-front artifacts).
-      // Only relativistic streaks convey motion through Phase D.
-      for (let i = 0; i < tunnelMats.length; i++) tunnelMats[i].opacity = 0;
-      tunnelStreakMat.uniforms.uOpacity.value = streakI * 1.4;
+      // Re-activate tunnel rings for the wormhole effect
+      for (let i = 0; i < tunnelMats.length; i++) {
+        const ringZ = -6 - i * 5.2;
+        const dist = Math.abs(camZ - ringZ);
+        // Fade rings that are too close to the camera to prevent clipping/artifacts
+        const proximityFade = ss(1.0, 8.0, dist);
+        tunnelMats[i].opacity = streakI * proximityFade * 0.75;
+      }
+      // Extreme streaks
+      tunnelStreakMat.uniforms.uOpacity.value = streakI * 2.5;
 
       // Pulsar (cross-fades in across D and E, beam pulses on wall clock)
       const pulsarOn = pulsarOp > 0.005;

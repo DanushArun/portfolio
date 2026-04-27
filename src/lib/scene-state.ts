@@ -5,24 +5,26 @@ import { create } from 'zustand';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ScenePhase =
-  | 'VOID'           // 3.5s autonomous: stars crystallize, terminal boot, BH reveals
-  | 'EVENT_HORIZON'  // Hero: full-screen BH, mouse = physics, scroll approaches
-  | 'DESCENT'        // 3.2s: equation dissolves, darkness, amber point grows
-  | 'MIRA_PULSAR'    // Scene 1: 92ms clockwork, Mira AI
-  | 'DRIVEX_QUASAR'  // Scene 2: dual jets, DriveX agentic AI
-  | 'TWIN_BUILD'     // Scene 3: binary magnetar, drag to orbit, FuryX + Veronica
-  | 'FORMULA_RINGS'  // Scene 4: scroll velocity = ring speed, Formula Manipal
-  | 'QUANTUM_PLANET' // Scene 5: equation interaction + shatter, quantum research
-  | 'SINGULARITY';   // Act VII: convergence, monolith, contact
+  | 'COVER'          // 00: Cover — The Event Horizon Cut
+  | 'APPROACH'       // 01: Approach — The Veil
+  | 'CROSSING'       // 02: Crossing — The Wormhole Transition
+  | 'BOSON_STAR'     // 03: Boson Star — Quantum Lab
+  | 'STRANGEON'      // 04: Strangeon — MIRA
+  | 'BINARY_MERGER'  // 05: Binary Merger — DriveX
+  | 'EINSTEIN_CROSS' // 06: Einstein Cross — FuryX × Veronica
+  | 'HAUMEA'         // 07: Haumea — Formula Manipal
+  | 'MANIFEST'       // 08: Manifest — The Logbook
+  | 'CYGNUS_LOOP';   // 09: Cygnus Loop — Singularity (Contact)
 
-// Ordered scene sequence after DESCENT (for scroll-snap advancement)
+// Ordered scene sequence after CROSSING (for R3F rendering and scroll advancement)
 export const COSMIC_SCENES: ScenePhase[] = [
-  'MIRA_PULSAR',
-  'DRIVEX_QUASAR',
-  'TWIN_BUILD',
-  'FORMULA_RINGS',
-  'QUANTUM_PLANET',
-  'SINGULARITY',
+  'BOSON_STAR',
+  'STRANGEON',
+  'BINARY_MERGER',
+  'EINSTEIN_CROSS',
+  'HAUMEA',
+  'MANIFEST',
+  'CYGNUS_LOOP',
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,7 +77,7 @@ type SceneStore = {
 };
 
 export const useScene = create<SceneStore>((set, get) => ({
-  phase: 'VOID',
+  phase: 'COVER',
   phaseStart: performance.now(),
   mouseX: 0,
   mouseY: 0,
@@ -111,13 +113,12 @@ export const useScene = create<SceneStore>((set, get) => ({
     if (next) {
       set({ phase: next, phaseStart: performance.now() });
     }
-    // SINGULARITY has no next — stays
   },
 
   beginJourney: () => {
-    set({ phase: 'VOID', phaseStart: performance.now(), veil: 0, horizonProgress: 0 });
+    set({ phase: 'COVER', phaseStart: performance.now(), veil: 0, horizonProgress: 0 });
     setTimeout(() => {
-      set({ phase: 'EVENT_HORIZON', phaseStart: performance.now() });
+      set({ phase: 'APPROACH', phaseStart: performance.now() });
     }, 3500);
   },
 }));
@@ -134,6 +135,5 @@ export const isCosmic = (phase: ScenePhase) =>
   COSMIC_SCENES.includes(phase);
 
 // True when the R3F canvas should be mounted.
-// DESCENT → WarpScene runs inside the same canvas, avoiding a second canvas swap.
 export const isCosmicCanvas = (phase: ScenePhase) =>
-  phase === 'DESCENT' || COSMIC_SCENES.includes(phase);
+  phase === 'CROSSING' || COSMIC_SCENES.includes(phase);

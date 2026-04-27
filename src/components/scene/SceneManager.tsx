@@ -11,57 +11,16 @@ import BlackHoleMount from './BlackHoleMount';
 import CameraRig from './CameraRig';
 import PostFX from './PostFX';
 
-const VoidPrologue      = dynamic(() => import('./VoidPrologue'), { ssr: false });
+const QuantumPlanet     = dynamic(() => import('./scenes/QuantumPlanet'), { ssr: false });
 const MiraPulsar        = dynamic(() => import('./scenes/MiraPulsar'), { ssr: false });
-const MiraPulsarOverlay = dynamic(
-  () => import('./scenes/MiraPulsar').then((m) => ({ default: m.MiraPulsarOverlay })),
-  { ssr: false },
-);
-const DriveXQuasar        = dynamic(() => import('./scenes/DriveXQuasar'), { ssr: false });
-const DriveXQuasarOverlay = dynamic(
-  () => import('./scenes/DriveXQuasar').then((m) => ({ default: m.DriveXQuasarOverlay })),
-  { ssr: false },
-);
-const TwinBuild        = dynamic(() => import('./scenes/TwinBuild'), { ssr: false });
-const TwinBuildOverlay = dynamic(
-  () => import('./scenes/TwinBuild').then((m) => ({ default: m.TwinBuildOverlay })),
-  { ssr: false },
-);
-const FormulaRings  = dynamic(() => import('./scenes/FormulaRings'),  { ssr: false });
-const QuantumPlanet = dynamic(() => import('./scenes/QuantumPlanet'), { ssr: false });
-const Singularity   = dynamic(() => import('./scenes/Singularity'),   { ssr: false });
+const DriveXQuasar      = dynamic(() => import('./scenes/DriveXQuasar'), { ssr: false });
+const TwinBuild         = dynamic(() => import('./scenes/TwinBuild'), { ssr: false });
+const FormulaRings      = dynamic(() => import('./scenes/FormulaRings'),  { ssr: false });
+const Singularity       = dynamic(() => import('./scenes/Singularity'),   { ssr: false });
 
 import HUD from './HUD';
 import GravityCursor from './GravityCursor';
-import ScrollSnap from './ScrollSnap';
-
-/**
- * ONE SHOT.
- *
- * The Bruno Simon BH canvas owns the entire journey from landing to
- * MIRA_PULSAR. There are no canvas swaps mid-flight. Scroll progress
- * 0..1 drives the camera continuously through:
- *
- *   orbit → BH approach → through BH → wormhole tunnel → emerge → pulsar
- *
- * Phase state is purely a HUD hint — it switches when journey progress
- * crosses thresholds, but does NOT change which canvas is rendered.
- *
- * The R3F canvas only mounts for the OTHER cosmic scenes (DriveX, Twin
- * Build, etc.) which the user reaches by scrolling past MIRA_PULSAR.
- * That swap uses a veil because those scenes don't share world space
- * with the BH/pulsar.
- */
-
-// Total wheel travel for the entire flight from orbit to MIRA_PULSAR.
-const JOURNEY_WHEEL_PX = 6500;
-
-// Journey progress thresholds at which we update the phase (HUD only)
-const PHASE_AT: { p: number; phase: ScenePhase }[] = [
-  { p: 0.00, phase: 'EVENT_HORIZON' },
-  { p: 0.32, phase: 'DESCENT'       },
-  { p: 0.78, phase: 'MIRA_PULSAR'   },
-];
+import Overlays from './Overlays';
 
 export default function SceneManager() {
   const phase           = useScene((s) => s.phase);
@@ -72,7 +31,6 @@ export default function SceneManager() {
   const setHorizonProgress = useScene((s) => s.setHorizonProgress);
 
   const lastScrollY = useRef(0);
-  const wheelAcc    = useRef(0);
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     setMouse(
@@ -90,23 +48,26 @@ export default function SceneManager() {
     lastScrollY.current = window.scrollY;
     setScrollVelocity(dy);
 
-    // Map 0..1 to the 7 stages (0 to 6)
-    const continuous = progress * 6;
+    // Map 0..1 to the 10 stages (0 to 9)
+    const continuous = progress * 9;
     const idx = Math.floor(continuous);
 
-    // 0 to 1/6 (0.166) is the BH flight.
-    const bhProg = Math.min(1, progress * 6);
+    // 0 to 3/9 (0.333) is the BH flight.
+    const bhProg = Math.min(1, progress * 3);
     setHorizonProgress(bhProg);
 
     // Determine discrete phase for overlays
-    let newPhase: ScenePhase = 'VOID';
-    if (idx === 0) newPhase = bhProg > 0.6 ? 'DESCENT' : 'EVENT_HORIZON';
-    else if (idx === 1) newPhase = 'MIRA_PULSAR';
-    else if (idx === 2) newPhase = 'DRIVEX_QUASAR';
-    else if (idx === 3) newPhase = 'TWIN_BUILD';
-    else if (idx === 4) newPhase = 'FORMULA_RINGS';
-    else if (idx === 5) newPhase = 'QUANTUM_PLANET';
-    else if (idx >= 6)  newPhase = 'SINGULARITY';
+    let newPhase: ScenePhase = 'COVER';
+    if (idx === 0) newPhase = 'COVER';
+    else if (idx === 1) newPhase = 'APPROACH';
+    else if (idx === 2) newPhase = 'CROSSING';
+    else if (idx === 3) newPhase = 'BOSON_STAR';
+    else if (idx === 4) newPhase = 'STRANGEON';
+    else if (idx === 5) newPhase = 'BINARY_MERGER';
+    else if (idx === 6) newPhase = 'EINSTEIN_CROSS';
+    else if (idx === 7) newPhase = 'HAUMEA';
+    else if (idx === 8) newPhase = 'MANIFEST';
+    else if (idx >= 9)  newPhase = 'CYGNUS_LOOP';
 
     if (newPhase !== useScene.getState().phase) {
       useScene.getState().setPhase(newPhase);
@@ -124,21 +85,18 @@ export default function SceneManager() {
 
   useEffect(() => {
     const { beginJourney, phase: p } = useScene.getState();
-    if (p === 'VOID') beginJourney();
+    if (p === 'COVER') beginJourney();
   }, []);
 
   useAudio();
 
-  // The BH canvas drives everything from VOID through DESCENT.
-  // It unmounts when the user reaches MIRA_PULSAR.
-  const showBH       = phase === 'VOID' || phase === 'EVENT_HORIZON' || phase === 'DESCENT';
+  // The BH canvas drives everything from COVER through CROSSING.
+  const showBH       = phase === 'COVER' || phase === 'APPROACH' || phase === 'CROSSING';
   const showCosmic   = isCosmic(phase);
-  const showR3F      = showCosmic; // R3F for all cosmic scenes including pulsar
-  const atPulsar     = phase === 'MIRA_PULSAR';
+  const showR3F      = showCosmic;
 
   return (
     <>
-      {/* The BH canvas is the entire one-shot — landing through MIRA_PULSAR. */}
       {showBH && (
         <BlackHoleMount
           zIndex={1}
@@ -148,7 +106,6 @@ export default function SceneManager() {
         />
       )}
 
-      {/* R3F canvas — only for post-MIRA_PULSAR cosmic scenes. */}
       {showR3F && (
         <Canvas
           dpr={[1, 1.5]}
@@ -158,18 +115,19 @@ export default function SceneManager() {
         >
           <Suspense fallback={null}>
             <CameraRig />
-            <group position={[0, 0, 0]}><MiraPulsar /></group>
-            <group position={[0, 0, -90]}><DriveXQuasar /></group>
-            <group position={[0, 0, -180]}><TwinBuild /></group>
-            <group position={[0, 0, -270]}><FormulaRings /></group>
-            <group position={[0, 0, -360]}><QuantumPlanet /></group>
-            <group position={[0, 0, -450]}><Singularity /></group>
+            <group position={[0, 0, 0]}><QuantumPlanet /></group>
+            <group position={[0, 0, -90]}><MiraPulsar /></group>
+            <group position={[0, 0, -180]}><DriveXQuasar /></group>
+            <group position={[0, 0, -270]}><TwinBuild /></group>
+            <group position={[0, 0, -360]}><FormulaRings /></group>
+            {/* MANIFEST AT -450 HAS NO R3F SCENE */}
+            <group position={[0, 0, -540]}><Singularity /></group>
             <PostFX />
           </Suspense>
         </Canvas>
       )}
 
-      {/* Veil — only used at the BH→R3F handoff (post-MIRA_PULSAR). */}
+      {/* Veil — only used at the BH→R3F handoff (post-CROSSING). */}
       <div
         aria-hidden
         style={{
@@ -184,11 +142,8 @@ export default function SceneManager() {
 
       {showCosmic && <GravityCursor />}
       <HUD />
-      {phase === 'VOID' && <VoidPrologue />}
-      {atPulsar         && <MiraPulsarOverlay />}
-      <DriveXQuasarOverlay />
-      <TwinBuildOverlay />
-      <div style={{ height: '700vh', width: '100%', position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: -1 }} />
+      <Overlays />
+      <div style={{ height: '1000vh', width: '100%', position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: -1 }} />
       <AudioToggle />
     </>
   );
