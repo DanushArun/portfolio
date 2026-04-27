@@ -88,6 +88,8 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   controls.minDistance   = 4;
   controls.maxDistance   = 12;
   controls.enabled       = !opts.disableInteraction;
+  controls.autoRotate    = true;
+  controls.autoRotateSpeed = 0.5;
 
   // ── Render targets ──────────────────────────────────────────────────────────
   const spaceRT = new THREE.WebGLRenderTarget(width * 2, height * 2, {
@@ -468,6 +470,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       if (!approachOrigin) {
         approachOrigin = camera.position.clone();
         controls.enabled = false;
+        controls.autoRotate = false;
       }
       const p   = externalProgress;
       const phi = Math.atan2(approachOrigin.z, approachOrigin.x);
@@ -608,6 +611,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     } else if (approachOrigin) {
       approachOrigin = null;
       controls.enabled = true;
+      controls.autoRotate = true;
       camera.fov = 45;
       camera.updateProjectionMatrix();
       finalUniforms.uRGBShiftRadius.value = 0.00001;

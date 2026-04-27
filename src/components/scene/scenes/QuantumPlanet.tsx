@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useFrame, useThree } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
 
@@ -479,27 +479,28 @@ function DOMOverlay({
 
   if (typeof document === 'undefined') return null;
 
-  return createPortal(
-    <>
-      <EquationTrail planetScreenPos={screenPos} onEquationClick={handleEquationClick} />
-      {Array.from(openPanels.entries()).map(([id, pos]) => {
-        const eq = EQUATIONS.find((e) => e.id === id);
-        if (!eq) return null;
-        return (
-          <GlassPanel
-            key={id}
-            title={eq.title}
-            desc={eq.desc}
-            initialX={pos.x}
-            initialY={pos.y}
-            onClose={() => handleClosePanel(id)}
-          />
-        );
-      })}
-      <ShatterCanvas phase={shatterPhase} />
-    </>,
-    document.body,
-  ) as React.ReactNode;
+  return (
+    <Html fullscreen zIndexRange={[50, 100]}>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <EquationTrail planetScreenPos={screenPos} onEquationClick={handleEquationClick} />
+        {Array.from(openPanels.entries()).map(([id, pos]) => {
+          const eq = EQUATIONS.find((e) => e.id === id);
+          if (!eq) return null;
+          return (
+            <GlassPanel
+              key={id}
+              title={eq.title}
+              desc={eq.desc}
+              initialX={pos.x}
+              initialY={pos.y}
+              onClose={() => handleClosePanel(id)}
+            />
+          );
+        })}
+        <ShatterCanvas phase={shatterPhase} />
+      </div>
+    </Html>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
