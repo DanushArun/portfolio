@@ -60,6 +60,7 @@
 }
 
 html {
+  background: var(--graphite);
   /* Lenis owns scroll; native smooth-behavior fights the RAF loop. */
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
