@@ -75,7 +75,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
   // ── Camera ──────────────────────────────────────────────────────────────────
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-  camera.position.set(5, 2, 5);
+  camera.position.set(3, 2.5, 5);
   camera.lookAt(0, 0, 0);
   spaceScene.add(camera);
 
