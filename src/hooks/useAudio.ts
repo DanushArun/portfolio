@@ -12,7 +12,7 @@ import { audioUrl } from '@/lib/audio-files';
  * is called (requires user gesture per browser policy).
  *
  * Each phase transition fires its audio cue. horizonProgress drives
- * the continuous doppler shimmer during EVENT_HORIZON and DESCENT.
+ * the continuous doppler shimmer during APPROACH and CROSSING.
  */
 export function useAudio(): void {
   const phase           = useScene((s) => s.phase);
@@ -21,7 +21,7 @@ export function useAudio(): void {
 
   // Continuous: doppler shimmer tracks horizonProgress during approach
   useEffect(() => {
-    if (phase !== 'EVENT_HORIZON' && phase !== 'DESCENT') return;
+    if (phase !== 'APPROACH' && phase !== 'CROSSING') return;
     audioEngine.setDopplerShimmer(horizonProgress);
   }, [horizonProgress, phase]);
 
@@ -32,14 +32,14 @@ export function useAudio(): void {
     prevPhase.current = phase;
 
     switch (phase) {
-      case 'VOID':
+      case 'COVER':
         audioEngine.startSubBass();
         break;
 
-      case 'EVENT_HORIZON':
+      case 'APPROACH':
         break;
 
-      case 'DESCENT':
+      case 'CROSSING':
         audioEngine.pitchDownSubBass();
         setTimeout(() => audioEngine.silenceSubBass(), 1600);
         setTimeout(() => {
@@ -48,36 +48,9 @@ export function useAudio(): void {
         }, 2600);
         break;
 
-      case 'MIRA_PULSAR':
-        audioEngine.setDopplerShimmer(0);
-        audioEngine.startPulsarScheduler();
-        break;
-
-      case 'DRIVEX_QUASAR': {
-        const leftUrl  = audioUrl('quasar-left');
-        const rightUrl = audioUrl('quasar-right');
-        if (leftUrl)  audioEngine.startTrack('quasar-left',  leftUrl,  true, 0.7);
-        if (rightUrl) audioEngine.startTrack('quasar-right', rightUrl, true, 0.7);
-        break;
-      }
-
-      case 'TWIN_BUILD': {
-        audioEngine.stopTrack('quasar-left',  1.0);
-        audioEngine.stopTrack('quasar-right', 1.0);
-        const url = audioUrl('twin-flywheel');
-        if (url) audioEngine.startTrack('twin-flywheel', url, true, 0.8);
-        break;
-      }
-
-      case 'FORMULA_RINGS': {
-        audioEngine.stopTrack('twin-flywheel', 0.8);
-        const url = audioUrl('rings-strings');
-        if (url) audioEngine.startTrack('rings-strings', url, false, 1.0);
-        break;
-      }
-
-      case 'QUANTUM_PLANET': {
-        audioEngine.stopTrack('rings-strings', 0.1);
+      case 'BOSON_STAR': {
+        // Crystal-glass texture for the Quantum Lab scene.
+        // Stops any leftover post-CROSSING piano residue.
         const url = audioUrl('crystal-glass');
         if (url) {
           audioEngine.startTrack('crystal-glass', url, true, 0);
@@ -86,7 +59,40 @@ export function useAudio(): void {
         break;
       }
 
-      case 'SINGULARITY':
+      case 'STRANGEON':
+        audioEngine.stopTrack('crystal-glass', 1.0);
+        audioEngine.setDopplerShimmer(0);
+        audioEngine.startPulsarScheduler();
+        break;
+
+      case 'BINARY_MERGER': {
+        const leftUrl  = audioUrl('quasar-left');
+        const rightUrl = audioUrl('quasar-right');
+        if (leftUrl)  audioEngine.startTrack('quasar-left',  leftUrl,  true, 0.7);
+        if (rightUrl) audioEngine.startTrack('quasar-right', rightUrl, true, 0.7);
+        break;
+      }
+
+      case 'EINSTEIN_CROSS': {
+        audioEngine.stopTrack('quasar-left',  1.0);
+        audioEngine.stopTrack('quasar-right', 1.0);
+        const url = audioUrl('twin-flywheel');
+        if (url) audioEngine.startTrack('twin-flywheel', url, true, 0.8);
+        break;
+      }
+
+      case 'HAUMEA': {
+        audioEngine.stopTrack('twin-flywheel', 0.8);
+        const url = audioUrl('rings-strings');
+        if (url) audioEngine.startTrack('rings-strings', url, false, 1.0);
+        break;
+      }
+
+      case 'MANIFEST':
+        audioEngine.stopTrack('rings-strings', 0.6);
+        break;
+
+      case 'CYGNUS_LOOP':
         audioEngine.silenceAll();
         setTimeout(() => {
           const pianoUrl = audioUrl('descent-piano');
@@ -104,13 +110,13 @@ export function useAudio(): void {
 }
 
 /**
- * usePulsarScrollSync — mount inside FORMULA_RINGS to sync pulsar
- * click volume with scroll velocity (EV motor rhythm = pulsar beat).
+ * usePulsarScrollSync — mount inside HAUMEA (Formula Manipal rings)
+ * to sync pulsar click volume with scroll velocity (EV motor rhythm = pulsar beat).
  */
 export function usePulsarScrollSync(): void {
   useEffect(() => {
     const unsubscribe = useScene.subscribe((s) => {
-      if (s.phase !== 'FORMULA_RINGS') return;
+      if (s.phase !== 'HAUMEA') return;
       const normalised = Math.min(Math.abs(s.scrollVelocity) / 80, 1);
       audioEngine.setPulsarGain(0.12 + normalised * 0.32);
     });

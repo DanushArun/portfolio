@@ -3,7 +3,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { useScene, phaseTime } from '@/lib/scene-state';
+import { useScene, phaseTime, type ScenePhase } from '@/lib/scene-state';
 
 const BH_POS  = new THREE.Vector3(0, 0, 0);
 const IDLE_POS = new THREE.Vector3(0, 2, 30);
@@ -16,16 +16,24 @@ function smoothstep(e0: number, e1: number, x: number) {
 /**
  * CameraRig — drives camera position and FOV for every phase.
  *
- * VOID           Holds at IDLE_POS looking at BH, FOV 50
- * EVENT_HORIZON  Slow orbital breath + scroll-based approach toward BH
- * DESCENT        Rapid forward push into event horizon, FOV crush 50→120
- * Cosmic scenes  Each has its own cinematic camera position
+ * COVER     Holds at IDLE_POS looking at BH, FOV 50
+ * APPROACH  Slow orbital breath + scroll-based approach toward BH
+ * CROSSING  Rapid forward push into event horizon, FOV crush 50→120
+ * Cosmic scenes (BOSON_STAR → CYGNUS_LOOP) each have their own FOV
  */
-// FOV to snap to at the START of each phase (prevents drift from DESCENT's 120° FOV)
-const PHASE_FOV: Record<string, number> = {
-  VOID: 50, EVENT_HORIZON: 50, DESCENT: 50,
-  MIRA_PULSAR: 55, DRIVEX_QUASAR: 60, TWIN_BUILD: 58,
-  FORMULA_RINGS: 80, QUANTUM_PLANET: 52, SINGULARITY: 48,
+// FOV to snap to at the START of each phase (prevents drift from CROSSING's 120° FOV).
+// Typed Record<ScenePhase, number> so future phase renames fail at compile time.
+const PHASE_FOV: Record<ScenePhase, number> = {
+  COVER: 50,
+  APPROACH: 50,
+  CROSSING: 50,
+  BOSON_STAR: 52,
+  STRANGEON: 55,
+  BINARY_MERGER: 60,
+  EINSTEIN_CROSS: 58,
+  HAUMEA: 80,
+  MANIFEST: 50,
+  CYGNUS_LOOP: 48,
 };
 
 export default function CameraRig() {

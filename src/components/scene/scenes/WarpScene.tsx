@@ -5,13 +5,13 @@
  *
  * 5-second cinematic transition directed in the spirit of Nolan/Fraser.
  * Picks up where the BH canvas left off (chromatic line on black) and
- * carries the audience through a spacetime tunnel into MIRA_PULSAR.
+ * carries the audience through a spacetime tunnel into STRANGEON.
  *
  *   BEAT 1 (0.0–1.0s)  THE TEAR        Reality rips open from horizontal line
  *   BEAT 2 (0.8–2.7s)  THE TUNNEL      Spacetime conduit, FBM-warped walls, rings rushing
  *   BEAT 3 (1.5–3.6s)  ACCELERATION    LineSegments2 streaks racing past at relativistic speed
  *   BEAT 4 (3.4–4.0s)  THE FLASH       Anamorphic horizontal flare, overexposed peak
- *   BEAT 5 (4.0–5.0s)  REVEAL          New universe stars + 200ms black before MIRA_PULSAR
+ *   BEAT 5 (4.0–5.0s)  REVEAL          New universe stars + 200ms black before STRANGEON
  *
  * Post-processing: Bloom + Chromatic Aberration + Vignette (mounted at
  * SceneManager level so it covers the whole canvas).
@@ -343,7 +343,7 @@ export default function WarpScene() {
     // 200ms of pure black between flash death and reveal birth (4.0–4.2)
     revealMat.opacity = ss(4.2, 5.0, p) * 0.7;
 
-    // Pre-fire veil at 4.5s to cover the MIRA_PULSAR scene swap
+    // Pre-fire veil at 4.5s to cover the STRANGEON (was MIRA_PULSAR) scene swap
     if (p >= 4.5 && !veilFired.current) {
       veilFired.current = true;
       setVeil(1);
@@ -351,7 +351,7 @@ export default function WarpScene() {
 
     if (p >= DURATION && !fired.current) {
       fired.current = true;
-      setPhase('MIRA_PULSAR');
+      setPhase('STRANGEON');
     }
   });
 

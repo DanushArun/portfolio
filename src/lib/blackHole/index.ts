@@ -649,7 +649,8 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         // Maintain user's angle (th0) much more, only drifting slightly to equator
         // to show the disk's depth without flattening it into a line.
         const r = R0 * Math.exp(-lambda * p);
-        const th = mix(th0, 0.0, Math.pow(p / 0.55, 2.5) * 0.7); // Only 70% drift to equator
+        // GLSL `mix(a,b,t)` = JS `THREE.MathUtils.lerp(a,b,t)`. Keep math identical.
+        const th = THREE.MathUtils.lerp(th0, 0.0, Math.pow(p / 0.55, 2.5) * 0.7); // Only 70% drift to equator
         camX = r * Math.cos(th) * Math.cos(phi);
         camY = r * Math.sin(th);
         camZ = r * Math.cos(th) * Math.sin(phi);
@@ -664,7 +665,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         // Dive through the center towards the tunnel
         const u = ss(0.55, 0.65, p);
         const rStart = R0 * Math.exp(-lambda * 0.55);
-        const thStart = mix(th0, 0.0, 0.7);
+        const thStart = THREE.MathUtils.lerp(th0, 0.0, 0.7);
         
         // Final approach to origin and then past it
         const posStart = new THREE.Vector3(

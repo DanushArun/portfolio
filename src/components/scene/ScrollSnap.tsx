@@ -10,8 +10,9 @@ import { useScene, COSMIC_SCENES } from '@/lib/scene-state';
  * past 80% of a page, advance to the next scene. Scroll velocity is also
  * fed into the store for FORMULA_RINGS ring speed.
  *
- * TWIN_BUILD exception: scrolling does not advance if orbitAngle hasn't
+ * EINSTEIN_CROSS exception: scrolling does not advance if orbitAngle hasn't
  * completed at least 180° of rotation (user must physically drag).
+ * (Formerly named TWIN_BUILD — same scene, FuryX × Veronica.)
  */
 
 const PAGE_H = typeof window !== 'undefined' ? window.innerHeight : 900;
@@ -41,8 +42,8 @@ export default function ScrollSnap() {
       if (cooldown.current) return;
       const { phase: p, orbitAngle: oa } = useScene.getState();
 
-      // TWIN_BUILD requires orbit completion before scroll advances
-      if (p === 'TWIN_BUILD' && Math.abs(oa) < Math.PI) return;
+      // EINSTEIN_CROSS (twin build) requires orbit completion before scroll advances
+      if (p === 'EINSTEIN_CROSS' && Math.abs(oa) < Math.PI) return;
 
       if (window.scrollY > PAGE_H * 0.8) {
         cooldown.current = true;
