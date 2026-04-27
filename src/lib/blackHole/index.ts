@@ -40,18 +40,18 @@ export interface BlackHoleOptions {
 }
 
 const PARTICLES = 50_000;
-const STARS     = 50_000;
+const STARS = 50_000;
 
 export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   const target = opts.target;
-  const inner  = new THREE.Color(opts.innerColor ?? '#ff8080');
-  const outer  = new THREE.Color(opts.outerColor ?? '#3633ff');
+  const inner = new THREE.Color(opts.innerColor ?? '#ff8080');
+  const outer = new THREE.Color(opts.outerColor ?? '#3633ff');
 
   // ── Sizing ──────────────────────────────────────────────────────────────────
   const rect = target.getBoundingClientRect();
-  let width  = rect.width  || window.innerWidth;
+  let width = rect.width || window.innerWidth;
   let height = rect.height || window.innerHeight;
-  const dpr  = Math.min(Math.max(window.devicePixelRatio, 1), 2);
+  const dpr = Math.min(Math.max(window.devicePixelRatio, 1), 2);
 
   // ── Renderer ────────────────────────────────────────────────────────────────
   const renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true });
@@ -65,12 +65,12 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     cursor: 'grab',  // overrides body { cursor: none } so the user sees a grab handle
   });
   renderer.domElement.addEventListener('pointerdown', () => { renderer.domElement.style.cursor = 'grabbing'; });
-  renderer.domElement.addEventListener('pointerup',   () => { renderer.domElement.style.cursor = 'grab'; });
+  renderer.domElement.addEventListener('pointerup', () => { renderer.domElement.style.cursor = 'grab'; });
   renderer.domElement.addEventListener('pointercancel', () => { renderer.domElement.style.cursor = 'grab'; });
   target.appendChild(renderer.domElement);
 
   // ── Scenes ──────────────────────────────────────────────────────────────────
-  const spaceScene      = new THREE.Scene();
+  const spaceScene = new THREE.Scene();
   const distortionScene = new THREE.Scene();
 
   // ── Camera ──────────────────────────────────────────────────────────────────
@@ -82,14 +82,14 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
-  controls.enableZoom    = false;
-  controls.enablePan     = false;
-  controls.rotateSpeed   = 0.7;
-  controls.minDistance   = 4;
-  controls.maxDistance   = 12;
-  controls.enabled       = !opts.disableInteraction;
-  controls.autoRotate    = true;
-  controls.autoRotateSpeed = 0.5;
+  controls.enableZoom = false;
+  controls.enablePan = false;
+  controls.rotateSpeed = 0.7;
+  controls.minDistance = 4;
+  controls.maxDistance = 12;
+  controls.enabled = !opts.disableInteraction;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.3;
 
   // ── Render targets ──────────────────────────────────────────────────────────
   const spaceRT = new THREE.WebGLRenderTarget(width * 2, height * 2, {
@@ -105,14 +105,14 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
   // ── Noise texture (one-shot Perlin render to RT) ────────────────────────────
   const noiseTex = (() => {
-    const noiseScene  = new THREE.Scene();
+    const noiseScene = new THREE.Scene();
     const noiseCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
-    const noiseRT     = new THREE.WebGLRenderTarget(128, 128, {
+    const noiseRT = new THREE.WebGLRenderTarget(128, 128, {
       generateMipmaps: false, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping,
     });
     const noiseMat = new THREE.RawShaderMaterial({
-      glslVersion:    THREE.GLSL3,
-      vertexShader:   noisesVert,
+      glslVersion: THREE.GLSL3,
+      vertexShader: noisesVert,
       fragmentShader: noisesFrag,
     });
     const noisePlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), noiseMat);
@@ -134,20 +134,20 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
   // ── Disc (Bruno's exact CylinderGeometry(5, 1, 0, 64, 10, true)) ────────────
   const discMat = new THREE.RawShaderMaterial({
-    glslVersion:    THREE.GLSL3,
-    side:           THREE.DoubleSide,
-    blending:       THREE.AdditiveBlending,
-    depthWrite:     false,
-    depthTest:      false,
-    transparent:    true,
+    glslVersion: THREE.GLSL3,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: false,
+    transparent: true,
     uniforms: {
-      uTime:         { value: 0 },
+      uTime: { value: 0 },
       uNoiseTexture: { value: noiseTex },
       uInnerColor,
       uOuterColor,
-      uCamAzimuth:   { value: 0 },
+      uCamAzimuth: { value: 0 },
     },
-    vertexShader:   discVert,
+    vertexShader: discVert,
     fragmentShader: discFrag,
   });
   const discMesh = new THREE.Mesh(
@@ -163,33 +163,33 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   {
     const distArr = new Float32Array(PARTICLES);
     const sizeArr = new Float32Array(PARTICLES);
-    const rndArr  = new Float32Array(PARTICLES);
+    const rndArr = new Float32Array(PARTICLES);
     for (let i = 0; i < PARTICLES; i++) {
       distArr[i] = Math.random();
       sizeArr[i] = Math.random();
-      rndArr[i]  = Math.random();
+      rndArr[i] = Math.random();
     }
     partGeo.setAttribute('position', new THREE.Float32BufferAttribute(distArr, 1));
-    partGeo.setAttribute('aSize',    new THREE.Float32BufferAttribute(sizeArr, 1));
-    partGeo.setAttribute('aRandom',  new THREE.Float32BufferAttribute(rndArr,  1));
+    partGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(sizeArr, 1));
+    partGeo.setAttribute('aRandom', new THREE.Float32BufferAttribute(rndArr, 1));
     // 1-component position breaks auto bounding sphere; supply manually.
     partGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 10);
   }
   const partMat = new THREE.RawShaderMaterial({
-    glslVersion:    THREE.GLSL3,
-    blending:       THREE.AdditiveBlending,
-    depthWrite:     false,
-    depthTest:      false,
-    transparent:    true,
+    glslVersion: THREE.GLSL3,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: false,
+    transparent: true,
     uniforms: {
-      uTime:       { value: 0 },
+      uTime: { value: 0 },
       uInnerColor,
       uOuterColor,
       uViewHeight: { value: spaceRT.height },
-      uSize:       { value: 0.015 },
+      uSize: { value: 0.015 },
       uCamAzimuth: { value: 0 },
     },
-    vertexShader:   discParticlesVert,
+    vertexShader: discParticlesVert,
     fragmentShader: discParticlesFrag,
   });
   const partPoints = new THREE.Points(partGeo, partMat);
@@ -200,35 +200,35 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   // ── Stars (50k random points on r=400 sphere) ───────────────────────────────
   const starGeo = new THREE.BufferGeometry();
   {
-    const pos  = new Float32Array(STARS * 3);
-    const sz   = new Float32Array(STARS);
-    const col  = new Float32Array(STARS * 3);
-    const c    = new THREE.Color();
+    const pos = new Float32Array(STARS * 3);
+    const sz = new Float32Array(STARS);
+    const col = new Float32Array(STARS * 3);
+    const c = new THREE.Color();
     for (let i = 0; i < STARS; i++) {
       const theta = 2 * Math.PI * Math.random();
-      const phi   = Math.acos(2 * Math.random() - 1.0);
-      pos[i * 3]     = Math.cos(theta) * Math.sin(phi) * 400;
+      const phi = Math.acos(2 * Math.random() - 1.0);
+      pos[i * 3] = Math.cos(theta) * Math.sin(phi) * 400;
       pos[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * 400;
       pos[i * 3 + 2] = Math.cos(phi) * 400;
       sz[i] = Math.random();
       c.setHSL(Math.random(), 1.0, 0.8);
-      col[i * 3]     = c.r;
+      col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
     }
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    starGeo.setAttribute('aSize',    new THREE.Float32BufferAttribute(sz,  1));
-    starGeo.setAttribute('aColor',   new THREE.Float32BufferAttribute(col, 3));
+    starGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(sz, 1));
+    starGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
   }
   const starsMat = new THREE.RawShaderMaterial({
-    glslVersion:    THREE.GLSL3,
-    depthWrite:     false,
-    depthTest:      false,
+    glslVersion: THREE.GLSL3,
+    depthWrite: false,
+    depthTest: false,
     uniforms: {
       uViewHeight: { value: spaceRT.height },
-      uSize:       { value: 0.001 },
+      uSize: { value: 0.001 },
     },
-    vertexShader:   starsVert,
+    vertexShader: starsVert,
     fragmentShader: starsFrag,
   });
   const starsPoints = new THREE.Points(starGeo, starsMat);
@@ -245,27 +245,27 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   // Each ring is a thin torus positioned along z-axis. Their additive emission
   // creates the "rushing through a tunnel" sensation when the camera traverses.
   const TUNNEL_RINGS = 32;
-  const tunnelGroup  = new THREE.Group();
+  const tunnelGroup = new THREE.Group();
   const tunnelMats: THREE.MeshBasicMaterial[] = [];
   for (let i = 0; i < TUNNEL_RINGS; i++) {
     const z = -6 - i * 5.2;        // -6 → -167, denser stacking
     // Larger, taper-narrowing rings — the tunnel converges toward the destination
-    const tip   = i / (TUNNEL_RINGS - 1); // 0 = near, 1 = far
+    const tip = i / (TUNNEL_RINGS - 1); // 0 = near, 1 = far
     const radius = THREE.MathUtils.lerp(2.4, 0.9, tip * tip); // converges
-    const tubeR  = THREE.MathUtils.lerp(0.18, 0.08, tip);     // thicker tubes
+    const tubeR = THREE.MathUtils.lerp(0.18, 0.08, tip);     // thicker tubes
     // Color shifts cool→warm along the tunnel (cyan near → amber at end)
-    const hue    = THREE.MathUtils.lerp(0.55, 0.08, tip);
-    const col    = new THREE.Color().setHSL(hue, 0.9, 0.6);
-    const mat    = new THREE.MeshBasicMaterial({
-      color:        col,
-      transparent:  true,
-      opacity:      0,
-      blending:     THREE.AdditiveBlending,
-      depthWrite:   false,
+    const hue = THREE.MathUtils.lerp(0.55, 0.08, tip);
+    const col = new THREE.Color().setHSL(hue, 0.9, 0.6);
+    const mat = new THREE.MeshBasicMaterial({
+      color: col,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
     });
     tunnelMats.push(mat);
     const geo = new THREE.TorusGeometry(radius, tubeR, 8, 96);
-    const m   = new THREE.Mesh(geo, mat);
+    const m = new THREE.Mesh(geo, mat);
     m.position.z = z;
     m.rotation.z = Math.random() * Math.PI;
     tunnelGroup.add(m);
@@ -277,17 +277,17 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   const tunnelStreakGeo = new THREE.BufferGeometry();
   {
     const pos = new Float32Array(TUNNEL_STREAKS * 3);
-    const sz  = new Float32Array(TUNNEL_STREAKS);
+    const sz = new Float32Array(TUNNEL_STREAKS);
     for (let i = 0; i < TUNNEL_STREAKS; i++) {
       const theta = Math.random() * Math.PI * 2;
-      const r     = 0.3 + Math.pow(Math.random(), 0.6) * 2.0;
-      pos[i * 3]     = Math.cos(theta) * r;
+      const r = 0.3 + Math.pow(Math.random(), 0.6) * 2.0;
+      pos[i * 3] = Math.cos(theta) * r;
       pos[i * 3 + 1] = Math.sin(theta) * r;
       pos[i * 3 + 2] = -Math.random() * 175; // distributed along tunnel
       sz[i] = 0.5 + Math.random() * 1.5;
     }
     tunnelStreakGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    tunnelStreakGeo.setAttribute('size',     new THREE.Float32BufferAttribute(sz, 1));
+    tunnelStreakGeo.setAttribute('size', new THREE.Float32BufferAttribute(sz, 1));
   }
   // Custom shader — clamps gl_PointSize so close streaks don't balloon into
   // chunky pixel blocks. They stay sub-4px at any distance and use opacity
@@ -330,10 +330,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   // ── Neutron star (the destination — MIRA_PULSAR) ──────────────────────────
   const neutronGeo = new THREE.SphereGeometry(0.9, 48, 48);
   const neutronMat = new THREE.MeshStandardMaterial({
-    color:             new THREE.Color('#8B3A1A'),
-    emissive:          new THREE.Color('#C84B20'),
+    color: new THREE.Color('#8B3A1A'),
+    emissive: new THREE.Color('#C84B20'),
     emissiveIntensity: 2.2,
-    roughness:         0.7,
+    roughness: 0.7,
   });
   const neutronStar = new THREE.Mesh(neutronGeo, neutronMat);
   neutronStar.position.set(0, 0, -210);
@@ -353,11 +353,11 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   // ── Pulsar beam (BoxGeometry with shader, flashes every 92ms) ──────────────
   const beamUni = { uAlpha: { value: 0.0 } };
   const beamMat = new THREE.ShaderMaterial({
-    transparent:  true,
-    depthWrite:   false,
-    blending:     THREE.AdditiveBlending,
-    uniforms:     beamUni,
-    vertexShader:   'void main(){gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: beamUni,
+    vertexShader: 'void main(){gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
     fragmentShader: 'uniform float uAlpha;void main(){gl_FragColor=vec4(0.52,0.80,1.0,uAlpha);}',
   });
   const beam = new THREE.Mesh(new THREE.BoxGeometry(80, 0.06, 0.06), beamMat);
@@ -367,11 +367,11 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
   // ── Distortion (active = camera-facing, mask = horizontal disc) ─────────────
   const distActiveMat = new THREE.RawShaderMaterial({
-    glslVersion:    THREE.GLSL3,
-    side:           THREE.DoubleSide,
-    transparent:    true,
-    uniforms:       {},
-    vertexShader:   distortionVert,
+    glslVersion: THREE.GLSL3,
+    side: THREE.DoubleSide,
+    transparent: true,
+    uniforms: {},
+    vertexShader: distortionVert,
     fragmentShader: distortionActiveFrag,
   });
   const distActiveMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), distActiveMat);
@@ -379,11 +379,11 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   distortionScene.add(distActiveMesh);
 
   const distMaskMat = new THREE.RawShaderMaterial({
-    glslVersion:    THREE.GLSL3,
-    side:           THREE.DoubleSide,
-    transparent:    true,
-    uniforms:       {},
-    vertexShader:   distortionVert,
+    glslVersion: THREE.GLSL3,
+    side: THREE.DoubleSide,
+    transparent: true,
+    uniforms: {},
+    vertexShader: distortionVert,
     fragmentShader: distortionMaskFrag,
   });
   const distMaskMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), distMaskMat);
@@ -393,18 +393,18 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
   // ── Final composite (fullscreen quad with FinalMaterial) ────────────────────
   const finalUniforms = {
-    uSpaceTexture:      { value: spaceRT.texture },
+    uSpaceTexture: { value: spaceRT.texture },
     uDistortionTexture: { value: distortionRT.texture },
     uBlackHolePosition: { value: new THREE.Vector2() },
-    uRGBShiftRadius:    { value: 0.00001 },
-    uDopplerBoost:      { value: 0.0 },
+    uRGBShiftRadius: { value: 0.00001 },
+    uDopplerBoost: { value: 0.0 },
   };
   const finalMat = new THREE.RawShaderMaterial({
-    glslVersion:    THREE.GLSL3,
-    depthWrite:     false,
-    depthTest:      false,
-    uniforms:       finalUniforms,
-    vertexShader:   finalVert,
+    glslVersion: THREE.GLSL3,
+    depthWrite: false,
+    depthTest: false,
+    uniforms: finalUniforms,
+    vertexShader: finalVert,
     fragmentShader: finalFrag,
   });
   const finalScene = new THREE.Scene();
@@ -436,7 +436,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   };
 
   // ── Scroll-approach state ────────────────────────────────────────────────────
-  let externalProgress   = 0;
+  let externalProgress = 0;
   let approachOrigin: THREE.Vector3 | null = null;
 
   // ── Animation loop ──────────────────────────────────────────────────────────
@@ -472,13 +472,13 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         controls.enabled = false;
         controls.autoRotate = false;
       }
-      const p   = externalProgress;
+      const p = externalProgress;
       const phi = Math.atan2(approachOrigin.z, approachOrigin.x);
       const th0 = Math.atan2(
         approachOrigin.y,
         Math.sqrt(approachOrigin.x * approachOrigin.x + approachOrigin.z * approachOrigin.z),
       );
-      const R0  = approachOrigin.length();
+      const R0 = approachOrigin.length();
 
       let camX = 0, camY = 0, camZ = 0;
       let lookX = 0, lookY = 0, lookZ = 0;
@@ -502,22 +502,22 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         //
         // θ(p) = θ₀·exp(−9p)  — elevation drifts rapidly to equatorial so the
         // disk starts wrapping (Interstellar-style side view) by mid-approach.
-        const r   = R0 * Math.exp(-lambda * p);
-        const th  = th0 * Math.exp(-9.0 * p);
+        const r = R0 * Math.exp(-lambda * p);
+        const th = th0 * Math.exp(-9.0 * p);
         camX = r * Math.cos(th) * Math.cos(phi);
         camY = r * Math.sin(th);
         camZ = r * Math.cos(th) * Math.sin(phi);
         lookX = 0; lookY = 0; lookZ = 0; // always looking at BH
         fov = 45 + 40 * (p / 0.55);      // 45° → 85° (linear, smooth widening)
-        rgbShift     = 0.00001 + 0.015 * Math.pow(p / 0.55, 2); // 0.00001 → 0.015
+        rgbShift = 0.00001 + 0.015 * Math.pow(p / 0.55, 2); // 0.00001 → 0.015
         dopplerBoost = 0.60 * (p / 0.55);                        // 0 → 0.60
-        diskScale    = 0.75 + 0.55 * (p / 0.55);                 // 0.75 → 1.30
+        diskScale = 0.75 + 0.55 * (p / 0.55);                 // 0.75 → 1.30
       } else if (p < 0.65) {
         // ── PHASE B — Convergence (off-axis → on-axis, 10% of scroll)
         //
         // At p=0.55 the camera is at equatorial (θ≈0), r=2.0.
         // Position = (2·cos(φ), 0, 2·sin(φ)).  Blend to (0, 0, 0.4) on-axis.
-        const w    = ss(0.55, 0.65, p);
+        const w = ss(0.55, 0.65, p);
         const xOff = 2.0 * Math.cos(phi);
         const yOff = 0.0; // equatorial
         const zOff = 2.0 * Math.sin(phi);
@@ -526,9 +526,9 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         camZ = zOff * (1 - w) + 0.4 * w;
         lookX = 0; lookY = 0; lookZ = -100 * w;
         fov = 85 + 5 * w;            // 85 → 90
-        rgbShift     = 0.015 + 0.015 * w; // 0.015 → 0.030
-        dopplerBoost = 0.60 + 0.30  * w;  // 0.60 → 0.90
-        diskScale    = 1.30;
+        rgbShift = 0.015 + 0.015 * w; // 0.015 → 0.030
+        dopplerBoost = 0.60 + 0.30 * w;  // 0.60 → 0.90
+        diskScale = 1.30;
       } else if (p < 0.78) {
         // ── PHASE C — Crossing the horizon (13% of scroll)
         //
@@ -541,9 +541,9 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         lookX = 0; lookY = 0; lookZ = -100 - 100 * u;
         fov = 90 + 20 * u;              // 90 → 110
         // linear(0.030→0.020) + sine bump → continuous at both ends, peak at u=0.5
-        rgbShift     = 0.030 - 0.010 * u + 0.020 * Math.sin(u * Math.PI);
-        dopplerBoost = 0.90 - 0.25  * u + 0.10  * Math.sin(u * Math.PI);
-        diskScale    = 1.30;
+        rgbShift = 0.030 - 0.010 * u + 0.020 * Math.sin(u * Math.PI);
+        dopplerBoost = 0.90 - 0.25 * u + 0.10 * Math.sin(u * Math.PI);
+        diskScale = 1.30;
       } else if (p < 0.90) {
         // ── PHASE D — Inter-region transit (12% of scroll, cubic ease-out)
         //
@@ -555,10 +555,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         camZ = -8 - 65 * k;              // -8 → -73
         lookX = 0; lookY = 0; lookZ = -200 - 50 * u; // -200 → -250
         fov = 110 - 35 * k;              // 110 → 75
-        rgbShift     = 0.020 - 0.018 * u; // 0.020 → 0.002
-        dopplerBoost = 0.65 - 0.45  * u;  // 0.65 → 0.20
-        diskScale    = 1.30 - 0.45  * u;  // 1.30 → 0.85
-        streakI      = Math.sin(u * Math.PI); // bell, peaks at u=0.5
+        rgbShift = 0.020 - 0.018 * u; // 0.020 → 0.002
+        dopplerBoost = 0.65 - 0.45 * u;  // 0.65 → 0.20
+        diskScale = 1.30 - 0.45 * u;  // 1.30 → 0.85
+        streakI = Math.sin(u * Math.PI); // bell, peaks at u=0.5
       } else {
         // ── PHASE E — Pulsar arrival (10% of scroll, smoothstep)
         //
@@ -570,9 +570,9 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         camZ = -73 - 125 * k;            // -73 → -198
         lookX = 0; lookY = 1.2 * k; lookZ = -250 + 40 * k; // → (0,1.2,-210)
         fov = 75 - 20 * k;               // 75 → 55
-        rgbShift     = 0.002 * (1 - u);
-        dopplerBoost = 0.20  * (1 - u);
-        diskScale    = 0.85; // hidden by pastBH gate
+        rgbShift = 0.002 * (1 - u);
+        dopplerBoost = 0.20 * (1 - u);
+        diskScale = 0.85; // hidden by pastBH gate
       }
 
       // Pulsar opacity ramps continuously across Phase D and E (starts at p=0.78)
@@ -584,7 +584,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       camera.fov = fov;
       camera.updateProjectionMatrix();
       finalUniforms.uRGBShiftRadius.value = rgbShift;
-      finalUniforms.uDopplerBoost.value   = dopplerBoost;
+      finalUniforms.uDopplerBoost.value = dopplerBoost;
       discMesh.scale.setScalar(Math.max(0.05, diskScale));
       partPoints.scale.setScalar(Math.max(0.05, diskScale));
 
@@ -596,16 +596,16 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       // Pulsar (cross-fades in across D and E, beam pulses on wall clock)
       const pulsarOn = pulsarOp > 0.005;
       neutronStar.visible = pulsarOn;
-      beam.visible        = pulsarOn;
+      beam.visible = pulsarOn;
       if (pulsarOn) {
         neutronStar.rotation.y += 0.04;
         neutronMat.emissiveIntensity = 2.2 * pulsarOp;
         const beat = (performance.now() / 1000) % 0.092;
-        const a    = beat < 0.080 ? Math.exp(-beat / 0.022) * 0.92 : 0.0;
-        beamUni.uAlpha.value   = a * pulsarOp;
+        const a = beat < 0.080 ? Math.exp(-beat / 0.022) * 0.92 : 0.0;
+        beamUni.uAlpha.value = a * pulsarOp;
         neutronLight.intensity = a * 7 * pulsarOp;
       } else {
-        beamUni.uAlpha.value   = 0;
+        beamUni.uAlpha.value = 0;
         neutronLight.intensity = 0;
       }
     } else if (approachOrigin) {
@@ -615,10 +615,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       camera.fov = 45;
       camera.updateProjectionMatrix();
       finalUniforms.uRGBShiftRadius.value = 0.00001;
-      finalUniforms.uDopplerBoost.value   = 0;
+      finalUniforms.uDopplerBoost.value = 0;
       discMesh.scale.setScalar(0.75);
       partPoints.scale.setScalar(0.75);
-      discMesh.visible   = true;
+      discMesh.visible = true;
       partPoints.visible = true;
       tunnelMats.forEach((m) => { m.opacity = 0; });
       tunnelStreakMat.uniforms.uOpacity.value = 0;
@@ -666,7 +666,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     // frustum culls the geometry naturally once we're past. Hard-hiding too
     // early causes a sudden disappearance during the crossing.
     const pastBH = camera.position.z < -40.0;
-    discMesh.visible   = !pastBH;
+    discMesh.visible = !pastBH;
     partPoints.visible = !pastBH;
 
     // Pass 1: space scene → spaceRT
@@ -700,14 +700,14 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   // ── Resize ──────────────────────────────────────────────────────────────────
   function onResize() {
     const r = target.getBoundingClientRect();
-    width  = r.width  || window.innerWidth;
+    width = r.width || window.innerWidth;
     height = r.height || window.innerHeight;
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     spaceRT.setSize(width * 2, height * 2);
     distortionRT.setSize(Math.floor(width * 0.5), Math.floor(height * 0.5));
-    partMat.uniforms.uViewHeight.value  = spaceRT.height;
+    partMat.uniforms.uViewHeight.value = spaceRT.height;
     starsMat.uniforms.uViewHeight.value = spaceRT.height;
   }
   window.addEventListener('resize', onResize);
