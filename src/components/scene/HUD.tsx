@@ -1,78 +1,31 @@
 'use client';
 
 import { useScene } from '@/lib/scene-state';
-import { useEffect, useState } from 'react';
 
-const MONO: React.CSSProperties = {
-  fontFamily: 'var(--font-mono, monospace)',
-  fontSize: 9,
-  letterSpacing: '0.25em',
-  textTransform: 'uppercase' as const,
-  color: 'rgba(232,228,216,0.42)',
-};
-
-const STRIP: React.CSSProperties = {
-  position: 'fixed',
-  left: 0, right: 0,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end',
-  padding: '1.25rem 2rem',
-  zIndex: 20,
-  pointerEvents: 'none',
-};
-
-function NavHint() {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 1000);
-    return () => clearTimeout(t);
-  }, []);
-
+function DebugProgressOverlay() {
+  const phase = useScene((s) => s.phase);
+  const j = useScene((s) => s.journeyProgress);
+  const c = useScene((s) => s.cosmicProgress);
+  const w = useScene((s) => s.workProgress);
+  const l = useScene((s) => s.localProgress);
   return (
     <div style={{
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 1.4s cubic-bezier(0.16,1,0.3,1)',
-      ...MONO,
-      color: 'rgba(232,228,216,0.28)',
-      lineHeight: 2.6,
+      position: 'fixed', top: 8, right: 8, zIndex: 1000,
+      background: 'rgba(0,0,0,0.6)', color: '#5EEAD4',
+      fontFamily: 'monospace', fontSize: 10, padding: '4px 8px',
+      pointerEvents: 'none', letterSpacing: '0.05em',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9em' }}>
-        <span style={{ color: 'rgba(255,168,50,0.5)', fontSize: 11 }}>⊕</span>
-        <span>DRAG  —  ORBIT THE SINGULARITY</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9em' }}>
-        <span style={{ color: 'rgba(255,168,50,0.5)', fontSize: 13 }}>↓</span>
-        <span>SCROLL  —  CROSS THE THRESHOLD</span>
-      </div>
+      <div>{phase}</div>
+      <div>j={j.toFixed(3)} c={c.toFixed(3)} w={w.toFixed(3)}</div>
+      <div>local={l.toFixed(3)}</div>
     </div>
   );
 }
 
 export default function HUD() {
-  const phase = useScene((s) => s.phase);
-
   return (
     <>
-      <div style={{ ...STRIP, top: 0 }}>
-        <div style={{ ...MONO, opacity: 0.55 }}>
-          {phase === 'STRANGEON'     && 'MIRA  /  VOICE AI'}
-          {phase === 'BINARY_MERGER' && 'DRIVEX  /  AGENTIC SYSTEMS'}
-          {phase === 'EINSTEIN_CROSS'&& 'FURYX × VERONICA'}
-          {phase === 'HAUMEA'        && 'FORMULA MANIPAL'}
-          {phase === 'BOSON_STAR'    && 'QUANTUM RESEARCH'}
-          {phase === 'CYGNUS_LOOP'   && 'DANUSH ARUN'}
-        </div>
-        <div />
-      </div>
-
-      <div style={{ ...STRIP, bottom: 0 }}>
-        <div style={MONO}>
-          {phase === 'COVER' && <NavHint />}
-        </div>
-        <div />
-      </div>
-
+      {process.env.NODE_ENV !== 'production' && <DebugProgressOverlay />}
     </>
   );
 }

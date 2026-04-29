@@ -2,36 +2,33 @@
 
 import { useEffect, useRef, useCallback, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { useScene, isCosmic, type ScenePhase } from '@/lib/scene-state';
+import { useScene, isCosmic, isBlackHoleCanvas, isR3FCanvas, type ScenePhase } from '@/lib/scene-state';
 import dynamic from 'next/dynamic';
 import { useAudio } from '@/hooks/useAudio';
 import AudioToggle from '@/components/ui/AudioToggle';
 
+import ScrollOrchestrator from './ScrollOrchestrator';
 import BlackHoleMount from './BlackHoleMount';
 import CameraRig from './CameraRig';
 import PostFX from './PostFX';
 
-const QuantumPlanet     = dynamic(() => import('./scenes/QuantumPlanet'), { ssr: false });
-const MiraPulsar        = dynamic(() => import('./scenes/MiraPulsar'), { ssr: false });
-const DriveXQuasar      = dynamic(() => import('./scenes/DriveXQuasar'), { ssr: false });
-const TwinBuild         = dynamic(() => import('./scenes/TwinBuild'), { ssr: false });
-const FormulaRings      = dynamic(() => import('./scenes/FormulaRings'),  { ssr: false });
-const Singularity       = dynamic(() => import('./scenes/Singularity'),   { ssr: false });
-const WarpScene         = dynamic(() => import('./scenes/WarpScene'),     { ssr: false });
-const StarField         = dynamic(() => import('./StarField'),            { ssr: false });
+// New high-fidelity R3F components
+const WarpScene             = dynamic(() => import('./scenes/WarpScene'),             { ssr: false });
+const AnomalyGlitch         = dynamic(() => import('./scenes/AnomalyGlitch'),         { ssr: false });
+const TransitionConvergence = dynamic(() => import('./scenes/TransitionConvergence'), { ssr: false });
+const EmergeSystem          = dynamic(() => import('./scenes/EmergeSystem'),          { ssr: false });
+const StarField             = dynamic(() => import('./StarField'),                    { ssr: false });
 
 import HUD from './HUD';
-import GravityCursor from './GravityCursor';
-import Overlays from './Overlays';
 import VoidPrologue from './VoidPrologue';
+import WorkDashboard from '@/components/work/WorkDashboard';
 
 export default function SceneManager() {
   const phase           = useScene((s) => s.phase);
   const veil            = useScene((s) => s.veil);
-  const horizonProgress = useScene((s) => s.horizonProgress);
+  const cosmicProgress  = useScene((s) => s.cosmicProgress);
   const setMouse = useScene((s) => s.setMouse);
 
-  const lastScrollY    = useRef(0);
   const mousePending   = useRef(false);
   const pendingMouseX  = useRef(0);
   const pendingMouseY  = useRef(0);
@@ -48,78 +45,47 @@ export default function SceneManager() {
     }
   }, [setMouse]);
 
-  const onScroll = useCallback(() => {
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    const progress = max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
-
-    const dy = window.scrollY - lastScrollY.current;
-    lastScrollY.current = window.scrollY;
-
-    const continuous = progress * 9;
-    const idx = Math.floor(continuous);
-    const bhProg = Math.min(1, progress * 3);
-
-    let newPhase: ScenePhase = 'COVER';
-    if (idx === 0) newPhase = 'COVER';
-    else if (idx === 1) newPhase = 'APPROACH';
-    else if (idx === 2) newPhase = 'CROSSING';
-    else if (idx === 3) newPhase = 'BOSON_STAR';
-    else if (idx === 4) newPhase = 'STRANGEON';
-    else if (idx === 5) newPhase = 'BINARY_MERGER';
-    else if (idx === 6) newPhase = 'EINSTEIN_CROSS';
-    else if (idx === 7) newPhase = 'HAUMEA';
-    else if (idx === 8) newPhase = 'MANIFEST';
-    else if (idx >= 9)  newPhase = 'CYGNUS_LOOP';
-
-    // Batch all scroll-derived state into a single zustand set call
-    useScene.setState((s) => ({
-      scrollVelocity:  dy,
-      horizonProgress: bhProg,
-      ...(newPhase !== s.phase ? { phase: newPhase, phaseStart: performance.now() } : {}),
-    }));
-  }, []);
-
   useEffect(() => {
     window.addEventListener('mousemove', onMouseMove, { passive: true });
-    window.addEventListener('scroll',    onScroll,    { passive: true });
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('scroll',    onScroll);
     };
-  }, [onMouseMove, onScroll]);
+  }, [onMouseMove]);
 
   useEffect(() => {
     const { beginJourney, phase: p } = useScene.getState();
-    if (p === 'COVER') beginJourney();
+    if (p === 'C01_ORBIT') beginJourney();
   }, []);
 
-  // Defensive reset: once we leave CROSSING, ensure the veil overlay never
-  // stays raised. WarpScene used to setVeil(1) without resetting; this guard
-  // keeps any future veil-raise from leaking into cosmic phases.
   useEffect(() => {
     if (isCosmic(phase)) useScene.setState({ veil: 0 });
   }, [phase]);
 
   useAudio();
 
-  // The BH canvas drives everything from COVER through CROSSING. We keep it
-  // mounted across CROSSING but fade its DOM opacity so the R3F canvas
-  // (mounted underneath) crossfades into view rather than hard-cutting.
-  const showBH       = phase === 'COVER' || phase === 'APPROACH' || phase === 'CROSSING';
-  const showCosmic   = isCosmic(phase);
-  // R3F mounts during CROSSING too, so WarpScene is alive while the BH is
-  // still on screen. This is the seam-killer — both canvases co-exist for
-  // the duration of the bridge instead of doing an unmount/mount swap.
-  const showR3F      = phase === 'CROSSING' || showCosmic;
-  // BH DOM opacity. horizonProgress is `min(1, scrollProgress * 3)`, so it
-  // hits 1.0 at scroll = 1/3 (= end of CROSSING). Fade BH out across the
-  // last ~30% of that range so by the time CROSSING ends, BH is invisible
-  // and the WarpScene + cosmic scenes own the frame.
-  //   horizonProgress 0.00..0.70  → bhAlpha = 1
-  //   horizonProgress 0.70..1.00  → bhAlpha = 1 → 0
-  const bhAlpha = phase === 'CROSSING'
-    ? Math.max(0, 1 - (horizonProgress - 0.70) / 0.30)
-    : 1;
+  const showBH    = isBlackHoleCanvas(phase);
+  const showR3F   = isR3FCanvas(phase) || phase === 'C05_WARP';  // overlap during WARP
+  const bhAlpha   = phase === 'C05_WARP'
+    ? Math.max(0, 1 - useScene.getState().localProgress * 1.4) // fade out across WARP
+    : (showBH ? 1 : 0);
+
+  // ── Journey Remapping ──────────────────────────────────────────────────────
+  const local = useScene((s) => s.localProgress);
+  let bhProgress = cosmicProgress;
+  let bhIntensity = 1.0;
+
+  if (phase === 'C04_HORIZON') {
+    // Map HORIZON (local 0..1) to internal Phase B (0.55..0.65)
+    bhProgress = 0.55 + local * 0.10;
+    // Intensity spike at the crossing (white-flash)
+    bhIntensity = 1.0 + local * 0.6;
+  } else if (phase === 'C05_WARP') {
+    // Map WARP (local 0..1) to internal Phase C/D (0.65..0.90)
+    bhProgress = 0.65 + local * 0.25;
+  } else if (isBlackHoleCanvas(phase) && cosmicProgress < 0.4) {
+    // Scale C01..C03 to fit in the 0.00..0.55 approach window
+    bhProgress = (cosmicProgress / 0.4) * 0.55;
+  }
 
   return (
     <>
@@ -136,7 +102,7 @@ export default function SceneManager() {
           <BlackHoleMount
             innerColor="#ffc066"
             outerColor="#5a1a08"
-            progress={horizonProgress}
+            progress={bhProgress}
           />
         </div>
       )}
@@ -145,31 +111,16 @@ export default function SceneManager() {
         <Canvas
           dpr={[1, 1.5]}
           gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
-          camera={{ position: [0, 2, 30], fov: 50, near: 0.01, far: 2000 }}
+          camera={{ position: [0, 0, 30], fov: 50, near: 0.01, far: 2000 }}
           style={{ position: 'fixed', inset: 0, background: 'transparent', zIndex: 2 }}
         >
           <Suspense fallback={null}>
             <CameraRig />
-            {/* Persistent starfield backdrop. Mounts the moment the R3F
-                canvas exists so by the time WarpScene's reveal-stars beat
-                fades, the camera lands inside a real sky rather than a
-                pure-black void. */}
             <StarField />
-            {/* WarpScene is the bridge: 5s timeline (tear → tunnel → streaks
-                → flash → reveal stars) that masks the BH→cosmic handoff.
-                Mounted only during CROSSING; auto-advances to BOSON_STAR. */}
-            {phase === 'CROSSING' && <WarpScene />}
-            {showCosmic && (
-              <>
-                <group position={[0, 0, 0]}><QuantumPlanet /></group>
-                <group position={[0, 0, -90]}><MiraPulsar /></group>
-                <group position={[0, 0, -180]}><DriveXQuasar /></group>
-                <group position={[0, 0, -270]}><TwinBuild /></group>
-                <group position={[0, 0, -360]}><FormulaRings /></group>
-                {/* MANIFEST AT -450 HAS NO R3F SCENE */}
-                <group position={[0, 0, -540]}><Singularity /></group>
-              </>
-            )}
+            {phase === 'C05_WARP' && <WarpScene />}
+            {(phase === 'C06_ANOMALY' || phase === 'C07_TRANSITION') && <AnomalyGlitch />}
+            {phase === 'C07_TRANSITION' && <TransitionConvergence />}
+            {(phase === 'C08_EMERGE' || phase === 'C09_PROJECT') && <EmergeSystem />}
             <PostFX />
           </Suspense>
         </Canvas>
@@ -188,11 +139,19 @@ export default function SceneManager() {
         }}
       />
 
-      {showCosmic && <GravityCursor />}
+      <ScrollOrchestrator />
+      <WorkDashboard />
       <HUD />
-      <Overlays />
       <VoidPrologue />
-      <div style={{ height: '1000vh', width: '100%', position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: -1 }} />
+      <div
+        aria-hidden
+        style={{
+          height: '1500vh',
+          width: '100%',
+          pointerEvents: 'none',
+          zIndex: -1,
+        }}
+      />
       <AudioToggle />
     </>
   );

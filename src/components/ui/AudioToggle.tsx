@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { audioEngine } from '@/lib/audio';
+// import { audioEngine } from '@/lib/audio';
 
 /**
  * AudioToggle — fixed top-right, Space Mono 9px.
@@ -11,11 +11,11 @@ export default function AudioToggle() {
   const [on, setOn] = useState(false);
 
   const toggle = useCallback(() => {
-    if (!on) {
-      audioEngine.enable();
-    } else {
-      audioEngine.disable();
-    }
+    // if (!on) {
+    //   audioEngine.enable();
+    // } else {
+    //   audioEngine.disable();
+    // }
     setOn((prev) => !prev);
   }, [on]);
 
