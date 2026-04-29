@@ -45,3 +45,5 @@ research/
 claude-skills-generator/
 .superpowers/
 frame-capture/
+
+.worktrees/
