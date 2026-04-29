@@ -241,7 +241,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   const initTextParticles = async () => {
     // Wait for fonts to load
     await document.fonts.ready;
-    
+
     const canvas = document.createElement('canvas');
     canvas.width = 2048;
     canvas.height = 512;
@@ -261,60 +261,29 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     const positions = [];
     const originalPos = [];
     const randoms = [];
-    
-    // Orient the text plane to face the camera HORIZONTALLY (Y-axis pivot only).
-    //
-    // Why not a full lookAt-style rotation: the previous setFromUnitVectors
-    // mapped (0,0,1) → camPos.normalize() = (0.49, 0.41, 0.81). That rotation
-    // axis is diagonal (perpendicular to both the original and target normal),
-    // which tilts the text's horizontal X-axis off world-horizontal. The
-    // parabolic curve is symmetric in nx, but a tilted X-axis canted the whole
-    // shape, so the left side rose and the right side dropped.
-    //
-    // Constraining the rotation to the world Y-axis keeps the text's local X
-    // parallel to world horizontal. The parabola then renders symmetrically
-    // from any camera height.
-    const initialCamPos = new THREE.Vector3(3, 2.5, 5);
-    const angleY = Math.atan2(initialCamPos.x, initialCamPos.z);
-    const quaternion = new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 1, 0),
-      angleY
-    );
 
-    for(let y = 0; y < 512; y += 6) {
-      for(let x = 0; x < 2048; x += 6) {
+    // We will parent the text directly to the camera, so it stays perfectly still on screen.
+    // Because it's a child of the camera, we don't need any complex orientation quaternions.
+    // Local Z is forward/backward relative to the screen. Local X/Y is right/up.
+
+    for (let y = 0; y < 512; y += 6) {
+      for (let x = 0; x < 2048; x += 6) {
         const i = (y * 2048 + x) * 4;
         if (imgData[i] > 128) {
-           // Normalized coordinates (-1 to +1)
-           const nx = (x / 2048) * 2.0 - 1.0;
-           const ny = -(y / 512) * 2.0 + 1.0;
-           
-           // Base width and height mapping
-           // Total width 8 units (down from 10) — guarantees the text
-           // stays inside the desktop viewport on every aspect ratio.
-           const px = nx * 4.0;
+          // Normalized coordinates (-1 to +1)
+          const nx = (x / 2048) * 2.0 - 1.0;
+          const ny = -(y / 512) * 2.0 + 1.0;
 
-           // Uniform stroke — no thickness variation that bloated the edges.
-           // Italic Instrument Serif already has its own beautiful contrast.
-           let py = ny * 0.8;
+          const px = nx * 4.0;
+          let py = ny * 0.8;
+          py -= Math.pow(nx, 2.0) * 1.2; // arch curve
+          py += 1.8; // elevation above disk rim
 
-           // Parabolic arch over the top of the black hole's upper limb.
-           // Coefficient unchanged — the curve already hugs the rim correctly,
-           // it was just being fought by the bold weight + thickness multiplier.
-           py -= Math.pow(nx, 2.0) * 1.2;
+          const pz = 0;
 
-           // Elevation to sit just above the disk rim
-           py += 1.8;
-           
-           const pz = 0;
-           
-           const pos = new THREE.Vector3(px, py, pz);
-           // Face the initial camera
-           pos.applyQuaternion(quaternion);
-
-           positions.push(pos.x, pos.y, pos.z);
-           originalPos.push(pos.x, pos.y, pos.z);
-           randoms.push(Math.random(), Math.random(), Math.random());
+          positions.push(px, py, pz);
+          originalPos.push(px, py, pz);
+          randoms.push(Math.random(), Math.random(), Math.random());
         }
       }
     }
@@ -323,7 +292,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     textGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     textGeo.setAttribute('aOriginal', new THREE.Float32BufferAttribute(originalPos, 3));
     textGeo.setAttribute('aRandom', new THREE.Float32BufferAttribute(randoms, 3));
-    
+
     const textMat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
@@ -332,11 +301,13 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         uTime: { value: 0 },
         uProgress: { value: 0 },
         uColor: { value: new THREE.Color('#F2EEE7') },
-        uDestColor: { value: new THREE.Color('#ff8040') }
+        uDestColor: { value: new THREE.Color('#ff8040') },
+        uBlackHoleLocal: { value: new THREE.Vector3(0, 0, 0) }
       },
       vertexShader: `
         uniform float uTime;
         uniform float uProgress;
+        uniform vec3 uBlackHoleLocal;
         attribute vec3 aOriginal;
         attribute vec3 aRandom;
         varying vec3 vColor;
@@ -344,16 +315,15 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         
         void main() {
           float pull = pow(uProgress, 2.5);
-          vec3 targetPos = vec3(0.0, 0.0, 0.0);
           float individualPull = clamp(pull * (1.0 + aRandom.x * 0.5), 0.0, 1.0);
           
           vec3 pos = aOriginal;
           
-          // Pull effect towards world origin (0,0,0)
-          pos = mix(pos, targetPos, individualPull);
+          // Pull effect towards the black hole (transformed into camera local space)
+          pos = mix(pos, uBlackHoleLocal, individualPull);
           
           if (individualPull > 0.1) {
-             vec3 dir = normalize(targetPos - aOriginal);
+             vec3 dir = normalize(uBlackHoleLocal - aOriginal);
              pos += dir * sin(uTime * 10.0 + aRandom.z * 10.0) * 0.2 * individualPull;
           }
           
@@ -379,12 +349,12 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         }
       `
     });
-    
+
     textPoints = new THREE.Points(textGeo, textMat);
     textPoints.frustumCulled = false;
     spaceScene.add(textPoints);
   };
-  
+
   initTextParticles();
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -654,7 +624,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         camX = r * Math.cos(th) * Math.cos(phi);
         camY = r * Math.sin(th);
         camZ = r * Math.cos(th) * Math.sin(phi);
-        
+
         lookX = 0; lookY = 0; lookZ = 0;
         fov = 45 + 50 * (p / 0.55);      // 45° → 95°
         rgbShift = 0.00001 + 0.02 * Math.pow(p / 0.55, 3);
@@ -666,7 +636,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         const u = ss(0.55, 0.65, p);
         const rStart = R0 * Math.exp(-lambda * 0.55);
         const thStart = THREE.MathUtils.lerp(th0, 0.0, 0.7);
-        
+
         // Final approach to origin and then past it
         const posStart = new THREE.Vector3(
           rStart * Math.cos(thStart) * Math.cos(phi),
@@ -674,10 +644,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
           rStart * Math.cos(thStart) * Math.sin(phi)
         );
         const posEnd = new THREE.Vector3(0, 0, -2); // Just past origin
-        
+
         const pos = new THREE.Vector3().lerpVectors(posStart, posEnd, u);
         camX = pos.x; camY = pos.y; camZ = pos.z;
-        
+
         lookX = 0; lookY = 0; lookZ = -100 * u;
         fov = 95 + 15 * u;
         rgbShift = 0.02 + 0.04 * u;
@@ -689,7 +659,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         camX = 0; camY = 0;
         camZ = -2 - 12 * u; // Speeding up through the throat
         lookX = 0; lookY = 0; lookZ = -100 - 100 * u;
-        
+
         fov = 110 + 40 * u + 20 * Math.sin(u * Math.PI);
         rgbShift = 0.06 - 0.04 * u;
         dopplerBoost = 1.2 - 0.5 * u;
@@ -704,7 +674,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         camX = 0; camY = 0;
         camZ = -14 - 59 * k;             // Transition smoothly from Phase C end (-14)
         lookX = 0; lookY = 0; lookZ = -200 - 50 * u; // -200 → -250
-        
+
         fov = 150 - 75 * k;              // 150 → 75
         rgbShift = 0.020 - 0.018 * u;
         dopplerBoost = 0.65 - 0.45 * u;
@@ -789,13 +759,18 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     // Update uniforms
     discMat.uniforms.uTime.value = t;
     partMat.uniforms.uTime.value = t + 9999.0;
-    
+
     if (textPoints) {
       const mat = textPoints.material as THREE.ShaderMaterial;
       mat.uniforms.uTime.value = t;
       // Text gets sucked in between progress 0.0 and 0.5
       mat.uniforms.uProgress.value = Math.max(0, Math.min(1, externalProgress * 2.0));
-      
+
+      // Calculate the black hole's position (0,0,0 world) in the text's local space
+      const bhWorld = new THREE.Vector3(0, 0, 0);
+      const bhLocal = textPoints.worldToLocal(bhWorld);
+      mat.uniforms.uBlackHoleLocal.value.copy(bhLocal);
+
       // Hide text entirely once sucked in
       textPoints.visible = externalProgress < 0.6;
     }

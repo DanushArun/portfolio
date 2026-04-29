@@ -17,6 +17,8 @@ const DriveXQuasar      = dynamic(() => import('./scenes/DriveXQuasar'), { ssr: 
 const TwinBuild         = dynamic(() => import('./scenes/TwinBuild'), { ssr: false });
 const FormulaRings      = dynamic(() => import('./scenes/FormulaRings'),  { ssr: false });
 const Singularity       = dynamic(() => import('./scenes/Singularity'),   { ssr: false });
+const WarpScene         = dynamic(() => import('./scenes/WarpScene'),     { ssr: false });
+const StarField         = dynamic(() => import('./StarField'),            { ssr: false });
 
 import HUD from './HUD';
 import GravityCursor from './GravityCursor';
@@ -91,40 +93,83 @@ export default function SceneManager() {
     if (p === 'COVER') beginJourney();
   }, []);
 
+  // Defensive reset: once we leave CROSSING, ensure the veil overlay never
+  // stays raised. WarpScene used to setVeil(1) without resetting; this guard
+  // keeps any future veil-raise from leaking into cosmic phases.
+  useEffect(() => {
+    if (isCosmic(phase)) useScene.setState({ veil: 0 });
+  }, [phase]);
+
   useAudio();
 
-  // The BH canvas drives everything from COVER through CROSSING.
+  // The BH canvas drives everything from COVER through CROSSING. We keep it
+  // mounted across CROSSING but fade its DOM opacity so the R3F canvas
+  // (mounted underneath) crossfades into view rather than hard-cutting.
   const showBH       = phase === 'COVER' || phase === 'APPROACH' || phase === 'CROSSING';
   const showCosmic   = isCosmic(phase);
-  const showR3F      = showCosmic;
+  // R3F mounts during CROSSING too, so WarpScene is alive while the BH is
+  // still on screen. This is the seam-killer — both canvases co-exist for
+  // the duration of the bridge instead of doing an unmount/mount swap.
+  const showR3F      = phase === 'CROSSING' || showCosmic;
+  // BH DOM opacity. horizonProgress is `min(1, scrollProgress * 3)`, so it
+  // hits 1.0 at scroll = 1/3 (= end of CROSSING). Fade BH out across the
+  // last ~30% of that range so by the time CROSSING ends, BH is invisible
+  // and the WarpScene + cosmic scenes own the frame.
+  //   horizonProgress 0.00..0.70  → bhAlpha = 1
+  //   horizonProgress 0.70..1.00  → bhAlpha = 1 → 0
+  const bhAlpha = phase === 'CROSSING'
+    ? Math.max(0, 1 - (horizonProgress - 0.70) / 0.30)
+    : 1;
 
   return (
     <>
       {showBH && (
-        <BlackHoleMount
-          zIndex={1}
-          innerColor="#ffc066"
-          outerColor="#5a1a08"
-          progress={horizonProgress}
-        />
+        <div
+          aria-hidden
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1,
+            opacity: bhAlpha,
+            transition: bhAlpha === 1 ? 'none' : 'opacity 80ms linear',
+            pointerEvents: bhAlpha < 0.05 ? 'none' : 'auto',
+          }}
+        >
+          <BlackHoleMount
+            innerColor="#ffc066"
+            outerColor="#5a1a08"
+            progress={horizonProgress}
+          />
+        </div>
       )}
 
       {showR3F && (
         <Canvas
           dpr={[1, 1.5]}
-          gl={{ antialias: false, alpha: false, powerPreference: 'high-performance' }}
+          gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
           camera={{ position: [0, 2, 30], fov: 50, near: 0.01, far: 2000 }}
-          style={{ position: 'fixed', inset: 0, background: 'transparent', zIndex: 1 }}
+          style={{ position: 'fixed', inset: 0, background: 'transparent', zIndex: 2 }}
         >
           <Suspense fallback={null}>
             <CameraRig />
-            <group position={[0, 0, 0]}><QuantumPlanet /></group>
-            <group position={[0, 0, -90]}><MiraPulsar /></group>
-            <group position={[0, 0, -180]}><DriveXQuasar /></group>
-            <group position={[0, 0, -270]}><TwinBuild /></group>
-            <group position={[0, 0, -360]}><FormulaRings /></group>
-            {/* MANIFEST AT -450 HAS NO R3F SCENE */}
-            <group position={[0, 0, -540]}><Singularity /></group>
+            {/* Persistent starfield backdrop. Mounts the moment the R3F
+                canvas exists so by the time WarpScene's reveal-stars beat
+                fades, the camera lands inside a real sky rather than a
+                pure-black void. */}
+            <StarField />
+            {/* WarpScene is the bridge: 5s timeline (tear → tunnel → streaks
+                → flash → reveal stars) that masks the BH→cosmic handoff.
+                Mounted only during CROSSING; auto-advances to BOSON_STAR. */}
+            {phase === 'CROSSING' && <WarpScene />}
+            {showCosmic && (
+              <>
+                <group position={[0, 0, 0]}><QuantumPlanet /></group>
+                <group position={[0, 0, -90]}><MiraPulsar /></group>
+                <group position={[0, 0, -180]}><DriveXQuasar /></group>
+                <group position={[0, 0, -270]}><TwinBuild /></group>
+                <group position={[0, 0, -360]}><FormulaRings /></group>
+                {/* MANIFEST AT -450 HAS NO R3F SCENE */}
+                <group position={[0, 0, -540]}><Singularity /></group>
+              </>
+            )}
             <PostFX />
           </Suspense>
         </Canvas>

@@ -3,72 +3,76 @@
 import { useScene } from '@/lib/scene-state';
 import { useEffect, useState } from 'react';
 
-const HUD_STYLE: React.CSSProperties = {
-  position: 'fixed',
-  zIndex: 100,
-  fontSize: '10px',
-  letterSpacing: '0.3em',
-  textTransform: 'uppercase',
-  color: 'var(--color-lead)',
-  pointerEvents: 'none',
-  mixBlendMode: 'difference',
+const MONO: React.CSSProperties = {
+  fontFamily: 'var(--font-mono, monospace)',
+  fontSize: 9,
+  letterSpacing: '0.25em',
+  textTransform: 'uppercase' as const,
+  color: 'rgba(232,228,216,0.42)',
 };
+
+const STRIP: React.CSSProperties = {
+  position: 'fixed',
+  left: 0, right: 0,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+  padding: '1.25rem 2rem',
+  zIndex: 20,
+  pointerEvents: 'none',
+};
+
+function NavHint() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 1000);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div style={{
+      opacity: visible ? 1 : 0,
+      transition: 'opacity 1.4s cubic-bezier(0.16,1,0.3,1)',
+      ...MONO,
+      color: 'rgba(232,228,216,0.28)',
+      lineHeight: 2.6,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9em' }}>
+        <span style={{ color: 'rgba(255,168,50,0.5)', fontSize: 11 }}>⊕</span>
+        <span>DRAG  —  ORBIT THE SINGULARITY</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9em' }}>
+        <span style={{ color: 'rgba(255,168,50,0.5)', fontSize: 13 }}>↓</span>
+        <span>SCROLL  —  CROSS THE THRESHOLD</span>
+      </div>
+    </div>
+  );
+}
 
 export default function HUD() {
   const phase = useScene((s) => s.phase);
-  const scrollVelocity = useScene((s) => s.scrollVelocity);
-
-  const [progress, setProgress] = useState(0);
-  const [smoothedSpeed, setSmoothedSpeed] = useState(0);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const p = maxScroll > 0 ? Math.max(0, Math.min(1, window.scrollY / maxScroll)) : 0;
-      setProgress(p);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    let speed = Math.abs(scrollVelocity);
-    speed = Math.min(0.99, speed * 0.01);
-    setSmoothedSpeed((prev) => prev + (speed - prev) * 0.1);
-  }, [scrollVelocity]);
-
-  const hudNames: Record<string, string> = {
-    COVER: "THE THRESHOLD",
-    APPROACH: "THE THRESHOLD",
-    CROSSING: "THE THRESHOLD",
-    BOSON_STAR: "ANOMALY 03 // QUANTUM",
-    STRANGEON: "ANOMALY 04 // MIRA",
-    BINARY_MERGER: "ANOMALY 05 // DRIVEX",
-    EINSTEIN_CROSS: "ANOMALY 06 // BINARY",
-    HAUMEA: "ANOMALY 07 // COMET",
-    MANIFEST: "THE LOGBOOK",
-    CYGNUS_LOOP: "THE OUTSKIRTS",
-  };
 
   return (
     <>
-      <div style={{ ...HUD_STYLE, top: 32, left: 32 }} className="voice-composer">
-        {hudNames[phase] || "THE THRESHOLD"}
-      </div>
-      <div style={{ ...HUD_STYLE, top: 32, right: 32 }} className="voice-composer">
-        SYSTEM ONLINE
-      </div>
-      <div style={{ ...HUD_STYLE, bottom: 32, left: 32 }} className="voice-composer">
-        Z: -{(progress * 15000).toFixed(0)} LY
-      </div>
-      <div style={{ ...HUD_STYLE, bottom: 32, right: 32 }} className="voice-composer">
-        VELOCITY: {smoothedSpeed.toFixed(2)} c
+      <div style={{ ...STRIP, top: 0 }}>
+        <div style={{ ...MONO, opacity: 0.55 }}>
+          {phase === 'STRANGEON'     && 'MIRA  /  VOICE AI'}
+          {phase === 'BINARY_MERGER' && 'DRIVEX  /  AGENTIC SYSTEMS'}
+          {phase === 'EINSTEIN_CROSS'&& 'FURYX × VERONICA'}
+          {phase === 'HAUMEA'        && 'FORMULA MANIPAL'}
+          {phase === 'BOSON_STAR'    && 'QUANTUM RESEARCH'}
+          {phase === 'CYGNUS_LOOP'   && 'DANUSH ARUN'}
+        </div>
+        <div />
       </div>
 
-      {/* Progress Bar */}
-      <div style={{ position: 'fixed', right: 32, top: '50%', transform: 'translateY(-50%)', width: 1, height: 200, background: 'rgba(255,255,255,0.1)', zIndex: 100 }}>
-        <div style={{ position: 'absolute', top: 0, left: -1, width: 3, background: 'var(--color-bone)', height: `${progress * 100}%`, transition: 'height 0.1s linear' }} />
+      <div style={{ ...STRIP, bottom: 0 }}>
+        <div style={MONO}>
+          {phase === 'COVER' && <NavHint />}
+        </div>
+        <div />
       </div>
+
     </>
   );
 }

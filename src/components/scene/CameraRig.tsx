@@ -52,40 +52,45 @@ export default function CameraRig() {
       ? document.documentElement.scrollHeight - window.innerHeight : 1;
     const progress = max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
 
-    // R3F canvas mounts at progress >= 1/6.
-    // Map progress from [1/6, 1.0] to [0, 1.0]
-    const r3fProgress = Math.max(0, Math.min(1, (progress - (1 / 6)) * 1.2));
+    // The cosmic chain (BOSON_STAR..CYGNUS_LOOP) lives at scroll ∈ [3/9, 1.0].
+    // r3fProgress 0 = camera at idle perch (z=18, looking at QuantumPlanet at
+    // z=0). r3fProgress 1 = past Singularity at z=-540. Previously this
+    // started at scroll=1/6 (mid-APPROACH) which put the camera 72 units past
+    // QuantumPlanet by the time BOSON_STAR began — that's why every cosmic
+    // frame rendered black.
+    const r3fProgress = Math.max(0, Math.min(1, (progress - (1 / 3)) / (2 / 3)));
 
-    // Target Z goes from 18 down to -432 (450 total travel distance across 5 stages)
-    const targetZ = 18 - r3fProgress * 450;
-    camZ.current += (targetZ - camZ.current) * 0.08;
+    // 7 cosmic scenes spaced 90 units apart on -Z (0, -90, …, -540). Camera
+    // trails its lookTarget by 18 units so QuantumPlanet (z=0) is framed
+    // from z=18 at the start, and Singularity (z=-540) is framed from
+    // z=-522 at the end. Total travel = 540 units of lookZ.
+    const lookZ        = -r3fProgress * 540;
+    const targetZ      = lookZ + 18;
+    camZ.current     += (targetZ - camZ.current) * 0.08;
 
-    // Calculate look target based on current stage
-    const r3fContinuous = r3fProgress * 5;
-    const r3fIdx = Math.floor(r3fContinuous);
-    const local = r3fContinuous - r3fIdx;
-    
-    const currentStageZ = -r3fIdx * 90;
-    const nextStageZ = -Math.min(5, r3fIdx + 1) * 90;
-    const lookZ = currentStageZ + (nextStageZ - currentStageZ) * local;
+    // Stage index for FOV interpolation. 7 scenes → 6 segments.
+    const r3fContinuous = r3fProgress * 6;
+    const r3fIdx        = Math.min(6, Math.floor(r3fContinuous));
+    const local         = r3fContinuous - r3fIdx;
 
     // Base position with a slight breathing drift
     tmp.current.set(
       Math.sin(bt * 0.08) * 0.8,
-      Math.sin(bt * 0.06) * 0.4,
-      camZ.current
+      Math.sin(bt * 0.06) * 0.4 + 1.2,
+      camZ.current,
     );
 
     camera.position.lerp(tmp.current, 0.1);
-    camera.lookAt(new THREE.Vector3(0, 0, lookZ));
+    camera.lookAt(new THREE.Vector3(0, 0.6, lookZ));
 
-    // Smooth FOV transitions based on the stage we are looking at
-    // Pulsar(55), DriveX(60), Twin(58), Formula(80), Quantum(52), Singularity(48)
-    const FOVS = [55, 60, 58, 80, 52, 48];
+    // FOV per scene, indexed by r3fIdx. Order matches scene placement on -Z:
+    // Quantum(0), Pulsar(-90), DriveX(-180), Twin(-270), Formula(-360),
+    // Manifest(-450, no R3F scene), Singularity(-540).
+    const FOVS = [52, 55, 60, 58, 80, 50, 48];
     const currentFov = FOVS[r3fIdx];
-    const nextFov = FOVS[Math.min(5, r3fIdx + 1)];
-    const targetFov = currentFov + (nextFov - currentFov) * local;
-    
+    const nextFov    = FOVS[Math.min(6, r3fIdx + 1)];
+    const targetFov  = currentFov + (nextFov - currentFov) * local;
+
     pcam.fov = THREE.MathUtils.lerp(pcam.fov, targetFov, 0.05);
     pcam.updateProjectionMatrix();
   });

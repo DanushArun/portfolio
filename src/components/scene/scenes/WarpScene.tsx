@@ -308,13 +308,16 @@ export default function WarpScene() {
     const p = elapsed.current;
 
     // ─ BEAT 1 (0.0–1.0s) — TEAR
-    // easeOutExpo = snappy reality-tearing motion
+    // The tear was reading as a fullscreen white-out: a 60×1.2 plane scaled
+    // 7×50 with additive-blend opacity 1.0 in front of a bloom postprocess
+    // basically guarantees a blown-out frame. Drop opacity to 0.18 and cap
+    // the scale so the line stays a thin chromatic seam rather than a full
+    // canvas takeover.
     const tearK = easeOutExpo(ss(0.0, 1.0, p));
-    const tearOpacity = ss(0.0, 0.25, p) * ss(1.4, 0.7, p) * 1.0;
+    const tearOpacity = ss(0.0, 0.25, p) * ss(1.4, 0.7, p) * 0.18;
     tearMat.opacity = tearOpacity;
     if (tearRef.current) {
-      // Grows wider, taller, rotates from horizontal to vertical
-      tearRef.current.scale.set(1 + tearK * 7, 1 + tearK * 50, 1);
+      tearRef.current.scale.set(1 + tearK * 4, 1 + tearK * 6, 1);
       tearRef.current.rotation.z = tearK * Math.PI * 0.5;
     }
 
@@ -333,25 +336,32 @@ export default function WarpScene() {
     streakMat.uniforms.uIntensity.value = ss(1.5, 2.0, p) * ss(3.8, 3.2, p);
     streakMat.uniforms.uSpeed.value     = 0.3 + easeInQuart(ss(1.5, 3.5, p)) * 0.9;
 
-    // ─ BEAT 4 (3.4–4.0s) — ANAMORPHIC FLARE + FLASH
-    const flashWindow = ss(3.4, 3.55, p) * ss(4.05, 3.85, p);
-    const flashShape  = flashCurve(ss(3.4, 4.0, p));
-    flareMat.uniforms.uIntensity.value = flashShape * 1.4;
-    flashMat.opacity = flashShape * 0.95;
+    // ─ BEAT 4 — DISABLED.
+    // The 800×800 fullscreen flash plane and the 120×60 anamorphic flare
+    // plane both got amplified by PostFX bloom into a fullscreen white-out
+    // (any positive intensity bloomed across the whole frame). The dramatic
+    // beat now comes from the streaks peaking + tunnel cresting; the white
+    // climax is gone because it was reading as a render bug, not cinema.
+    flareMat.uniforms.uIntensity.value = 0;
+    flashMat.opacity = 0;
 
     // ─ BEAT 5 (4.0–5.0s) — REVEAL
     // 200ms of pure black between flash death and reveal birth (4.0–4.2)
     revealMat.opacity = ss(4.2, 5.0, p) * 0.7;
 
-    // Pre-fire veil at 4.5s to cover the STRANGEON (was MIRA_PULSAR) scene swap
-    if (p >= 4.5 && !veilFired.current) {
-      veilFired.current = true;
-      setVeil(1);
-    }
+    // Veil intentionally NOT raised here. Previously WarpScene set veil=1
+    // at t=4.5s to mask the BH→cosmic canvas swap, but nothing ever reset
+    // it to 0, so an opaque black div at zIndex 50 stayed on top of every
+    // post-CROSSING frame. The BH-alpha crossfade in SceneManager now
+    // handles the seam visually; the veil is kept as an unused safety net.
+    void veilFired;
+    void setVeil;
 
     if (p >= DURATION && !fired.current) {
       fired.current = true;
-      setPhase('STRANGEON');
+      // Hand off to the first cosmic scene. (Was 'STRANGEON' — the wrong
+      // target phase since the cosmic chain begins at BOSON_STAR / Quantum.)
+      setPhase('BOSON_STAR');
     }
   });
 
