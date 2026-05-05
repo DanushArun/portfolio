@@ -1,7 +1,4 @@
-/**
- * Faithful port of Bruno Simon's webgl-black-hole experience to a single
- * factory function. Mirrors the original architecture exactly:
- *
+/** Black Hole
  *   - 3 scenes: space, distortion, overlay
  *   - 2 render targets: spaceRT (2x), distortionRT (0.5x, RedFormat float)
  *   - multi-pass: space → spaceRT → distortion → distortionRT → final composite
@@ -12,6 +9,11 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import {
+  EffectComposer, RenderPass, EffectPass,
+  BloomEffect, VignetteEffect, NoiseEffect,
+  BlendFunction,
+} from 'postprocessing';
 import {
   discVert, discFrag,
   discParticlesVert, discParticlesFrag,
@@ -159,6 +161,40 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   discMesh.scale.setScalar(0.75);
   spaceScene.add(discMesh);
 
+  // ── Event horizon sphere — the visible black "shadow" geometry ─────────────
+  // Solid black sphere at origin. As the camera approaches in Phase A the sphere
+  // grows naturally in screen space; in Phase B we *scale the sphere itself* to
+  // engulf the camera (replaces the previous CSS veil hack). DoubleSide so the
+  // sphere is still pure black when the camera is inside it (the swallow).
+  const HORIZON_R = 0.42;
+  const horizonGeo = new THREE.SphereGeometry(HORIZON_R, 64, 64);
+  const horizonMat = new THREE.MeshBasicMaterial({
+    color: 0x000000,
+    side: THREE.DoubleSide,
+  });
+  const horizonMesh = new THREE.Mesh(horizonGeo, horizonMat);
+  // renderOrder -10 + depthWrite=true on horizon, depthTest=true on disc/particles
+  // would do the proper occlusion — but disc/particles use depthTest:false so we
+  // gate them via .visible flags during the swallow instead. Simpler, no shader fight.
+  horizonMesh.renderOrder = -10;
+  spaceScene.add(horizonMesh);
+
+  // ── Photon ring — bright thin rim that always faces the camera ─────────────
+  // This is what the user sees as "the edge glows" in storyboard panel 04. We
+  // ramp it up across panels 02→04, peak at the swallow, fade with the sphere.
+  const photonRingGeo = new THREE.RingGeometry(HORIZON_R * 1.0, HORIZON_R * 1.18, 128);
+  const photonRingMat = new THREE.MeshBasicMaterial({
+    color: 0xffb066,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: false,
+    side: THREE.DoubleSide,
+  });
+  const photonRing = new THREE.Mesh(photonRingGeo, photonRingMat);
+  spaceScene.add(photonRing);
+
   // ── Disc particles (50k, radial-spiral via vertex shader) ───────────────────
   const partGeo = new THREE.BufferGeometry();
   {
@@ -212,7 +248,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       pos[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * 400;
       pos[i * 3 + 2] = Math.cos(phi) * 400;
       sz[i] = Math.random();
-      c.setHSL(Math.random(), 1.0, 0.8);
+      // Near-white stars: tiny saturation hint only — keeps them silver/white so
+      // the gravitational lensing secondary image stays warm amber (disc colour),
+      // not rainbow (caused by sampling fully-saturated red/green/blue stars).
+      c.setHSL(Math.random(), 0.15, 0.75 + Math.random() * 0.2);
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
@@ -358,134 +397,145 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   initTextParticles();
 
   // ──────────────────────────────────────────────────────────────────────────
-  // EXTENDED JOURNEY — wormhole tunnel + new universe + neutron star
-  // The BH is at origin. The new universe lives on the other side at z = -200.
-  // Camera path travels continuously from BH-orbit → through BH → tunnel → pulsar.
+  // WARP TUNNEL — pure radial streaks (no rings, no chromatic ringing)
+  // The camera punches through after the engulf. Streaks live in a tube around
+  // the camera's -Z axis; each is a short line segment aligned with Z so the
+  // perspective projection naturally renders them as radial trails out of the
+  // screen center. NO rings, NO chromatic aberration → no rainbow donut.
   // ──────────────────────────────────────────────────────────────────────────
-
-  // ── Wormhole tunnel: stack of glowing rings between BH (z=0) and new space ─
-  // Each ring is a thin torus positioned along z-axis. Their additive emission
-  // creates the "rushing through a tunnel" sensation when the camera traverses.
-  const TUNNEL_RINGS = 32;
-  const tunnelGroup = new THREE.Group();
-  const tunnelMats: THREE.MeshBasicMaterial[] = [];
-  for (let i = 0; i < TUNNEL_RINGS; i++) {
-    const z = -6 - i * 5.2;        // -6 → -167, denser stacking
-    // Larger, taper-narrowing rings — the tunnel converges toward the destination
-    const tip = i / (TUNNEL_RINGS - 1); // 0 = near, 1 = far
-    const radius = THREE.MathUtils.lerp(2.4, 0.9, tip * tip); // converges
-    const tubeR = THREE.MathUtils.lerp(0.18, 0.08, tip);     // thicker tubes
-    // Color shifts cool→warm along the tunnel (cyan near → amber at end)
-    const hue = THREE.MathUtils.lerp(0.55, 0.08, tip);
-    const col = new THREE.Color().setHSL(hue, 0.9, 0.6);
-    const mat = new THREE.MeshBasicMaterial({
-      color: col,
-      transparent: true,
-      opacity: 0,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    tunnelMats.push(mat);
-    const geo = new THREE.TorusGeometry(radius, tubeR, 8, 96);
-    const m = new THREE.Mesh(geo, mat);
-    m.position.z = z;
-    m.rotation.z = Math.random() * Math.PI;
-    tunnelGroup.add(m);
-  }
-  spaceScene.add(tunnelGroup);
-
-  // ── Wormhole streaks: bright point particles streaming past in the tunnel ──
-  const TUNNEL_STREAKS = 4000;
-  const tunnelStreakGeo = new THREE.BufferGeometry();
+  const STREAK_COUNT = 2400;
+  const streakGeo = new THREE.BufferGeometry();
   {
-    const pos = new Float32Array(TUNNEL_STREAKS * 3);
-    const sz = new Float32Array(TUNNEL_STREAKS);
-    for (let i = 0; i < TUNNEL_STREAKS; i++) {
+    const pos = new Float32Array(STREAK_COUNT * 2 * 3); // 2 verts per streak
+    const lif = new Float32Array(STREAK_COUNT * 2);     // 0 at tail, 1 at head
+    const hue = new Float32Array(STREAK_COUNT * 2);     // shared per-streak hue
+    for (let i = 0; i < STREAK_COUNT; i++) {
       const theta = Math.random() * Math.PI * 2;
-      const r = 0.3 + Math.pow(Math.random(), 0.6) * 2.0;
-      pos[i * 3] = Math.cos(theta) * r;
-      pos[i * 3 + 1] = Math.sin(theta) * r;
-      pos[i * 3 + 2] = -Math.random() * 175; // distributed along tunnel
-      sz[i] = 0.5 + Math.random() * 1.5;
+      // Uniform-area distribution → tube cross-section evenly populated
+      const r = 0.35 + Math.sqrt(Math.random()) * 6.0;
+      const zHead = -2 - Math.random() * 240;
+      const len = 1.6 + Math.random() * 4.5;
+      const x = Math.cos(theta) * r;
+      const y = Math.sin(theta) * r;
+      // Tangential drift on the tail — breaks the axis-stacking artifact where
+      // streaks at y≈cam_y all project to the same horizontal screen line. Each
+      // streak now points slightly off pure-Z so they project to slightly
+      // different screen Y, dispersing the light instead of stacking it.
+      const tang = theta + Math.PI / 2;
+      const drift = (Math.random() - 0.5) * 0.45;
+      const tailX = x + Math.cos(tang) * drift;
+      const tailY = y + Math.sin(tang) * drift;
+      // Streak head (closer to camera = larger Z)
+      pos[i * 6 + 0] = x;
+      pos[i * 6 + 1] = y;
+      pos[i * 6 + 2] = zHead;
+      // Streak tail (further from camera with tangential drift)
+      pos[i * 6 + 3] = tailX;
+      pos[i * 6 + 4] = tailY;
+      pos[i * 6 + 5] = zHead - len;
+      lif[i * 2 + 0] = 1;   // head
+      lif[i * 2 + 1] = 0;   // tail
+      const h = Math.random();
+      hue[i * 2 + 0] = h;
+      hue[i * 2 + 1] = h;
     }
-    tunnelStreakGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    tunnelStreakGeo.setAttribute('size', new THREE.Float32BufferAttribute(sz, 1));
+    streakGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    streakGeo.setAttribute('aLife', new THREE.Float32BufferAttribute(lif, 1));
+    streakGeo.setAttribute('aHue', new THREE.Float32BufferAttribute(hue, 1));
   }
-  // Custom shader — clamps gl_PointSize so close streaks don't balloon into
-  // chunky pixel blocks. They stay sub-4px at any distance and use opacity
-  // for distance-based brightness instead. Star-like, not blocky.
-  const tunnelStreakMat = new THREE.ShaderMaterial({
-    uniforms: { uOpacity: { value: 0 } },
+  const streakMat = new THREE.ShaderMaterial({
+    uniforms: { uOpacity: { value: 0 }, uIntensity: { value: 1.0 } },
     vertexShader: /* glsl */`
-      attribute float size;
+      attribute float aLife;
+      attribute float aHue;
+      varying float vLife;
+      varying float vHue;
       varying float vDist;
       void main() {
+        vLife = aLife;
+        vHue = aHue;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         vDist = -mv.z;
         gl_Position = projectionMatrix * mv;
-        // Pixel size: would be size*30/dist with attenuation, clamp to [0.6, 3.5]
-        float ps = size * 28.0 / max(vDist, 0.5);
-        gl_PointSize = clamp(ps, 0.6, 3.5);
       }
     `,
     fragmentShader: /* glsl */`
       uniform float uOpacity;
+      uniform float uIntensity;
+      varying float vLife;
+      varying float vHue;
       varying float vDist;
       void main() {
-        float r = distance(gl_PointCoord, vec2(0.5));
-        if (r > 0.5) discard;
-        float a = (1.0 - r * 2.0) * uOpacity;
-        // Distance brightness: closer streaks brighter, far ones dim.
-        // Inverted Doppler — feels like rushing through them.
-        a *= clamp(1.4 - vDist * 0.006, 0.25, 1.4);
-        gl_FragColor = vec4(0.95, 0.97, 1.0, a);
+        // Tail-to-head gradient: head bright, tail fades to nothing
+        float a = pow(vLife, 1.4) * uOpacity * uIntensity;
+        // Distance falloff so far streaks don't all stack at full bright
+        a *= clamp(1.6 - vDist * 0.008, 0.0, 1.6);
+        // Subtle hue spread: warm white → amber so streaks aren't monochrome
+        vec3 warm = vec3(1.0, 0.96, 0.88);
+        vec3 amber = vec3(1.0, 0.78, 0.42);
+        vec3 col = mix(warm, amber, vHue * 0.6);
+        gl_FragColor = vec4(col, a);
       }
     `,
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
-  const tunnelStreakPoints = new THREE.Points(tunnelStreakGeo, tunnelStreakMat);
-  tunnelStreakPoints.frustumCulled = false;
-  spaceScene.add(tunnelStreakPoints);
+  const streaks = new THREE.LineSegments(streakGeo, streakMat);
+  streaks.frustumCulled = false;
+  streaks.visible = false; // off until tunnel phase
+  spaceScene.add(streaks);
 
-  // ── Neutron star (the destination — MIRA_PULSAR) ──────────────────────────
-  const neutronGeo = new THREE.SphereGeometry(0.9, 48, 48);
-  const neutronMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#8B3A1A'),
-    emissive: new THREE.Color('#C84B20'),
-    emissiveIntensity: 2.2,
-    roughness: 0.7,
+  // ── Destination orb (the "MIRA emerge") ──────────────────────────────────
+  // Pure-emissive sphere — no lights needed, no Standard material complexity.
+  // Bloom will turn this into a halo when post-processing is wired up. Sized
+  // to read clearly from camera z=-203 (Phase E final cam pos).
+  const destGeo = new THREE.SphereGeometry(2.4, 64, 64);
+  const destMat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color('#ffe7b8'),
+    transparent: true,
+    opacity: 0,
   });
-  const neutronStar = new THREE.Mesh(neutronGeo, neutronMat);
-  neutronStar.position.set(0, 0, -210);
-  neutronStar.visible = false; // only revealed when journey progress is high
-  spaceScene.add(neutronStar);
+  const destOrb = new THREE.Mesh(destGeo, destMat);
+  destOrb.position.set(0, 0, -210);
+  destOrb.visible = false;
+  spaceScene.add(destOrb);
 
-  // Point light at the neutron star — pulses with the beam
-  const neutronLight = new THREE.PointLight('#88ccff', 0, 80);
-  neutronLight.position.set(0, 0, -210);
-  spaceScene.add(neutronLight);
-
-  // Soft fill light for the neutron star
-  const neutronFill = new THREE.DirectionalLight('#2255aa', 0.6);
-  neutronFill.position.set(10, 5, -200);
-  spaceScene.add(neutronFill);
-
-  // ── Pulsar beam (BoxGeometry with shader, flashes every 92ms) ──────────────
-  const beamUni = { uAlpha: { value: 0.0 } };
-  const beamMat = new THREE.ShaderMaterial({
+  // ── Destination halo — billboard quad with radial soft glow ──────────────
+  const haloUni = { uOpacity: { value: 0 } };
+  const haloMat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: beamUni,
-    vertexShader: 'void main(){gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-    fragmentShader: 'uniform float uAlpha;void main(){gl_FragColor=vec4(0.52,0.80,1.0,uAlpha);}',
+    uniforms: haloUni,
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform float uOpacity;
+      varying vec2 vUv;
+      void main() {
+        float d = distance(vUv, vec2(0.5));
+        // Soft radial falloff, hot core, warm rim
+        float core = exp(-d * 8.0);
+        float rim  = exp(-pow(d * 4.0, 2.0));
+        vec3 hot   = vec3(1.0, 0.92, 0.78);
+        vec3 warm  = vec3(1.0, 0.62, 0.30);
+        vec3 col = mix(warm, hot, core);
+        float a = (core * 0.9 + rim * 0.6) * uOpacity;
+        if (a < 0.001) discard;
+        gl_FragColor = vec4(col, a);
+      }
+    `,
   });
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(80, 0.06, 0.06), beamMat);
-  beam.position.set(0, 0, -210);
-  beam.visible = false;
-  spaceScene.add(beam);
+  const haloMesh = new THREE.Mesh(new THREE.PlaneGeometry(28, 28), haloMat);
+  haloMesh.position.set(0, 0, -211);  // slightly behind orb so orb is in front
+  haloMesh.visible = false;
+  spaceScene.add(haloMesh);
 
   // ── Distortion (active = camera-facing, mask = horizontal disc) ─────────────
   const distActiveMat = new THREE.RawShaderMaterial({
@@ -533,6 +583,34 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   const finalPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), finalMat);
   finalPlane.frustumCulled = false;
   finalScene.add(finalPlane);
+  const finalCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+  // ── Post-processing: bloom + vignette + film grain ──────────────────────────
+  // Single biggest visual quality lift. Bloom turns the disc/streaks into
+  // luminous bodies (instead of flat 2D rings), vignette frames the shot,
+  // film grain adds cinematic micro-noise. Without this the BH looks
+  // technically correct but visually "programmer-art" flat.
+  const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
+  composer.addPass(new RenderPass(finalScene, finalCamera));
+  // Bloom kept restrained — finalShader output is already LDR-clipped at 1.0 so
+  // a high luminance threshold lets us highlight the brightest hot pixels only.
+  const bloomEffect = new BloomEffect({
+    intensity: 0.55,
+    radius: 0.78,
+    luminanceThreshold: 0.78,
+    luminanceSmoothing: 0.2,
+    mipmapBlur: true,
+  });
+  const vignetteEffect = new VignetteEffect({
+    offset: 0.35,
+    darkness: 0.45,
+  });
+  const noiseEffect = new NoiseEffect({
+    premultiply: true,
+    blendFunction: BlendFunction.SCREEN,
+  });
+  noiseEffect.blendMode.opacity.value = 0.025;
+  composer.addPass(new EffectPass(finalCamera, bloomEffect, vignetteEffect, noiseEffect));
 
   // ── Continuous-curve helpers — used by the journey camera path ──────────────
   // smoothstep with explicit edges
@@ -608,96 +686,106 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       let rgbShift = 0.00001;
       let dopplerBoost = 0;
       let diskScale = 0.75;
-      let streakI = 0;
+      // Sphere-driven swallow parameters — set per phase, applied after the if-chain
+      let sphereScaleK = 1.0;       // multiplier on horizon sphere scale (1 = HORIZON_R)
+      let photonRingOp = 0;         // photon ring opacity (0 = invisible, 1 = full glow)
 
-      // λ adapts to actual R0 so the decay rate is always correct regardless of
-      // where the user happened to be orbiting when they started scrolling.
-      const lambda = Math.log(R0 / 0.5) / 0.55; // Pass through r=0.5 at p=0.55
-
+      // Shared Phase A/B target angles — used twice so they MUST agree.
+      // THETA_END=0.62 rad (~35°) keeps the camera elevated so the flat disc
+      // never goes edge-on (the bug at p=0.20 where it collapsed to a line).
+      const PHI_END = Math.PI / 2;
+      const THETA_END = 0.62;
       if (p < 0.55) {
-        // ── PHASE A — The big approach
-        // Maintain user's angle (th0) much more, only drifting slightly to equator
-        // to show the disk's depth without flattening it into a line.
-        const r = R0 * Math.exp(-lambda * p);
-        // GLSL `mix(a,b,t)` = JS `THREE.MathUtils.lerp(a,b,t)`. Keep math identical.
-        const th = THREE.MathUtils.lerp(th0, 0.0, Math.pow(p / 0.55, 2.5) * 0.7); // Only 70% drift to equator
-        camX = r * Math.cos(th) * Math.cos(phi);
-        camY = r * Math.sin(th);
-        camZ = r * Math.cos(th) * Math.sin(phi);
+        // ── PHASE A — Orbital approach + push (Panels 01 → 04 HORIZON entry) ─
+        // Slow angular convergence (linear-cubic across full Phase A) so the
+        // disc stays oblique through panels 02/03 instead of snapping edge-on.
+        const t = ss(0, 0.55, p);
+        const tCubic = t * t * (3 - 2 * t);
+        // Exponential radial decay R0 → 0.5 so we never enter the sphere
+        const r = R0 * Math.pow(0.5 / R0, t);
+        // Angular convergence stretched across all of Phase A (was p=0.25).
+        const angConv = tCubic;
+        const phiCur = phi + (PHI_END - phi) * angConv;
+        const thCur = th0 + (THETA_END - th0) * angConv;
+        camX = r * Math.cos(thCur) * Math.cos(phiCur);
+        camY = r * Math.sin(thCur);
+        camZ = r * Math.cos(thCur) * Math.sin(phiCur);
 
         lookX = 0; lookY = 0; lookZ = 0;
-        fov = 45 + 50 * (p / 0.55);      // 45° → 95°
-        rgbShift = 0.00001 + 0.02 * Math.pow(p / 0.55, 3);
-        dopplerBoost = 0.8 * (p / 0.55);
-        diskScale = 0.75; // KEEP SCALE CONSTANT - dive into the hole, don't grow the model
+        fov = 45 + 30 * tCubic;                       // 45° → 75° dolly zoom
+        // Chromatic aberration: starts subtle, peaks at the dramatic Panel 03.
+        // Reduced peak from 0.006 → 0.004 to avoid coloured fringing artefacts.
+        rgbShift = 0.00001 + 0.004 * Math.pow(tCubic, 2);
+        dopplerBoost = 1.0 * tCubic;
+        diskScale = 0.75;
+        sphereScaleK = 1.0;
+        photonRingOp = ss(0.30, 0.55, p) * 0.55;       // softer, peaks at 0.55 not 0.85
       } else if (p < 0.65) {
-        // ── PHASE B — Entering the Event Horizon
-        // Dive through the center towards the tunnel
-        const u = ss(0.55, 0.65, p);
-        const rStart = R0 * Math.exp(-lambda * 0.55);
-        const thStart = THREE.MathUtils.lerp(th0, 0.0, 0.7);
+        // ── PHASE B — The Engulf (Panel 04 → black) ────────────────────────
+        // Camera holds on the converged orbital vector; sphere scales up to
+        // swallow the camera. No phi/theta change so there's no jump from A→B.
+        const u = (p - 0.55) / 0.10;
+        const eased = u * u * (3 - 2 * u);
+        const r = 0.5;
+        camX = r * Math.cos(THETA_END) * Math.cos(PHI_END);
+        camY = r * Math.sin(THETA_END);
+        camZ = r * Math.cos(THETA_END) * Math.sin(PHI_END);
 
-        // Final approach to origin and then past it
-        const posStart = new THREE.Vector3(
-          rStart * Math.cos(thStart) * Math.cos(phi),
-          rStart * Math.sin(thStart),
-          rStart * Math.cos(thStart) * Math.sin(phi)
-        );
-        const posEnd = new THREE.Vector3(0, 0, -2); // Just past origin
-
-        const pos = new THREE.Vector3().lerpVectors(posStart, posEnd, u);
-        camX = pos.x; camY = pos.y; camZ = pos.z;
-
-        lookX = 0; lookY = 0; lookZ = -100 * u;
-        fov = 95 + 15 * u;
-        rgbShift = 0.02 + 0.04 * u;
-        dopplerBoost = 0.8 + 0.4 * u;
-        diskScale = 0.75 * (1.0 - u); // Fade disk out as we pass through
+        lookX = 0; lookY = 0; lookZ = 0;
+        fov = 75 + 25 * eased;
+        // Hard-zero chromatic shift during engulf — handled by the override below
+        // anyway, but cleaner to set 0 here too.
+        rgbShift = 0;
+        dopplerBoost = 1.0 * (1 - eased);
+        diskScale = 0.75;
+        sphereScaleK = 1.0 + 29.0 * eased;
+        // Photon ring fades aggressively as we go inside — no lingering rim
+        photonRingOp = 0.55 * (1 - Math.pow(eased, 1.2));
       } else if (p < 0.78) {
-        // ── PHASE C — The Crossing
+        // ── PHASE C — Inside the tunnel (hidden behind the CSS black veil until p=0.72)
+        // The camera jumps to the tunnel axis; no discontinuity visible (screen is black).
+        // rgbShift = 0 so tunnel streaks and rings render SHARP, not blurred.
         const u = (p - 0.65) / 0.13;
         camX = 0; camY = 0;
-        camZ = -2 - 12 * u; // Speeding up through the throat
+        camZ = -2 - 12 * u;
         lookX = 0; lookY = 0; lookZ = -100 - 100 * u;
 
         fov = 110 + 40 * u + 20 * Math.sin(u * Math.PI);
-        rgbShift = 0.06 - 0.04 * u;
+        rgbShift = 0;
         dopplerBoost = 1.2 - 0.5 * u;
-        diskScale = 0; // Disk is gone
-        streakI = Math.pow(u, 1.2);
+        diskScale = 0;
       } else if (p < 0.90) {
-        // ── PHASE D — Inter-region transit (12% of scroll, cubic ease-out)
-        //
-        // Blast through the tunnel. High velocity streaks and rings.
+        // ── PHASE D — Full tunnel blast — peak warp speed ──────────────────
         const u = (p - 0.78) / 0.12;
         const k = 1 - Math.pow(1 - u, 3);
         camX = 0; camY = 0;
-        camZ = -14 - 59 * k;             // Transition smoothly from Phase C end (-14)
-        lookX = 0; lookY = 0; lookZ = -200 - 50 * u; // -200 → -250
+        camZ = -14 - 59 * k;
+        lookX = 0; lookY = 0; lookZ = -200 - 50 * u;
 
-        fov = 150 - 75 * k;              // 150 → 75
-        rgbShift = 0.020 - 0.018 * u;
+        fov = 150 - 75 * k;
+        rgbShift = 0;
         dopplerBoost = 0.65 - 0.45 * u;
         diskScale = 0;
-        streakI = 1.0 - Math.pow(u, 2);  // Decays from peak
       } else {
-        // ── PHASE E — Pulsar arrival (10% of scroll, smoothstep)
-        //
-        // Camera decelerates into the viewing position 10u in front of pulsar.
+        // ── PHASE E — Destination emerge (decelerate, orb resolves) ────────
+        // Camera decelerates into a viewing position close to the destination
+        // orb. Streaks fade out, orb scales/brightens up. Settles into a held
+        // shot ready for the panel to crossfade in over the top.
         const u = (p - 0.90) / 0.10;
         const k = u * u * (3 - 2 * u);
         camX = 0;
-        camY = 1.2 * k;
-        camZ = -73 - 125 * k;            // -73 → -198
-        lookX = 0; lookY = 1.2 * k; lookZ = -250 + 40 * k; // → (0,1.2,-210)
-        fov = 75 - 20 * k;               // 75 → 55
-        rgbShift = 0.002 * (1 - u);
+        camY = 0.4 * k;                          // gentle settle Y
+        camZ = -73 - 130 * k;                    // -73 → -203 (closer to orb at -210)
+        lookX = 0; lookY = 0; lookZ = -210;      // lock on destination
+        fov = 75 - 25 * k;                       // 75° → 50° narrow
+        rgbShift = 0;
         dopplerBoost = 0.20 * (1 - u);
-        diskScale = 0.85; // hidden by pastBH gate
+        diskScale = 0.85;
       }
 
-      // Pulsar opacity ramps continuously across Phase D and E (starts at p=0.78)
-      const pulsarOp = ss(0.78, 0.97, p);
+      // Destination orb opacity ramps in late: barely visible during warp,
+      // emerges in Phase E as the streaks fade. Storyboard panel 08 EMERGE.
+      const destOp = ss(0.86, 0.99, p);
 
       // Apply
       camera.position.set(camX, camY, camZ);
@@ -709,31 +797,53 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       discMesh.scale.setScalar(Math.max(0.05, diskScale));
       partPoints.scale.setScalar(Math.max(0.05, diskScale));
 
-      // Re-activate tunnel rings for the wormhole effect
-      for (let i = 0; i < tunnelMats.length; i++) {
-        const ringZ = -6 - i * 5.2;
-        const dist = Math.abs(camZ - ringZ);
-        // Fade rings that are too close to the camera to prevent clipping/artifacts
-        const proximityFade = ss(1.0, 8.0, dist);
-        tunnelMats[i].opacity = streakI * proximityFade * 0.75;
-      }
-      // Extreme streaks
-      tunnelStreakMat.uniforms.uOpacity.value = streakI * 2.5;
+      // Horizon sphere — the visible black mass. Scales up dramatically in Phase B.
+      horizonMesh.scale.setScalar(sphereScaleK);
+      horizonMesh.visible = p < 0.78;  // hide once camera teleports into tunnel
 
-      // Pulsar (cross-fades in across D and E, beam pulses on wall clock)
-      const pulsarOn = pulsarOp > 0.005;
-      neutronStar.visible = pulsarOn;
-      beam.visible = pulsarOn;
-      if (pulsarOn) {
-        neutronStar.rotation.y += 0.04;
-        neutronMat.emissiveIntensity = 2.2 * pulsarOp;
-        const beat = (performance.now() / 1000) % 0.092;
-        const a = beat < 0.080 ? Math.exp(-beat / 0.022) * 0.92 : 0.0;
-        beamUni.uAlpha.value = a * pulsarOp;
-        neutronLight.intensity = a * 7 * pulsarOp;
+      // Photon ring — always faces camera, opacity follows the phase ramp above
+      photonRing.lookAt(camera.position);
+      photonRingMat.opacity = Math.max(0, Math.min(1, photonRingOp));
+      photonRing.visible = photonRingOp > 0.001 && p < 0.70;
+
+      // Warp streaks — the only tunnel visual. No rings, no chromatic ringing.
+      // Phase B (0.55-0.65): faint hint as the engulf veil holds.
+      // Phase C (0.65-0.78): streaks ramp in fast as we punch through.
+      // Phase D (0.78-0.90): full warp blast.
+      // Phase E (0.90-1.00): fade out as destination emerges.
+      const inTunnel = p >= 0.55;
+      streaks.visible = inTunnel;
+      let streakOp = 0;
+      let streakI = 1.0;
+      if (p >= 0.55 && p < 0.65) {
+        // Subtle streaks during the engulf hold — adds motion behind the black veil
+        streakOp = ss(0.55, 0.65, p) * 0.25;
+        streakI = 0.6;
+      } else if (p < 0.78) {
+        const u = (p - 0.65) / 0.13;
+        streakOp = 0.25 + u * 0.75;
+        streakI = 1.0 + u * 0.6;
+      } else if (p < 0.90) {
+        streakOp = 1.0;
+        streakI = 1.6;
       } else {
-        beamUni.uAlpha.value = 0;
-        neutronLight.intensity = 0;
+        const u = (p - 0.90) / 0.10;
+        streakOp = 1.0 - u;
+        streakI = 1.6 - u * 0.8;
+      }
+      streakMat.uniforms.uOpacity.value = streakOp;
+      streakMat.uniforms.uIntensity.value = streakI;
+
+      // Destination orb + halo — emerge cleanly in Phase E.
+      const destOn = destOp > 0.001;
+      destOrb.visible = destOn;
+      haloMesh.visible = destOn;
+      if (destOn) {
+        destMat.opacity = destOp;
+        haloUni.uOpacity.value = destOp * 1.1;
+        haloMesh.lookAt(camera.position);
+        // Gentle drift on the orb so it doesn't feel static
+        destOrb.rotation.y += 0.005;
       }
     } else if (approachOrigin) {
       approachOrigin = null;
@@ -747,11 +857,17 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       partPoints.scale.setScalar(0.75);
       discMesh.visible = true;
       partPoints.visible = true;
-      tunnelMats.forEach((m) => { m.opacity = 0; });
-      tunnelStreakMat.uniforms.uOpacity.value = 0;
-      neutronStar.visible = false;
-      beam.visible = false;
-      neutronLight.intensity = 0;
+      // Restore horizon sphere + photon ring to their idle state
+      horizonMesh.scale.setScalar(1.0);
+      horizonMesh.visible = true;
+      photonRingMat.opacity = 0;
+      photonRing.visible = false;
+      streaks.visible = false;
+      streakMat.uniforms.uOpacity.value = 0;
+      destOrb.visible = false;
+      haloMesh.visible = false;
+      destMat.opacity = 0;
+      haloUni.uOpacity.value = 0;
     }
 
     controls.update();
@@ -784,17 +900,13 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     distActiveMesh.lookAt(camera.position);
 
     // BH screen-space UV for the lensing center.
-    // CRITICAL: when the camera is past the BH (z < 0 relative to BH at origin),
-    // the BH is BEHIND the camera. .project() then maps it to clip-space coords
-    // outside [-1, 1] (z > 1 in NDC), but x/y can still be in-bounds — which
-    // produces a phantom chromatic-aberration ring on screen. Detect and disable.
+    // When the camera is past the BH (Phase B onwards) we hard-disable chromatic
+    // aberration. The previous attempt to keep a "warp prismatic effect" produced
+    // a rainbow donut around the tunnel rings (an explicitly-rejected anti-pattern).
     screenPos.set(0, 0, 0).project(camera);
     const bhBehindCamera = screenPos.z > 1.0 || screenPos.z < -1.0;
-    if (bhBehindCamera) {
-      // Off-screen so chromatic-shift sampling lands outside the visible UV
+    if (bhBehindCamera || externalProgress >= 0.55) {
       finalUniforms.uBlackHolePosition.value.set(-2.0, -2.0);
-      // Hard-kill chromatic shift — no point distorting around something we
-      // can't see. Overrides whatever the journey keyframe set.
       finalUniforms.uRGBShiftRadius.value = 0.0;
     } else {
       finalUniforms.uBlackHolePosition.value.set(
@@ -803,13 +915,23 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       );
     }
 
-    // Disc + particles: hide only when WELL past the BH (>40 units behind).
-    // The diskScale keyframe already smoothly fades them down, and the camera
-    // frustum culls the geometry naturally once we're past. Hard-hiding too
-    // early causes a sudden disappearance during the crossing.
+    // Disc + particles: hide once swallowed (camera inside expanded horizon
+    // sphere) OR well past the BH. Both conditions point at "user shouldn't
+    // see the disc" — gating both prevents the disc bleeding through during
+    // the sphere engulfment.
     const pastBH = camera.position.z < -40.0;
-    discMesh.visible = !pastBH;
-    partPoints.visible = !pastBH;
+    const cameraInsideHorizon =
+      horizonMesh.visible &&
+      camera.position.length() < HORIZON_R * horizonMesh.scale.x * 0.95;
+    const hideDisc = pastBH || cameraInsideHorizon;
+    discMesh.visible = !hideDisc;
+    partPoints.visible = !hideDisc;
+    // Once camera is inside the horizon, kill ALL chromatic shift / lensing —
+    // there is no BH to lens, just black + photon ring fading.
+    if (cameraInsideHorizon) {
+      finalUniforms.uRGBShiftRadius.value = 0.0;
+      finalUniforms.uBlackHolePosition.value.set(-2.0, -2.0);
+    }
 
     // Pass 1: space scene → spaceRT
     renderer.autoClearColor = true;
@@ -831,9 +953,8 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       renderer.setClearColor(0x000000, 1);
     }
 
-    // Pass 3: final composite → screen
-    renderer.setRenderTarget(null);
-    renderer.render(finalScene, camera);
+    // Pass 3: final composite → bloom/vignette/grain → screen via composer
+    composer.render();
 
     raf = requestAnimationFrame(tick);
   }
@@ -851,6 +972,7 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     distortionRT.setSize(Math.floor(width * 0.5), Math.floor(height * 0.5));
     partMat.uniforms.uViewHeight.value = spaceRT.height;
     starsMat.uniforms.uViewHeight.value = spaceRT.height;
+    composer.setSize(width, height);
   }
   window.addEventListener('resize', onResize);
 
@@ -866,35 +988,35 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
 
     // Geometries
     discMesh.geometry.dispose();
+    horizonGeo.dispose();
+    photonRingGeo.dispose();
     partPoints.geometry.dispose();
     starsPoints.geometry.dispose();
     distActiveMesh.geometry.dispose();
     distMaskMesh.geometry.dispose();
     finalPlane.geometry.dispose();
-    tunnelGroup.children.forEach((c) => {
-      const m = c as THREE.Mesh;
-      m.geometry.dispose();
-    });
-    tunnelStreakGeo.dispose();
-    neutronGeo.dispose();
-    beam.geometry.dispose();
+    streakGeo.dispose();
+    destGeo.dispose();
+    haloMesh.geometry.dispose();
 
     // Materials
     discMat.dispose();
+    horizonMat.dispose();
+    photonRingMat.dispose();
     partMat.dispose();
     starsMat.dispose();
     distActiveMat.dispose();
     distMaskMat.dispose();
     finalMat.dispose();
-    tunnelMats.forEach((m) => m.dispose());
-    tunnelStreakMat.dispose();
-    neutronMat.dispose();
-    beamMat.dispose();
+    streakMat.dispose();
+    destMat.dispose();
+    haloMat.dispose();
 
     if (noiseTex && (noiseTex as THREE.Texture).dispose) {
       (noiseTex as THREE.Texture).dispose();
     }
 
+    composer.dispose();
     renderer.dispose();
     if (renderer.domElement.parentElement === target) {
       target.removeChild(renderer.domElement);

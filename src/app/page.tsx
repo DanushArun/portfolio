@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import LDRLoader from '@/components/ui/LDRLoader';
 
-const SceneManager = dynamic(() => import('@/components/scene/SceneManager'), {
+const Experience = dynamic(() => import('@/components/Experience'), {
   ssr: false,
   loading: () => <LDRLoader />,
 });
@@ -11,8 +11,7 @@ const SceneManager = dynamic(() => import('@/components/scene/SceneManager'), {
 export default function Home() {
   return (
     <>
-      <SceneManager />
-      {/* CSS vignette — zero GPU cost, replaces PostFX Vignette effect */}
+      <Experience />
       <div
         aria-hidden
         style={{

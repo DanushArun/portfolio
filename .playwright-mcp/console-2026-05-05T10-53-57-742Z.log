@@ -1,0 +1,378 @@
+[     496ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[     543ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  632041ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  632341ms] [LOG] [Fast Refresh] done in 387ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  679837ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  679862ms] [ERROR] ./src/lib/blackHole/index.ts:772:11
+the name `streakI` is defined multiple times
+  770 |       streaks.visible = inTunnel;
+  771 |       let streakOp = 0;
+> 772 |       let streakI = 1.0;
+      |           ^^^^^^^
+  773 |       if (p >= 0.55 && p < 0.65) {
+  774 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  775 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  680076ms] [ERROR] ./src/lib/blackHole/index.ts:772:11
+the name `streakI` is defined multiple times
+  770 |       streaks.visible = inTunnel;
+  771 |       let streakOp = 0;
+> 772 |       let streakI = 1.0;
+      |           ^^^^^^^
+  773 |       if (p >= 0.55 && p < 0.65) {
+  774 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  775 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  680101ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  690797ms] [ERROR] ./src/lib/blackHole/index.ts:772:11
+the name `streakI` is defined multiple times
+  770 |       streaks.visible = inTunnel;
+  771 |       let streakOp = 0;
+> 772 |       let streakI = 1.0;
+      |           ^^^^^^^
+  773 |       if (p >= 0.55 && p < 0.65) {
+  774 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  775 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  690832ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  705615ms] [ERROR] ./src/lib/blackHole/index.ts:772:11
+the name `streakI` is defined multiple times
+  770 |       streaks.visible = inTunnel;
+  771 |       let streakOp = 0;
+> 772 |       let streakI = 1.0;
+      |           ^^^^^^^
+  773 |       if (p >= 0.55 && p < 0.65) {
+  774 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  775 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  705638ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  736224ms] [ERROR] ./src/lib/blackHole/index.ts:772:11
+the name `streakI` is defined multiple times
+  770 |       streaks.visible = inTunnel;
+  771 |       let streakOp = 0;
+> 772 |       let streakI = 1.0;
+      |           ^^^^^^^
+  773 |       if (p >= 0.55 && p < 0.65) {
+  774 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  775 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  736276ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  842167ms] [ERROR] ./src/lib/blackHole/index.ts:765:11
+the name `streakI` is defined multiple times
+  763 |       streaks.visible = inTunnel;
+  764 |       let streakOp = 0;
+> 765 |       let streakI = 1.0;
+      |           ^^^^^^^
+  766 |       if (p >= 0.55 && p < 0.65) {
+  767 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  768 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  842211ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  879412ms] [ERROR] ./src/lib/blackHole/index.ts:765:11
+the name `streakI` is defined multiple times
+  763 |       streaks.visible = inTunnel;
+  764 |       let streakOp = 0;
+> 765 |       let streakI = 1.0;
+      |           ^^^^^^^
+  766 |       if (p >= 0.55 && p < 0.65) {
+  767 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  768 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  879513ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  879975ms] [ERROR] ./src/lib/blackHole/index.ts:765:11
+the name `streakI` is defined multiple times
+  763 |       streaks.visible = inTunnel;
+  764 |       let streakOp = 0;
+> 765 |       let streakI = 1.0;
+      |           ^^^^^^^
+  766 |       if (p >= 0.55 && p < 0.65) {
+  767 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  768 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  880076ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  880315ms] [ERROR] ./src/lib/blackHole/index.ts:765:11
+the name `streakI` is defined multiple times
+  763 |       streaks.visible = inTunnel;
+  764 |       let streakOp = 0;
+> 765 |       let streakI = 1.0;
+      |           ^^^^^^^
+  766 |       if (p >= 0.55 && p < 0.65) {
+  767 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  768 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[  880339ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/:0
+[  880423ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_react-dom_0bruynb._.js:15305
+[  880472ms] Error: ./src/lib/blackHole/index.ts:765:11
+the name `streakI` is defined multiple times
+  763 |       streaks.visible = inTunnel;
+  764 |       let streakOp = 0;
+> 765 |       let streakI = 1.0;
+      |           ^^^^^^^
+  766 |       if (p >= 0.55 && p < 0.65) {
+  767 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  768 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/lib/blackHole/index.ts:765:11)
+    at Object.getCompilationErrors (file:///Users/danusharun/Downloads/Important/portfolio/node_modules/next/dist/server/dev/hot-reloader-turbopack.js:1186:59)
+    at DevBundlerService.getCompilationError (file:///Users/danusharun/Downloads/Important/portfolio/node_modules/next/dist/server/lib/dev-bundler-service.js:44:55)
+    at DevServer.getCompilationError (file:///Users/danusharun/Downloads/Important/portfolio/node_modules/next/dist/server/dev/next-dev-server.js:719:42)
+    at DevServer.findPageComponents (file:///Users/danusharun/Downloads/Important/portfolio/node_modules/next/dist/server/dev/next-dev-server.js:689:43)
+    at async DevServer.renderErrorToResponseImpl (file:///Users/danusharun/Downloads/Important/portfolio/node_modules/next/dist/server/base-server.js:1745:26)
+[  880473ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[  880476ms] [ERROR] ./src/lib/blackHole/index.ts:765:11
+the name `streakI` is defined multiple times
+  763 |       streaks.visible = inTunnel;
+  764 |       let streakOp = 0;
+> 765 |       let streakI = 1.0;
+      |           ^^^^^^^
+  766 |       if (p >= 0.55 && p < 0.65) {
+  767 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  768 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[  880541ms] [ERROR] ./src/lib/blackHole/index.ts:765:11
+the name `streakI` is defined multiple times
+  763 |       streaks.visible = inTunnel;
+  764 |       let streakOp = 0;
+> 765 |       let streakI = 1.0;
+      |           ^^^^^^^
+  766 |       if (p >= 0.55 && p < 0.65) {
+  767 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  768 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[  880592ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[  906388ms] [ERROR] ./src/lib/blackHole/index.ts:766:11
+the name `streakI` is defined multiple times
+  764 |       streaks.visible = inTunnel;
+  765 |       let streakOp = 0;
+> 766 |       let streakI = 1.0;
+      |           ^^^^^^^
+  767 |       if (p >= 0.55 && p < 0.65) {
+  768 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  769 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[  906403ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[  936140ms] [ERROR] ./src/lib/blackHole/index.ts:779:11
+the name `streakI` is defined multiple times
+  777 |       streaks.visible = inTunnel;
+  778 |       let streakOp = 0;
+> 779 |       let streakI = 1.0;
+      |           ^^^^^^^
+  780 |       if (p >= 0.55 && p < 0.65) {
+  781 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  782 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[  936147ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[  958705ms] [ERROR] ./src/lib/blackHole/index.ts:780:11
+the name `streakI` is defined multiple times
+  778 |       streaks.visible = inTunnel;
+  779 |       let streakOp = 0;
+> 780 |       let streakI = 1.0;
+      |           ^^^^^^^
+  781 |       if (p >= 0.55 && p < 0.65) {
+  782 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  783 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[  958717ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[  971846ms] [ERROR] ./src/lib/blackHole/index.ts:780:11
+the name `streakI` is defined multiple times
+  778 |       streaks.visible = inTunnel;
+  779 |       let streakOp = 0;
+> 780 |       let streakI = 1.0;
+      |           ^^^^^^^
+  781 |       if (p >= 0.55 && p < 0.65) {
+  782 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  783 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[  971900ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[  982421ms] [ERROR] ./src/lib/blackHole/index.ts:780:11
+the name `streakI` is defined multiple times
+  778 |       streaks.visible = inTunnel;
+  779 |       let streakOp = 0;
+> 780 |       let streakI = 1.0;
+      |           ^^^^^^^
+  781 |       if (p >= 0.55 && p < 0.65) {
+  782 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  783 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[  982477ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[ 1000213ms] [ERROR] ./src/lib/blackHole/index.ts:780:11
+the name `streakI` is defined multiple times
+  778 |       streaks.visible = inTunnel;
+  779 |       let streakOp = 0;
+> 780 |       let streakI = 1.0;
+      |           ^^^^^^^
+  781 |       if (p >= 0.55 && p < 0.65) {
+  782 |         // Subtle streaks during the engulf hold — adds motion behind the black veil
+  783 |         streakOp = ss(0.55, 0.65, p) * 0.25;
+
+Ecmascript file had an error
+
+Import trace:
+  Client Component Browser:
+    ./src/lib/blackHole/index.ts [Client Component Browser]
+    ./src/components/scene/BlackHoleMount.tsx [Client Component Browser]
+    ./src/components/Experience.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1945
+[ 1000266ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[ 1043874ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[ 1043908ms] [LOG] [Fast Refresh] done in 26ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_0u_w_5s._.js:1226
+[ 1044080ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1044118ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1073322ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1073345ms] [LOG] [Fast Refresh] done in 47ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
