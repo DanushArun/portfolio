@@ -1,10 +1,10 @@
-# DANUSH ARUN PORTFOLIO — CINEMATIC SCRIPT v1
-## Master Creative Blueprint
+# DANUSH ARUN PORTFOLIO — CINEMATIC SCRIPT v2
+## Storyboard-Aligned Master Blueprint
 
-**Director:** Christopher Nolan + Denis Villeneuve  
-**Cinematographer:** Greig Fraser  
-**Composer:** Hans Zimmer  
-**Status:** APPROVED · 2026-04-24
+**Director:** Christopher Nolan + Denis Villeneuve
+**Cinematographer:** Greig Fraser
+**Composer:** Hans Zimmer
+**Status:** APPROVED · 2026-05-06 (storyboard final)
 
 ---
 
@@ -12,440 +12,407 @@
 
 > One mind. Every force in the universe a metaphor for how that mind works.
 
-The visitor witnesses a cosmology whose physics mirrors Danush's thinking: gravitational (everything has mass and consequence), orbital (all systems interconnect), precise (92ms between heartbeats). By the time they reach contact, they don't want to hire him — they want to fold his mind into their infrastructure.
+The visitor witnesses a cosmology whose physics mirrors Danush's thinking: gravitational (everything has mass and consequence), orbital (all systems interconnect), precise (sub-100ms latencies). By the time they reach contact, they don't want to hire him — they want to fold his mind into their infrastructure.
 
 ---
 
-## PHASE ARCHITECTURE
-
-Old 7-phase system is **scrapped**. New 9-phase cinematic journey:
+## THE JOURNEY — 18 STAGES
 
 ```
-VOID            → 3.5s autonomous. silence, crystallizing stars, gravitational warp, terminal boot
-EVENT_HORIZON   → hero. full-screen black hole. mouse IS physics.
-DESCENT         → 3.2s non-skippable. crossing threshold. equations disintegrate.
-MIRA_PULSAR     → scene 1. 92ms clockwork. Mira AI.
-DRIVEX_QUASAR   → scene 2. dual jets. DriveX / Agentic AI.
-TWIN_BUILD      → scene 3. binary magnetar. drag to orbit. FuryX + Veronica.
-FORMULA_RINGS   → scene 4. velocity. telemetry rings. Formula Manipal.
-QUANTUM_PLANET  → scene 5. bleeding edge. math trails. Quantum / Physics research.
-SINGULARITY     → act VII. convergence. the monolith. contact.
+PART I · COSMIC JOURNEY                       PART II · THE WORK DONE
+─────────────────────────────                 ──────────────────────────────
+01 ORBIT          0%                          10 MIRA              voice ai
+02 PULL           10–25%                      11 AIDEN             analytics
+03 STRETCH        25–40%                      12 VANGUARD          autonomy
+04 HORIZON        40–50%                      13 AI INSPECTION     vehicle cv
+05 WARP           50–65%                      14 WAVE FIELD LLM    research
+06 ANOMALY        65–75%                      15 EM ENGINE         physics
+07 TRANSITION     75–80%                      16 FORMULA MANIPAL   ev racing
+08 EMERGE         80–85%                      17 ABOUT ME          biography
+09 PROJECT        85–100%↘                    18 LET'S CONNECT     contact
 ```
 
-Post-descent scenes are **scroll-snap**. The film chooses the order. Rich interaction exists within each scene. The visitor never goes back.
+User Action: **SCROLL TO EXPLORE.** No clicks. No buttons. The visitor never goes back.
+
+Total scroll: 1500vh. Cosmic occupies scroll 0.000–0.555. Work occupies 0.555–1.000.
 
 ---
 
-## PROLOGUE — THE VOID
-### *Duration: 3.5 seconds autonomous*
+# PART I — THE COSMIC JOURNEY
+*"From the pull of gravity to purposeful impact."*
 
-**Visual sequence:**
+## C01 — ORBIT
+### *Scroll 0% · "User is in orbit around the black hole"*
 
-| Time | Event |
-|------|-------|
-| 0.0s | #000000. Absolute black. Not dark — void. |
-| 1.2s | Stars crystallize from darkness. Not fade — crystallize, like a detector coming online. Sparse. Cold. Milky Way band is a whisper. |
-| 2.0s | Gravitational lensing begins. Stars near center bend outward, barely perceptibly. Something is there. Something massive. Not visible yet. |
-| 3.0s | Terminal cursor blinks once. Types, character by character: |
+**Visual:** Camera orbits a Schwarzschild black hole at distance r=R₀. Accretion disc rendered with relativistic Doppler beaming — approaching side brightens to 1.7× rest, receding side dims to 0.2×. Photon ring is one unbroken circle of warm gold. Star field at radius 400 units, ~50k points.
 
-```
-> SCHWARZSCHILD METRIC — INITIALIZED
-> OBSERVER CONFIRMED AT r = 30 Rs
-> GRAVITY FIELD DETECTED
-> CAUTION: EVENT HORIZON AT r = 2GM/c²
-```
+**Hero overlay:** "Danush Arun" in **Instrument Serif italic 400 at 240px** rendered as ~3500 luminous particles arcing above the disc rim.
 
-Cursor holds on final line. One more blink. Then the black hole reveals itself — the way your eyes adjust to darkness and realize the shape was always there.
+**Mood:** Subtle movement. Particles floating. Sense of scale and calm.
 
-**Audio:** 28Hz sub-bass sine wave. Below conscious hearing. Felt, not heard.
+**Audio:** 28Hz sub-bass sine wave continuous. Below conscious hearing. Felt, not heard.
 
 ---
 
-## ACT I — THE EVENT HORIZON
-### *"What pulls you in cannot be reasoned with"*
+## C02 — PULL
+### *Scroll 10–25% · "Camera gets pulled closer"*
 
-### The Reveal
+**Visual:** Camera dollies inward exponentially along the established orbital plane. Accretion disk stretches — fills more vertical viewport. Stars start to smear radially toward the center. Doppler beaming intensifies: brighter peaks, deeper darks.
 
-The accretion disk **becomes visible** — not appears. Warm amber light resolves horizontally. Then the photon ring: one unbroken circle of white-gold. Then the shadow: absolute. Full screen. No UI chrome. No nav. Just the black hole and the visitor.
+**Particle behavior:** Name particles begin to drift toward the singularity at `pull = pow(progress, 2.5)`. Individual particles get sucked in randomly.
 
----
+**Mood:** Sound deepens. Acceleration is felt, not narrated.
 
-### MOUSE IS PHYSICS
-
-This is the defining interaction of the entire experience. The mouse does not move the camera. The mouse **warps spacetime**.
-
-**X-axis movement:**  
-Observer angle shifts ±25° around the disk. Doppler beaming responds physically — approaching side brightens dramatically, receding side dims and reddens. Real gravitational physics, real time.
-
-**Y-axis movement:**  
-Up = more face-on disk geometry, photon ring becomes more circular.  
-Down = toward disk plane, lensing becomes extreme, secondary image sharpens into the eye-shape.
-
-**Scroll (approach):**  
-Camera moves forward. Black hole grows to fill the screen. Accretion disk fills the lower portion like a physical horizon. Photon ring becomes a halo around the entire field of vision.
-
-**Cursor gravity:**  
-Replaced with 1px crosshair — barely visible. Within 40% of screen radius from center: gravitational lag (cursor trails its true position, distance proportional to proximity). Near photon ring boundary: cursor bends visibly toward singularity.
+**Audio:** Sub-bass drops 2 semitones. Low-end thickens.
 
 ---
 
-### HUD
+## C03 — STRETCH
+### *Scroll 25–40% · "Spacetime distortion increases"*
 
-Bottom-left · Space Mono · 9px · 0.28em tracking · #E8E4D8 · 38% opacity:
-```
-DA · OBS-25 · SAGITTARIUS A★
-SCHWARZSCHILD RADIUS: 1.0 Rs
-DISK INCLINATION: 15°
-```
+**Visual:** Light warps. Chromatic aberration begins — `uRGBShiftRadius` ramps 0.00001 → 0.02 in the final composite shader. Forward Doppler boost climbs 0 → 0.8 — pixels near the direction of motion brighten and shift toward blue. Stars now smear into thin streaks.
 
-Bottom-right · same style · 45% opacity:
-```
-DANUSH ARUN
-SYSTEMS ARCHITECT · PHYSICS ENGINE
-```
+**Mood:** Everything bends toward the black hole. The viewer's nervous system registers gravitational lensing.
 
-**No ENTER button.** The invitation is the black hole itself.
-
-At 60% scroll threshold — center screen · Syne 800 · 11px · wide tracking:
-```
-CROSS THE EVENT HORIZON
-```
-
-Scroll triggers descent. No click required.
+**Audio:** Sub-bass continues. New high-frequency tinnitus-like overtone enters.
 
 ---
 
-## THE DESCENT
-### *"Time and space have exchanged their roles" — Duration: 3.2s*
+## C04 — HORIZON
+### *Scroll 40–50% · "Crossing the event horizon"*
 
-| Time | Event |
-|------|-------|
-| 0.0–0.8s | Accretion disk fills everything. Photon ring becomes halo. Shadow swallows screen. |
-| 0.8–1.6s | Einstein field equation appears, full-screen width, white monospace: `Rμν − ½gμνR + Λgμν = 8πG/c⁴ · Tμν` — holds 0.4s, then dissolves character-by-character into static. |
-| 1.6–2.6s | Total darkness. Single amber point of light, impossibly far ahead. Growing slowly. |
-| 2.6–3.2s | Point expands into the MIRA_PULSAR scene. |
+**Visual:** Final approach. Camera reaches r=0.5 (half the Schwarzschild radius from event horizon at r=1) at scroll 0.55, then dives past origin to z=-2 between 0.55 and 0.65. The edge glows. Time dilates — visual cue: starlight bends radically into the eye-shape secondary image.
 
-**Audio:**
-- 0.0s: 28Hz hum returns, pitched down 2 semitones
-- 1.6s: **Total silence** — the most silent moment in the experience
-- 2.6s: Single D♭ piano note, below middle octave. Held. Growing. Becomes the theme.
+**The crossing event:**
+- 200ms full-black flash at the moment of crossing (`local === 0.5`)
+- Vignette deepens 0.72 → 0.95 → 0.72 across local 0.4..0.6
+- The world curves into darkness
+
+**Audio:** Total silence for 1.0 seconds. The most intentional silence so far.
 
 ---
 
-## ACT II — THE PULSAR (MIRA)
-### *"92 milliseconds between heartbeats"*
+## C05 — WARP
+### *Scroll 50–65% · "Falling through the void"*
 
-**Visual:** A neutron star, dead center, spinning visibly. Metronomic. Every **92 milliseconds** — a collimated beam of EM radiation **snaps** across the scene. Not sweeps. Snaps. There and gone. Instant. Precise.
+**Visual:** Inside the throat. 32 glowing torus rings stack along z = -6 to -167, hue cycles cyan (#88ccff) → amber (#ff8040). 4000 streak particles pass at relativistic speeds. Camera FOV explodes to 150°, then narrows back to 75°.
 
-**Colors:** Electric blue-white beam · deep amber star surface · #000000 void. The contrast is violent. Clean.
+Stars stretch into light trails. Speed increases exponentially.
 
-**The 92ms beat is the scene's metronome — and it never stops.** It persists as the underlying pulse for all remaining scenes.
-
-### UI — arrives ON THE BEAT, mechanical counter flip, no easing:
-
-```
-[PULSE] ──── SYSTEM IDENTIFIER: MIRA
-[PULSE] ──── CLASSIFICATION: AGENTIC AI · VOICE
-[PULSE] ──── LATENCY: 92ms · END TO END
-[PULSE] ──── STACK: PIPECAT · WEBSOCKETS · FASTAPI
-[PULSE] ──── FUNCTION: REAL-TIME LEAD CONVERSION
-[PULSE] ──── FUNCTION: FINANCE APPOINTMENT BOOKING
-[PULSE] ──── RESULT: SUB-100MS · PRODUCTION GRADE
-```
-
-**Interaction:** Spacebar or click fires a manual pulse. Beam fires, sweeps scene, illuminates voice waveforms ghosting through the space — conversation, system thinking, booking.
-
-**On scroll advance:** Pulsar does NOT disappear. It **recedes to background** — still pulsing at 92ms — and remains visible and audible as the metronome for every subsequent scene.
+**Audio:** D♭ piano note enters from the silence, growing. This becomes the theme.
 
 ---
 
-## ACT III — THE QUASAR PAIR (DRIVEX)
-### *"Two systems. One velocity."*
+## C06 — ANOMALY
+### *Scroll 65–75% · "Reality breaks apart"*
 
-**Visual:** Camera pivots from Pulsar. Two relativistic jets erupt from a central invisible point — plasma at 99% light speed in opposite directions.
+**Visual:** Quantum-like glitches. Data fragments. Abstract patterns appear. `<Glitch>` from `@react-three/postprocessing` with strength modulated by `useScene().scrollVelocity` — anomaly intensifies as the visitor scrolls faster. Cube-sprite particles drift through the frame.
 
-- **Left jet:** Structured, geometric, cold blue. Data in organized columns.
-- **Right jet:** Churning, organic, warm amber. Information ordering itself from chaos.
+**Mood:** Reality is no longer continuous. The runtime is hinting at code.
 
-The space between them is where the story lives.
-
-**Audio:** Two interlocking synthetic patterns (like Zimmer's "S.T.A.Y." for machines) — pulling against each other, then resolving into single forward momentum.
-
-### UI — condenses FROM jet material, not slides in:
-
-```
-ROLE: TECHNICAL ASSOCIATE PROGRAM MANAGER
-ROLE: SOFTWARE DEVELOPER
-COMPANY: DRIVEX — 2025 ONWARDS
-
-SPECIALIZATION: AGENTIC AI SYSTEMS
-SPECIALIZATION: HIGH-SCALE AUTOMATION FRAMEWORKS
-
-ENVIRONMENT: AGILE · CROSS-FUNCTIONAL
-FOCUS: CONVERSION PIPELINE ARCHITECTURE
-FOCUS: WEBHOOK & INTEGRATION SYSTEMS
-```
-
-**Interaction:**
-- Cursor in left jet → architecture depth, system topology, data flow diagrams ghost into visibility
-- Cursor in right jet → business impact, conversion metrics, client outcomes materialize
-- Jets converge briefly at cursor position — visitor becomes the integration point between architecture and outcome
+**Audio:** Synthetic patterns interlock. Two waves pulling against each other.
 
 ---
 
-## ACT IV — THE BINARY MAGNETAR (FURYX + VERONICA)
-### *"Hardware and software locked in orbit"*
+## C07 — TRANSITION
+### *Scroll 75–80% · "Cosmos to Code"*
 
-**Visual:** Two neutron stars in tight orbit, 11-second revolution period. Gravitational field between them distorts visible light. This is the heaviest scene. The most massive.
+**Visual:** Five cosmic bodies converge from screen edges toward center — orbital arcs, purposeful, inevitable. They drift inward as if drawn to a single point of meaning. Hard cut on the convergence frame.
 
-- **Left body (FuryX):** Glassmorphic UI-blue. Interface panels, Chrome extensions, Strapi CMS dashboards orbit it. News articles distribute in slow spirals.
-- **Right body (Veronica):** Clinical white. Vehicle schematics, component diagrams, AI inspection overlays orbit it. 1,047 parts. Each analyzed.
-- **The Lagrange point between:** Data flows in spiraling bridges. Magnetic field interference = circuit traces.
-
-**Audio:** Heavy controlled machinery sound + 92ms Pulsar heartbeat audible underneath.
-
-### DRAG TO ORBIT — primary interaction
-
-This is the one scene where the visitor does physical work. Scroll alone does not advance. Must click-drag to rotate view:
-
-| View | Content |
-|------|---------|
-| Front | Integrated system — both bodies in frame, data bridge visible |
-| 90° left | FuryX resolves — Chrome extension, automated news distribution, bidirectional secure feedback |
-| 90° right | Veronica resolves — 1,047 parts analyzed, automated QA, manual inspection deprecated |
-| Rear | Magnetic standing waves visible as circuit traces — the schema of integration |
-
-### Cards snap on rotation:
-
-```
-FURYX ─────────────────────────────────
-Glassmorphic office communication portal
-Chrome Extension · Strapi CMS integration
-Automated internal news distribution
-Bidirectional secure feedback loop
-
-VERONICA ───────────────────────────────
-AI vehicle inspection agent
-1,047+ components analyzed per cycle
-Automated QA test case generation
-Manual inspection: DEPRECATED
-```
-
-Scroll OR complete orbit to advance.
+**Audio:** Two interlocking patterns resolve into single forward momentum.
 
 ---
 
-## ACT V — THE RINGED GIANT (FORMULA MANIPAL)
-### *"First place is a system, not a moment"*
+## C08 — EMERGE
+### *Scroll 80–85% · "First Light"*
 
-**Transition:** **HARD CUT** — most violent scene change. No dissolve. SNAP.
+**Visual:** A pulsar emerges from the void. Dead center, spinning visibly. Electric blue-white EM beam against deep amber star surface against #000 void. The first work begins to materialize.
 
-**Visual:** Camera inside ring plane, moving along the rings. Rock and ice blurring into a tunnel of velocity. Claustrophobic and exhilarating simultaneously.
-
-**Colors:** Space black · silver ring-particle blur · **telemetry green (#B8FF3C dominant here)** — only scene where lime becomes primary.
-
-**Audio:** Zimmer strings rising rapidly → rhythmic electronic pulse accelerating like an EV motor winding up. The Pulsar's 92ms heartbeat transforms into the beat of the motor — same interval, different context. The visitor's subconscious connects them.
-
-### SCROLL VELOCITY = RING SPEED
-
-Scroll fast → rings blur into pure velocity and sensation.  
-Scroll slow → individual ring particles pause and resolve into legible data:
-
-```
-FM23e ELECTRIC VEHICLE
-MOTOR: KV-80 · 500 RPM/V
-ROLE: OPERATIONS LEAD · 2022–2024
-
-PATH PLANNING: AUTONOMOUS SYSTEMS
-ACCURACY IMPROVEMENT: +40%
-
-FORMULA BHARAT 2024: 1ST PLACE
-COST & MANUFACTURING: 1ST PLACE
-SPONSORSHIP RAISED: ₹60 LAKH
-FUNCTION: DIRECTED AUTONOMOUS PATH PLANNING
-```
-
-Scroll past rings to break into open space.
+**Audio:** Pulsar metronome activates. **92ms** between snaps. This becomes the heartbeat of the entire remaining experience.
 
 ---
 
-## ACT VI — THE RACING PLANET (QUANTUM / PHYSICS RESEARCH)
-### *"At the edge of what's computable"*
+## C09 — PROJECT
+### *Scroll 85–100% of cosmic band · "Hand-off to the work"*
 
-**Transition:** Hard cut to **stillness**. After the velocity of Formula, sudden quiet. The visitor's nervous system resets.
+**Visual:** The pulsar recedes to background and persists as an audible 92ms metronome through every subsequent scene. The first work panel (W01_MIRA) materializes from the pulse itself.
 
-**Visual:** Lone rogue planet, moving faster than orbital mechanics should allow, through a dark nebula. Behind it: a comet tail of mathematics. Schelkunoff equations. Maxwell's field equations. Quantum state vectors. They glow — not as UI elements — as **physical phenomena**. Mathematics as the exhaust of computation.
-
-**Colors:** Nebula purple-blue · mathematical gold equations · clinical white planet · #000000 void. No amber — coldest, most abstract scene.
-
-**Audio:** Near-silence. A single sustained crystal glass note — ethereal, slightly dissonant. The sound of thinking at the edge of the possible. Zimmer strings: gone.
-
-### EQUATION INTERACTION
-
-Cursor touches an equation → it pauses in the trail, expands into a panel:
-
-```
-SCHELKUNOFF SHIELDING THEORY
-Research: Electromagnetic shielding simulation
-Publication: Vectorized physics engine
-Basis: Schelkunoff's foundational theory
-Application: Production-scale EM modeling
-
-MONTE CARLO — QUANTUM
-Tool: Qiskit
-Method: Variational quantum algorithms
-Problem: Quantum options pricing
-Improvement: 70% acceleration vs classical
-```
-
-**Monte Carlo click → SHATTER SEQUENCE (0.8s):**
-1. Screen shatters into 10,000 luminous data points — the simulation visualized
-2. Points scatter across the screen (each one a calculation)
-3. They **reassemble** back into the scene with algorithmic precision
-
-**Draggable glass panels:** Frosted, weighted panels the visitor can drag freely around the screen. Only freely-moveable elements in the entire experience. Metaphor: research has no fixed path.
+**Audio:** The 92ms beat. Forever.
 
 ---
 
-## ACT VII — THE SINGULARITY
-### *"All forces. One point."*
+# PART II — THE WORK DONE
+*"Systems built. Problems solved. Impact created."*
 
-**Opening:** All audio cuts simultaneously. Total silence. **3 seconds.** This is the most intentional silence in the experience.
+Dark space theme persists. Each panel is a system dashboard rendered against the void.
 
-**Visual sequence:**
+## W01 — MIRA
+### *Multilingual Intelligent Real-time Agent*
 
-Five cosmic bodies drift from screen edges toward center — orbital arcs, purposeful, inevitable:
+**Hero:** Real-time voice AI agent that listens, understands, and responds in 5 Indian languages at sub-100ms latency.
 
-```
-Pulsar ←── upper left
-Quasar jets ←── right (folding into themselves)
-Twin Magnetars ←── from below
-Ringed Giant ←── upper right
-Racing Planet ←── center left
-```
+**Big number:** `RESPONSE TIME 4.82ms`
 
-They converge toward screen center. At the convergence point — from the intersection of their light — **a monolith**. Same proportions as the opening prologue. Black. Frosted glass sheen. It was there at the beginning. It is here at the end. It is the through-line made visible.
+**Tags:** `REAL-TIME ASR` `NLU` `LLM ORCHESTRATION` `MULTILINGUAL` `PIPECAT` `LOW LATENCY`
 
-**Audio (after 3s silence):** D♭ organ note — two octaves below the piano note from the Descent. 4 seconds. A fifth above joins it. Then the full chord. Does not swell. Simply **is**.
+**Color motif:** Vibrant magenta/purple voice waveforms.
 
-**Contact arrives FROM DIRECTION of associated body:**
+**Flow:** `NOISE → SIGNAL → UNDERSTANDING`
 
-```
-Email ←── arrives from Pulsar direction
-Phone ←── arrives from Quasar direction
-LinkedIn ←── arrives from Magnetar direction
-GitHub ←── arrives from Rings direction
-Location ←── arrives from Planet direction
-```
-
-Text materializes from static — not fade, from white noise to clarity:
-
-```
-> INITIALIZE CONTACT
-
-danusharun999@gmail.com
-+91 9901148254
-linkedin.com/in/danush-arun-5aa762267
-github.com/DanushArun
-Bengaluru · India
-```
-
-**Final frame:** Five bodies orbiting slowly in background. Monolith foreground. Hairline crosshair cursor blinks once. Holds.
-
-*The visitor doesn't want to hire him. They want to integrate his mind into their systems.*
+**Interaction:** Spacebar fires a manual pulse. Beam sweeps the panel. Voice waveforms ghost into visibility.
 
 ---
 
-## DESIGN LAWS
+## W02 — AIDEN
+### *AI-Driven Engagement Analytics*
 
-### Motion
-- **Entry:** Objects emerge from black. NEVER fly in from side.
-- **Exit:** Objects compress toward a point. NEVER slide off screen.
-- **Transitions:** Hard cut OR 800ms dissolve-through-black. NOTHING ELSE.
+**Hero:** Conversation intelligence that turns every call into actionable insights across 8 SOP dimensions.
+
+**Tags:** `DURATION` `SENTIMENT` `SOP SCORES` `LLM ANALYSIS` `POST CALL INSIGHTS` `ZOOM CCR`
+
+**Color motif:** Cool cyan + deep blue analytics curves.
+
+**Flow:** `CONVERSATIONS → INSIGHTS → ACTION`
+
+**Interaction:** Cursor hover reveals time-series detail.
+
+---
+
+## W03 — VANGUARD
+### *Autonomous Web Testing Agent*
+
+**Hero:** AI agent that explores, tests and validates systems end-to-end without manual scripts.
+
+**Status indicators (semantic, glowing dots):**
+- 🔴 `ISSUE DETECTED — Element Overlap`
+- 🟡 `SELF HEALING — Re-attempting`
+- 🟢 `TEST PASSED — All Good`
+
+**Tags:** `VLM + PLAYWRIGHT` `AUTONOMOUS AGENT` `SELF CORRECTION` `VISUAL UNDERSTANDING`
+
+**Color motif:** Electric blue traversal paths with red/green semantic states.
+
+**Flow:** `EXPLORE → TEST → ADAPT → VALIDATE`
+
+---
+
+## W04 — AI INSPECTION
+### *AI Powered Vehicle Inspection*
+
+**Hero:** Computer vision system that inspects 1000+ parts of two-wheelers with precision and consistency.
+
+**Inspection layers (5):**
+- `STRUCTURAL`
+- `MECHANICAL`
+- `ELECTRICAL`
+- `COSMETIC`
+- `TYRES & WHEELS`
+
+**Tags:** `COMPUTER VISION` `DEFECT DETECTION` `3D RECONSTRUCTION` `1000+ PARTS` `REAL-TIME SCAN` `QUALITY ASSURANCE`
+
+**Visual:** Wireframe two-wheeler schematic with defect map overlay.
+
+**Color motif:** Clinical white wireframes on void.
+
+**Flow:** `SCAN → DETECT → ANALYZE → ASSURE`
+
+---
+
+## W05 — WAVE FIELD LLM
+### *Wave Field Attention Research*
+
+**Hero:** Breaking the quadratic barrier of attention with Wave Field Attention. 10k long context for massive scale.
+
+**Comparison visual:**
+- `STANDARD ATTENTION` — `O(n²)` — 1M tokens ~200,000× slower
+- `WAVE FIELD ATTENTION` — `O(n log n)` — STABLE & EFFICIENT
+
+**Tags:** `RESEARCH` `ALGORITHM DESIGN` `ATTENTION MECHANISM` `O(n log n) COMPLEXITY`
+
+**Color motif:** Subtle icy blue points — wave interference patterns.
+
+**Flow:** `RETHINK → RESEARCH → REDUCE COMPLEXITY`
+
+---
+
+## W06 — EM ENGINE
+### *EMI Shielding Designer & Computational Physics Engine*
+
+**Hero:** Simulating electromagnetic fields to design smarter shielding solutions that perform in the real world.
+
+**Domain layers:**
+- `STRUCTURAL` `MECHANICAL` `ELECTRICAL` `COSMETIC` `TYRES & WHEELS`
+
+**Visual:** Frequency sweep plot — `100 kHz → 10 GHz`
+
+**Tags:** `EM SIMULATION` `ALTERNATOR GEOMETRIES` `PREDICTIVE SHIELDING` `JENKINS CI/CD`
+
+**Color motif:** Mathematical gold equations against nebula purple-blue.
+
+**Flow:** `MODEL → SIMULATE → PREDICT → PROTECT`
+
+**Reference work:** Schelkunoff EM shielding theory, Monte Carlo Quantum (Qiskit, 70% acceleration vs classical).
+
+---
+
+## W07 — FORMULA MANIPAL
+### *Autonomous EV Path Planning · 1st Place Formula Bharat 2024*
+
+**Hero:** Led autonomous path planning, concepts and complex for Project & 1st in Cost & Manufacturing at Formula Bharat 2024.
+
+**Path types (color-coded race lines):**
+- 🟢 `INITIAL PATH`
+- 🟣 `OPTIMIZED PATH`
+- 🟠 `TRACK BOUNDARY`
+- 🔴 `BEST LINE`
+
+**Tags:** `CONTROLS` `PATH PLANNING` `VEHICLE DYNAMICS` `DATA LOGGING` `SYSTEMS ENGINEERING`
+
+**Achievements:** `1st Place Formula Bharat 2024` · `1st Cost & Manufacturing` · `₹60 Lakh raised` · `+40% accuracy`
+
+**Color motif:** Telemetry green (`#B8FF3C`) dominant — only scene where lime becomes primary.
+
+**Flow:** `MODEL → OPTIMIZE → TEST → WIN`
+
+---
+
+## W08 — ABOUT ME
+
+**Visual:** Brief biographical panel rendered against the persistent void. The pulsar metronome continues underneath.
+
+**Education:**
+- B.Tech Electrical Engineering — Manipal Institute of Technology · 2025
+- Executive PG Full Stack Development — IIT Roorkee · 2025
+
+**Current:** DriveX — Technical APM + Software Developer, 2025→. Specialization: Agentic AI systems, high-scale automation frameworks.
+
+---
+
+## W09 — LET'S CONNECT
+### *"Big problems need collaborative minds"*
+
+**Hero:** Big problems need collaborative minds. Let's build the future together.
+
+**Contact:**
+- 📧 Email: `danusharun999@gmail.com`
+- 💼 LinkedIn: `linkedin.com/in/danush-arun-5aa762267`
+- 🐙 GitHub: `github.com/DanushArun`
+- 📞 Phone: `+91 9901148254`
+- 📍 Location: Bengaluru · India
+
+**Visual:** Earth-on-horizon shot with orbital paths converging on contact links.
+
+**Flow:** `CONNECT → COLLABORATE → CREATE IMPACT`
+
+---
+
+# DESIGN PRINCIPLES (storyboard footer)
+
+| Principle | Statement |
+|---|---|
+| **Physics Inspired** | Real world systems, visualised beautifully |
+| **Data Driven** | Every visual represents real computation |
+| **Interactive** | You control the journey through scroll |
+| **Performance** | 60 FPS, optimized shaders, smooth experience |
+
+---
+
+# TECH STACK (storyboard footer)
+
+- **React Three Fiber** — declarative 3D
+- **GSAP ScrollTrigger** — 1:1 scroll scrub
+- **GLSL Shaders** — disc, lensing, Doppler, glitch
+- **WebGL 3D Engine** — Three.js 0.184
+
+---
+
+# EXPERIENCE NOTES (storyboard footer)
+
+- Smooth scroll scrub · 1:1 section mapping
+- Audio reactive · subtle feedback
+- Dark space theme with purpose
+- Mobile optimised experience
+
+---
+
+# DESIGN LAWS
+
+## Motion
+- **Entry:** Objects emerge from black. Never fly in from side.
+- **Exit:** Objects compress toward a point. Never slide off screen.
+- **Transitions:** Hard cut OR 800ms dissolve-through-black. Nothing else.
 - **Easing:** `cubic-bezier(0.16, 1, 0.3, 1)` — fast out, extremely slow settle. Everywhere.
 
-### Typography
+## Typography
 | Use | Font | Size | Tracking | Color | Opacity |
-|-----|------|------|----------|-------|---------|
+|---|---|---|---|---|---|
 | Data / narrative | Space Mono | 9–11px | 0.25em | #E8E4D8 | 38–62% |
 | Achievement metrics | Space Mono | 9–11px | 0.25em | #B8FF3C | 80% |
 | Scene titles | Syne 800 | large | -0.03em | #E8E4D8 | 100% |
-| Terminal text | Space Mono | 11px | 0.25em | #E8E4D8 | 70% |
+| Hero serif | Instrument Serif italic 400 | 240px | — | #F2EEE7 | 100% |
 
-**Zero body copy. Zero paragraphs. Show, don't tell.**
+**Zero body copy. Zero paragraphs. ≤ 7 words per UI element.**
 
-### Color by Act
+## Color by Stage
 
-| Scene | Primary | Secondary | Accent |
-|-------|---------|-----------|--------|
-| VOID / EVENT HORIZON | #000000 | Amber disk | Gold photon ring |
-| PULSAR | #000000 | Electric blue-white beam | Deep amber star |
-| QUASAR | Cold blue (left jet) | Warm amber (right jet) | — |
-| BINARY MAGNETAR | UI blue (FuryX) | Clinical white (Veronica) | Circuit-trace interference |
-| FORMULA RINGS | #000000 | Silver ring blur | **#B8FF3C** telemetry (dominant) |
-| QUANTUM PLANET | Nebula purple-blue | Mathematical gold | Clinical white |
-| SINGULARITY | All prior briefly | → cream #E8E4D8 | → #000000 only |
+| Stage | Primary | Secondary | Accent |
+|---|---|---|---|
+| C01–C04 | #000000 | Disc amber #ffc066 | Photon ring gold |
+| C05 WARP | #000000 | Cyan #88ccff streaks | Amber #ff8040 tunnel end |
+| C06 ANOMALY | #000000 | Pink/purple glitch | RGB-split chromatic |
+| C07–C09 | #000000 | Pulsar blue-white | Pulsar amber surface |
+| W01 MIRA | #000000 | Magenta voice | Pulse white |
+| W02 AIDEN | #000000 | Cyan/blue analytics | — |
+| W03 VANGUARD | #000000 | Electric blue paths | Red/green semantic |
+| W04 INSPECTION | #000000 | Clinical white wireframe | — |
+| W05 WAVEFIELD | #000000 | Icy blue interference | — |
+| W06 EM ENGINE | #000000 | Mathematical gold | Nebula purple |
+| W07 FORMULA | #000000 | Silver ring blur | **#B8FF3C** telemetry (dominant) |
+| W08 ABOUT | #000000 | #E8E4D8 cream | — |
+| W09 CONNECT | #000000 | Cream → black fade | — |
 
-### Audio Architecture
+## Audio Architecture
 
-| Moment | Sound | Duration |
-|--------|-------|---------|
-| VOID | 28Hz sub-bass | Continuous |
-| EVENT_HORIZON | 28Hz sub-bass | Continuous |
-| DESCENT 0–1.6s | 28Hz hum, -2 semitones | 1.6s |
-| DESCENT 1.6–2.6s | **Total silence** | 1.0s |
-| DESCENT 2.6s+ | D♭ piano note, growing | → |
-| PULSAR | 92ms synthetic pulse | Continuous from here |
-| QUASAR | Two interlocking synthetic patterns → harmony | Scene |
-| BINARY MAGNETAR | Heavy machinery + 92ms underneath | Scene |
-| FORMULA RINGS | Rising strings → EV motor pulse (= 92ms) | Scene |
-| QUANTUM PLANET | Near-silence + crystal glass note | Scene |
-| SINGULARITY opening | **3-second absolute silence** | 3.0s |
-| SINGULARITY resolution | D♭ organ → fifth → full chord | Held |
+| Stage | Sound | Notes |
+|---|---|---|
+| C01 ORBIT | 28Hz sub-bass | Continuous |
+| C02 PULL | 28Hz, deepening | -2 semitones |
+| C03 STRETCH | High-frequency overtone enters | Layered over sub-bass |
+| C04 HORIZON | **Total silence 1.0s** | The first weaponized silence |
+| C05 WARP | D♭ piano, growing | Becomes the theme |
+| C06 ANOMALY | Two interlocking synthetic patterns | Tension |
+| C07 TRANSITION | Patterns resolve to single momentum | Harmony |
+| C08 EMERGE | **92ms pulsar metronome activates** | Heartbeat of remainder |
+| C09 → W09 | 92ms persists underneath everything | Always |
+| W04 INSPECTION | Heavy machinery + 92ms | Twin layer |
+| W07 FORMULA | Rising strings → EV motor pulse (= 92ms) | Same interval, different context |
+| W09 CONNECT | D♭ organ → fifth → full chord | Final resolution |
 
-### The Three Laws
+---
+
+# THE THREE LAWS
+
 1. **Everything has weight.** Nothing bounces. Nothing eases in with joy. Objects arrive with consequence.
 2. **Silence is weaponized.** The absence of audio after a scene is the scene's final beat.
 3. **The visitor always moves forward.** There is no back button in a black hole.
 
 ---
 
-## INTERACTION MODEL SUMMARY
+# INTERACTION MODEL SUMMARY
 
-| Phase | Primary Interaction | Secondary | Advance |
-|-------|--------------------|-----------|---------| 
-| VOID | None (autonomous) | — | Auto |
-| EVENT_HORIZON | Mouse warps spacetime (X/Y + scroll) | Gravity cursor | Scroll threshold |
-| DESCENT | None | — | Auto (3.2s) |
-| MIRA_PULSAR | Spacebar/click fires manual pulse | — | Scroll |
-| DRIVEX_QUASAR | Cursor enters jets | Jets bend to cursor | Scroll |
-| TWIN_BUILD | **Click-drag to orbit** | Cards snap on rotation | Complete orbit or scroll |
-| FORMULA_RINGS | **Scroll velocity = ring speed** | Particles = data | Scroll out |
-| QUANTUM_PLANET | **Click equations (expand / shatter)** | Drag glass panels | Scroll |
-| SINGULARITY | Click INITIALIZE CONTACT | Hover contact details | — |
+| Stage | Primary | Secondary | Advance |
+|---|---|---|---|
+| C01–C09 | Scroll | Mouse warps spacetime in C04 | Scroll |
+| W01 MIRA | Scroll | Spacebar fires manual pulse | Scroll |
+| W02 AIDEN | Scroll | Hover reveals timeline detail | Scroll |
+| W03 VANGUARD | Scroll | Cursor reveals state transitions | Scroll |
+| W04 INSPECTION | Scroll | Hover shows defect map highlights | Scroll |
+| W05 WAVEFIELD | Scroll | Toggle O(n²) vs O(n log n) viz | Scroll |
+| W06 EM ENGINE | Scroll | Hover frequency sweep | Scroll |
+| W07 FORMULA | Scroll | Drag racing line | Scroll |
+| W08 ABOUT | Scroll | — | Scroll |
+| W09 CONNECT | Click contact link | — | — |
 
 ---
 
-## SCENE CONTENT REFERENCE
-
-### Danush's Projects Mapped to Cosmic Bodies
-
-| Body | Project | Key Stats |
-|------|---------|-----------|
-| Pulsar | **Mira** (Voice AI) | 92ms latency · Pipecat · WebSockets · FastAPI |
-| Quasar Pair | **DriveX** (Technical APM + SWE) | Agentic AI · High-scale automation · 2025→ |
-| Binary Magnetar (Blue) | **FuryX** (Communication Portal) | Chrome Extension · Strapi CMS · news automation |
-| Binary Magnetar (White) | **Veronica** (AI Inspection) | 1,047+ parts · automated QA · replaces manual |
-| Ringed Giant | **Formula Manipal** (EV Racing) | 1st Place Formula Bharat 2024 · ₹60L · +40% accuracy |
-| Racing Planet | **Research** (Quantum + Physics) | 70% Monte Carlo speedup · Schelkunoff EM shielding · Published |
-
-### Education
-- B.Tech Electrical Engineering — Manipal Institute of Technology · 2025
-- Executive PG Full Stack Development — IIT Roorkee · 2025
-
-### Contact
-- Email: danusharun999@gmail.com
-- Phone: +91 9901148254
-- LinkedIn: linkedin.com/in/danush-arun-5aa762267
-- GitHub: github.com/DanushArun
-- Location: Bengaluru · India
+END OF CINEMATIC SCRIPT v2
