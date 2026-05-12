@@ -4,6 +4,7 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
+import { palette } from '@/lib/design-tokens';
 
 const FRAGMENT_COUNT = 800;
 const RING_PARTICLE_COUNT = 5000;
@@ -52,8 +53,8 @@ export default function TransitionConvergence() {
     const g = new THREE.BufferGeometry();
     const pos = new Float32Array(RING_PARTICLE_COUNT * 3);
     const colors = new Float32Array(RING_PARTICLE_COUNT * 3);
-    const colorBlue = new THREE.Color('#38BDF8');
-    const colorOrange = new THREE.Color('#EA580C');
+    const colorBlue = new THREE.Color(palette.cream);
+    const colorOrange = new THREE.Color(palette.accretion);
 
     for (let i = 0; i < RING_PARTICLE_COUNT; i++) {
       const ringIdx = i % 3; // 3 intersecting rings
@@ -158,7 +159,7 @@ export default function TransitionConvergence() {
       {/* Core Volumetric Glow */}
       <mesh>
         <sphereGeometry args={[1.6, 32, 32]} />
-        <meshBasicMaterial color="#EA580C" transparent opacity={local * 0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color={palette.accretion} transparent opacity={local * 0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
 
       {/* Intersecting Orbit Rings */}
@@ -170,7 +171,7 @@ export default function TransitionConvergence() {
       {/* Flat Data Fragments */}
       <instancedMesh ref={fragmentsRef} args={[undefined, undefined, FRAGMENT_COUNT]}>
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial color="#38BDF8" transparent opacity={0} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color={palette.cream} transparent opacity={0} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} depthWrite={false} />
       </instancedMesh>
     </group>
   );

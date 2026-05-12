@@ -14,10 +14,13 @@ export default function WarpScene() {
   const phase = useScene((s) => s.phase);
   const localProgress = useScene((s) => s.localProgress);
 
-  // Initial star positions and velocities
-  const { positions, velocities } = useMemo(() => {
+  // Initial star positions, velocities, and per-instance color (multi-color
+  // warp — spectral hues seeded once so each streak holds its own colour).
+  const { positions, velocities, colors } = useMemo(() => {
     const positions = new Float32Array(COUNT * 3);
     const velocities = new Float32Array(COUNT);
+    const colors = new Float32Array(COUNT * 3);
+    const tmp = new THREE.Color();
     for (let i = 0; i < COUNT; i++) {
       // Random position in a cylinder around the Z axis
       const r = 5 + Math.random() * RADIUS;
@@ -26,8 +29,15 @@ export default function WarpScene() {
       positions[i * 3 + 1] = r * Math.sin(theta); // y
       positions[i * 3 + 2] = (Math.random() - 0.5) * DEPTH; // z
       velocities[i] = 1 + Math.random() * 2;
+      // Spectral palette: warm-amber → cyan → magenta, biased to accretion
+      // hues so warp reads as continuation of the BH disc.
+      const hue = (i * 0.137 + Math.random() * 0.4) % 1.0;
+      tmp.setHSL(hue, 0.85, 0.62);
+      colors[i * 3 + 0] = tmp.r;
+      colors[i * 3 + 1] = tmp.g;
+      colors[i * 3 + 2] = tmp.b;
     }
-    return { positions, velocities };
+    return { positions, velocities, colors };
   }, []);
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -75,17 +85,37 @@ export default function WarpScene() {
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, COUNT]}>
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, COUNT]}
+      onUpdate={(self) => {
+        // Apply per-instance colors once after mount
+        const attr = new THREE.InstancedBufferAttribute(colors, 3);
+        self.geometry.setAttribute('instanceColor', attr);
+      }}
+    >
       {/* A thin cylinder representing a stretched star */}
       <cylinderGeometry args={[0.2, 0.2, 1, 4]} />
       {/* Rotate the cylinder so it aligns with the Z axis */}
       <group rotation={[Math.PI / 2, 0, 0]} />
-      <meshBasicMaterial 
-        color="#ffffff" 
-        transparent 
-        opacity={0} 
+      <meshBasicMaterial
+        vertexColors
+        transparent
+        opacity={0}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
+        onBeforeCompile={(shader) => {
+          // Wire instanceColor → vColor for additive multi-color streaks.
+          shader.vertexShader = shader.vertexShader
+            .replace(
+              '#include <common>',
+              `#include <common>\nattribute vec3 instanceColor;`
+            )
+            .replace(
+              '#include <color_vertex>',
+              `#include <color_vertex>\nvColor.rgb *= instanceColor;`
+            );
+        }}
       />
     </instancedMesh>
   );

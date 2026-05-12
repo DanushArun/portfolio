@@ -1,0 +1,107 @@
+.root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 80;
+  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cluster {
+  position: absolute;
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.bottomLeft {
+  bottom: 24px;
+  left: 24px;
+  align-items: center;
+}
+
+.bottomRight {
+  bottom: 24px;
+  right: 24px;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.phaseIndicator {
+  font-family: var(--font-composer);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: rgba(240, 228, 210, 0.6);
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.skipButton {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 8px 4px;
+  min-height: 44px;
+  font-family: var(--font-composer);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: rgba(240, 228, 210, 0.5);
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 100ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.skipButton:hover {
+  color: rgba(240, 228, 210, 1);
+}
+
+.skipButton:hover .skipArrow {
+  color: var(--color-accretion);
+}
+
+.skipButton:active {
+  transform: scale(0.96);
+}
+
+.skipArrow {
+  display: inline-block;
+  transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggleSlot {
+  appearance: none;
+  background: none;
+  border: 1px solid rgba(240, 228, 210, 0.12);
+  border-radius: 999px;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-composer);
+  font-size: 14px;
+  color: rgba(240, 228, 210, 0.4);
+  cursor: pointer;
+  transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggleSlot[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toggleSlot:hover:not([aria-disabled="true"]) {
+  color: rgba(240, 228, 210, 1);
+  border-color: var(--color-accretion);
+}
+
+html[data-rm="reduce"] .root,
+html[data-rm="reduce"] .skipButton,
+html[data-rm="reduce"] .skipArrow,
+html[data-rm="reduce"] .toggleSlot {
+  transition: none;
+}

@@ -34,6 +34,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@playwright/test": "^1.59.1",
     "@react-three/test-renderer": "^9.1.0",
     "@tailwindcss/postcss": "^4",
@@ -45,6 +46,7 @@
     "@types/three": "^0.184.0",
     "@vitest/coverage-v8": "^4.1.5",
     "@vitest/ui": "^4.1.5",
+    "axe-core": "^4.11.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "jsdom": "^29.1.0",

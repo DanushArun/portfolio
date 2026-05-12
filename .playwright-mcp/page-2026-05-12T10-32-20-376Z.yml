@@ -1,0 +1,65 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic: "01"
+              - generic: MULTILINGUAL INTELLIGENT REAL-TIME AGENT
+            - heading [level=2]: MIRA
+            - paragraph: Real-time voice AI agent that listens, understands and responds in 5 Indian languages at sub-100ms latency.
+          - generic:
+            - generic:
+              - generic:
+                - generic: தமிழ்
+                - generic: हिंदी
+                - generic: తెలుగు
+                - generic: ಕನ್ನಡ
+                - generic: বাংলা
+              - generic:
+                - generic: RESPONSE TIME
+                - generic: 482ms
+              - generic [ref=e15]:
+                - generic [ref=e16]: REAL-TIME ASR
+                - generic [ref=e17]: NLU
+                - generic [ref=e18]: LLM ORCHESTRATION
+                - generic [ref=e19]: MULTILINGUAL
+                - generic [ref=e20]: PIPECAT
+                - generic [ref=e21]: LOW LATENCY
+        - generic:
+          - generic: NOISE →
+          - generic: SIGNAL →
+          - generic: UNDERSTANDING
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+  - generic "Scene controls":
+    - generic [ref=e22]:
+      - generic "Phase 1 of 18" [ref=e65]:
+        - generic [ref=e24]: 01 / 18
+      - button "Skip to next phase" [ref=e66] [cursor=pointer]:
+        - generic [ref=e67]: ↓
+        - generic [ref=e68]: next
+    - generic [ref=e28]:
+      - button "Toggle audio (unavailable)" [disabled] [ref=e29]:
+        - generic [ref=e30]: ⌀
+      - button "Toggle reduced motion (unavailable)" [disabled] [ref=e31]:
+        - generic [ref=e32]: =
+      - button "Toggle quality (unavailable)" [disabled] [ref=e33]:
+        - generic [ref=e34]: ◐
+  - button "Enable audio" [ref=e35] [cursor=pointer]: AUDIO OFF
+  - alert [ref=e10]

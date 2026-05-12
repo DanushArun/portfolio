@@ -33,7 +33,7 @@ export default function MiraPage() {
   return (
     <main
       style={{
-        background: '#0B0D10',
+        background: 'var(--color-void)',
         minHeight:  '100vh',
         color:      '#E8E4D8',
         fontFamily: 'var(--font-space-grotesk, sans-serif)',

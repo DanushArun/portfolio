@@ -1,29 +1,13 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------
- * Design tokens — the field system
+ * Job 003 design tokens — single source of truth.
+ * Palette locked by founder 2026-05-12. Mirror of `src/lib/design-tokens.ts`.
  * --------------------------------------------------------------- */
 :root {
-  /* THE 4 VALUES */
-  --color-void: #020203; /* Absolute pitch black for deepest space */
-  --color-paper: #F2EEE7; /* Ambient outside / day-for-night */
-  --color-ink: #0A0A0A; /* Everything inside / event horizon black */
-  --color-lead: #6F6A60; /* System labels / carbon-paper (40% ink) */
-  --color-sodium: #D24F1B; /* The only accent / use sparingly */
-
-  /* Legacy aliases to keep things running until we refactor all components */
-  --graphite: var(--color-ink);
-  --lime: var(--color-sodium);
-  --cream: var(--color-paper);
-  --bone: #E8E4D8;
-  --ash: #8A857B;
-  --radium: #B8FF3C;
-
-  /* Typography stacks. Variables are assigned by next/font at runtime;
-     the string fallbacks keep the cascade intact during hydration. */
-  --font-director: var(--font-director), "Cormorant Garamond", Georgia, serif;
-  --font-dop: var(--font-dop), "Instrument Serif", Georgia, serif;
-  --font-composer: var(--font-composer), "JetBrains Mono", ui-monospace, monospace;
+  --color-void:      #08070a;
+  --color-accretion: #FFA85C;
+  --color-cream:     #F0E4D2;
 
   /* Easing — six named curves. Never reach for CSS `ease` or `linear`. */
   --ease-instrument: cubic-bezier(0.16, 1, 0.3, 1);
@@ -34,29 +18,21 @@
   --ease-dismiss:    cubic-bezier(0.4, 0, 1, 1);
 }
 
-/* Expose tokens to Tailwind v4's theme layer */
+/* Expose tokens to Tailwind v4's theme layer. Font variables are written by
+ * `next/font` onto <html> via the className from `src/lib/fonts.ts`; we just
+ * re-export them so `font-composer` / `font-dop` utilities resolve. */
 @theme inline {
-  --color-void: var(--color-void);
-  --color-paper: var(--color-paper);
-  --color-ink: var(--color-ink);
-  --color-lead: var(--color-lead);
-  --color-sodium: var(--color-sodium);
-  --color-bone: var(--bone);
-  --color-ash: var(--ash);
-  --color-radium: var(--radium);
-  
-  --font-director: var(--font-director);
-  --font-dop: var(--font-dop);
-  --font-composer: var(--font-composer);
+  --color-void:      var(--color-void);
+  --color-accretion: var(--color-accretion);
+  --color-cream:     var(--color-cream);
 
-  /* Legacy aliases for Tailwind */
-  --color-graphite: var(--graphite);
-  --color-lime: var(--lime);
-  --color-cream: var(--cream);
+  --font-composer: var(--font-composer);
+  --font-dop:      var(--font-dop);
+  --font-director: var(--font-director);
 }
 
 /* ---------------------------------------------------------------
- * Reset — box-sizing, margin/padding, default element chrome
+ * Reset — box-sizing, margin/padding, default element chrome.
  * --------------------------------------------------------------- */
 *,
 *::before,
@@ -68,9 +44,7 @@
 }
 
 html {
-  background: var(--color-ink);
-  /* Native smooth-behavior fights the RAF loop if we use custom scroll, 
-     but for native continuous scroll it's fine. We use standard scrolling now. */
+  background: var(--color-void);
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
@@ -79,45 +53,44 @@ html {
 }
 
 body {
-  background: var(--color-ink);
-  color: var(--color-paper);
-  font-family: var(--font-dop); /* Default to DOP body voice */
-  font-style: italic; /* "All body is italic - always" */
+  background: var(--color-void);
+  color: var(--color-cream);
+  font-family: var(--font-dop), "Instrument Serif", Georgia, serif;
+  font-style: italic;
   font-weight: 400;
   line-height: 1.35;
   overflow-x: hidden;
-  cursor: none;
+  cursor: auto;
   min-height: 100svh;
 }
 
-/* Typography Utility Classes */
+/* Typography utility classes — names of the three voices. */
 .voice-director {
-  font-family: var(--font-director);
+  font-family: var(--font-director), "JetBrains Mono", ui-monospace, monospace;
   font-style: normal;
   letter-spacing: -0.02em;
   line-height: 0.86;
 }
 
 .voice-dop {
-  font-family: var(--font-dop);
+  font-family: var(--font-dop), "Instrument Serif", Georgia, serif;
   font-style: italic;
   line-height: 1.35;
 }
 
 .voice-composer {
-  font-family: var(--font-composer);
+  font-family: var(--font-composer), "JetBrains Mono", ui-monospace, monospace;
   font-style: normal;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
-/* Links/buttons/inputs inherit cleanly rather than using UA defaults. */
 a,
 button {
   color: inherit;
   background: none;
   font: inherit;
-  cursor: none;
+  cursor: auto;
 }
 
 img,
@@ -140,20 +113,20 @@ button {
  * Selection
  * --------------------------------------------------------------- */
 ::selection {
-  background: var(--color-sodium);
-  color: var(--color-paper);
+  background: var(--color-accretion);
+  color: var(--color-void);
 }
 
 /* ---------------------------------------------------------------
- * Focus
+ * Focus — accretion outline, 2px offset. AC14 contrast 9.8:1.
  * --------------------------------------------------------------- */
 :focus-visible {
-  outline: 1px solid var(--color-sodium);
+  outline: 1px solid var(--color-accretion);
   outline-offset: 2px;
 }
 
 /* ---------------------------------------------------------------
- * Scrollbar — hidden
+ * Scrollbar — hidden.
  * --------------------------------------------------------------- */
 ::-webkit-scrollbar {
   width: 0;
@@ -161,4 +134,18 @@ button {
 }
 html {
   scrollbar-width: none;
+}
+
+/* ---------------------------------------------------------------
+ * Reduced-motion safety net — applies when <html data-rm="reduce">.
+ * Motion-fallback contract §"CSS escape hatch" — see
+ * `src/lib/motion/contract.md`.
+ * --------------------------------------------------------------- */
+html[data-rm="reduce"] *,
+html[data-rm="reduce"] *::before,
+html[data-rm="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

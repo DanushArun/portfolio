@@ -12,6 +12,8 @@ export interface BlackHoleMountProps {
   progress?: number;
 }
 
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
 export default function BlackHoleMount({
   innerColor,
   outerColor,
@@ -30,7 +32,27 @@ export default function BlackHoleMount({
       outerColor,
       disableInteraction,
     });
+
+    // Dev-only: publish BH camera position each frame so E2E tests can assert
+    // the user is falling INTO the void (Job 003.5). Gated to non-production.
+    let rafId = 0;
+    if (IS_DEV) {
+      const tick = () => {
+        const pos = handleRef.current?.getCameraPosition();
+        if (pos) {
+          (window as unknown as { __bhCameraPos?: { x: number; y: number; z: number } })
+            .__bhCameraPos = pos;
+        }
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+    }
+
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (IS_DEV) {
+        delete (window as unknown as { __bhCameraPos?: unknown }).__bhCameraPos;
+      }
       handleRef.current?.destroy();
       handleRef.current = null;
     };

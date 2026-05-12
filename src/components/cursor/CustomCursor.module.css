@@ -1,0 +1,93 @@
+/* CustomCursor — dot+ring, follows real cursor with lerp.
+ * Visibility + state is fully CSS-driven off `[data-cursor]` on <body>. */
+
+.root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9998;
+  will-change: transform;
+  transform: translate3d(-100px, -100px, 0);
+}
+
+.ring {
+  position: absolute;
+  left: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-cream);
+  opacity: 0.4;
+  border-radius: 50%;
+  transition: width 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              height 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              left 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              top 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dot {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 4px;
+  height: 4px;
+  background: var(--color-cream);
+  border-radius: 50%;
+}
+
+body[data-cursor="interactive"] .ring {
+  width: 24px;
+  height: 24px;
+  left: -12px;
+  top: -12px;
+  border-color: var(--color-accretion);
+  opacity: 0.8;
+}
+
+body[data-cursor="dragging"] .ring {
+  width: 8px;
+  height: 8px;
+  left: -4px;
+  top: -4px;
+  border-color: var(--color-accretion);
+  opacity: 1;
+}
+
+body[data-cursor="dragging"] .dot {
+  background: var(--color-accretion);
+}
+
+body[data-cursor="text"] .ring {
+  display: none;
+}
+
+body[data-cursor="text"] .dot {
+  width: 1px;
+  height: 14px;
+  left: -0.5px;
+  top: -7px;
+  border-radius: 0;
+}
+
+body[data-cursor="gravity"] .root,
+body[data-cursor="antenna"] .root,
+body[data-cursor="gravity"] [data-custom-cursor],
+body[data-cursor="antenna"] [data-custom-cursor] {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .root {
+    display: none;
+  }
+}
+
+html[data-rm="reduce"] .ring,
+html[data-rm="reduce"] .dot {
+  transition: none;
+}

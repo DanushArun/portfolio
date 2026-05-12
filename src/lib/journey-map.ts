@@ -52,6 +52,14 @@ export interface PhaseSnapshot {
   workProgress: number;
 }
 
+export function phaseToProgress(phase: ScenePhase, local: number = 0): number {
+  const band = ALL_BANDS.find((b) => b.phase === phase);
+  if (!band) return 0;
+  const span = band.to - band.from;
+  const clamped = Math.max(0, Math.min(1, local));
+  return Math.min(0.9999, band.from + span * clamped);
+}
+
 export function progressToPhase(p: number): PhaseSnapshot {
   const clamped = Math.max(0, Math.min(1, p));
   // Find band

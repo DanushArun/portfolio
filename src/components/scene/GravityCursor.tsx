@@ -12,11 +12,16 @@ export default function GravityCursor() {
   const dispPos  = useRef({ x: -100, y: -100 });
   const rafRef   = useRef<number | null>(null);
 
-  // Hide system cursor while active
+  // Hide system + CustomCursor while active by signalling C04 override.
   useEffect(() => {
     if (!active) return;
+    const prevInlineCursor = document.body.style.cursor;
     document.body.style.cursor = 'none';
-    return () => { document.body.style.cursor = ''; };
+    document.body.dataset.cursor = 'gravity';
+    return () => {
+      document.body.style.cursor = prevInlineCursor;
+      delete document.body.dataset.cursor;
+    };
   }, [active]);
 
   useEffect(() => {

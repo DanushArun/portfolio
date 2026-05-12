@@ -26,6 +26,8 @@ export interface BlackHoleHandle {
   destroy: () => void;
   /** Drive the scroll-approach animation. 0 = at rest, 1 = threshold (DESCENT fires). */
   setProgress: (p: number) => void;
+  /** Dev-only camera position read for E2E continuity assertions. */
+  getCameraPosition: () => { x: number; y: number; z: number };
 }
 
 export interface BlackHoleOptions {
@@ -631,28 +633,34 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
         dopplerBoost = 0.8 * (p / 0.55);
         diskScale = 0.75; // KEEP SCALE CONSTANT - dive into the hole, don't grow the model
       } else if (p < 0.65) {
-        // ── PHASE B — Entering the Event Horizon
-        // Dive through the center towards the tunnel
+        // ── PHASE B — Plunge THROUGH the singularity
+        // Camera flies forward along the same orbital ray it was on at end
+        // of Phase A. r goes from +0.5 → 0 → -0.5 (passes through origin).
+        // lookAt is always 100 units ahead in the SAME direction of travel
+        // so the camera never pivots backward. The disc passes around the
+        // camera and fades behind — Phase C continues straight into the tunnel.
         const u = ss(0.55, 0.65, p);
-        const rStart = R0 * Math.exp(-lambda * 0.55);
-        const thStart = THREE.MathUtils.lerp(th0, 0.0, 0.7);
 
-        // Final approach to origin and then past it
-        const posStart = new THREE.Vector3(
-          rStart * Math.cos(thStart) * Math.cos(phi),
-          rStart * Math.sin(thStart),
-          rStart * Math.cos(thStart) * Math.sin(phi)
-        );
-        const posEnd = new THREE.Vector3(0, 0, -2); // Just past origin
+        const r = 0.5 - 1.0 * u;                                   // +0.5 → -0.5 (through origin)
+        const th = THREE.MathUtils.lerp(th0, 0.0, 0.7 + 0.3 * u);  // continue drift to equator
 
-        const pos = new THREE.Vector3().lerpVectors(posStart, posEnd, u);
-        camX = pos.x; camY = pos.y; camZ = pos.z;
+        camX = r * Math.cos(th) * Math.cos(phi);
+        camY = r * Math.sin(th);
+        camZ = r * Math.cos(th) * Math.sin(phi);
 
-        lookX = 0; lookY = 0; lookZ = -100 * u;
-        fov = 95 + 15 * u;
-        rgbShift = 0.02 + 0.04 * u;
-        dopplerBoost = 0.8 + 0.4 * u;
-        diskScale = 0.75 * (1.0 - u); // Fade disk out as we pass through
+        // LookAt = camera + forward_direction * 100, where forward is
+        // -orbital_unit_vector (i.e., always pointing further along the plunge).
+        const fwdX = -Math.cos(th) * Math.cos(phi);
+        const fwdY = -Math.sin(th);
+        const fwdZ = -Math.cos(th) * Math.sin(phi);
+        lookX = camX + fwdX * 100;
+        lookY = camY + fwdY * 100;
+        lookZ = camZ + fwdZ * 100;
+
+        fov = 95 + 30 * u;                  // 95° → 125° (peripheral fills as we close in)
+        rgbShift = 0.02 + 0.08 * u;
+        dopplerBoost = 0.8 + 0.6 * u;
+        diskScale = 0.75 * (1 - u * u);     // Disc trails off as we pass through (quadratic for late fade)
       } else if (p < 0.78) {
         // ── PHASE C — The Crossing
         const u = (p - 0.65) / 0.13;
@@ -741,6 +749,12 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       controls.autoRotate = true;
       camera.fov = 45;
       camera.updateProjectionMatrix();
+      // Snap camera back into OrbitControls' valid radius window before
+      // handing control back. Otherwise OrbitControls inherits the journey's
+      // last position (e.g. z=-198 past the pulsar, well outside [4, 12])
+      // and visibly snaps the camera on the first frame after scroll ends.
+      camera.position.set(3, 2.5, 5);
+      camera.lookAt(0, 0, 0);
       finalUniforms.uRGBShiftRadius.value = 0.00001;
       finalUniforms.uDopplerBoost.value = 0;
       discMesh.scale.setScalar(0.75);
@@ -754,7 +768,14 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
       neutronLight.intensity = 0;
     }
 
-    controls.update();
+    // CRITICAL: only run OrbitControls when the journey is NOT driving the camera.
+    // controls.update() clamps spherical.radius to [minDistance, maxDistance]
+    // and forces lookAt(target). During scroll the journey path needs to push
+    // the camera through r=0 (into and past the singularity) and aim along the
+    // plunge vector — both incompatible with OrbitControls' update().
+    if (externalProgress === 0) {
+      controls.update();
+    }
 
     // Update uniforms
     discMat.uniforms.uTime.value = t;
@@ -905,5 +926,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     canvas: renderer.domElement,
     destroy,
     setProgress: (p: number) => { externalProgress = Math.max(0, Math.min(1, p)); },
+    getCameraPosition: () => ({
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z,
+    }),
   };
 }

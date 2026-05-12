@@ -94,7 +94,7 @@ export default function VoidPrologue() {
 
   return (
     <div 
-      className="fixed inset-0 bg-[#020203] flex items-center justify-center z-[100] overflow-hidden pointer-events-none"
+      className="fixed inset-0 bg-[var(--color-void)] flex items-center justify-center z-[100] overflow-hidden pointer-events-none"
       style={{ 
         opacity,
         transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
