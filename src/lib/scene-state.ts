@@ -139,10 +139,13 @@ export const isCosmic = (p: ScenePhase): p is CosmicPhase =>
 export const isWork = (p: ScenePhase): p is WorkPhase =>
   (WORK_PHASES as ScenePhase[]).includes(p);
 
-// BH custom canvas drives C01..C05; R3F canvas takes over at C06.
+// BH custom canvas drives C01..C04 (orbit → engulfment). R3F canvas takes
+// over at C05 — the warp scene replaces what used to be the BH's internal
+// "tunnel rings + neutron star" continuation, so the disc-edge artifacts
+// from those tunnel rings no longer render through the void.
 export const isBlackHoleCanvas = (p: ScenePhase) =>
   p === 'C01_ORBIT' || p === 'C02_PULL' || p === 'C03_STRETCH' ||
-  p === 'C04_HORIZON' || p === 'C05_WARP';
+  p === 'C04_HORIZON';
 
 export const isR3FCanvas = (p: ScenePhase) =>
-  !isBlackHoleCanvas(p);  // C06 onward including all work panels
+  !isBlackHoleCanvas(p);  // C05 onward including all work panels

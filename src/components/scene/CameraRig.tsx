@@ -14,23 +14,30 @@ export default function CameraRig() {
     const t = state.clock.elapsedTime;
 
     switch (phase) {
+      // C05 + C06: o2bomb-style warp. Particles span z ∈ [-10, 10] traveling
+      // +z toward the camera. Camera at (0,0,5) fov 100 matches the upstream
+      // Scene's framing — particles approach the camera and wrap behind it.
+      // Without this, the default (0,0,30) fov 50 puts particles far in front
+      // of the camera and the burst reads tiny.
+      case 'C05_WARP':
       case 'C06_ANOMALY': {
-        const jx = (Math.sin(t * 11) * 0.3) * (1 - Math.abs(local - 0.5) * 2);
-        const jy = (Math.cos(t * 7)  * 0.3) * (1 - Math.abs(local - 0.5) * 2);
-        pcam.position.set(jx, jy, 30);
+        pcam.position.set(0, 0, 5);
         pcam.lookAt(0, 0, 0);
+        pcam.fov = 100;
         break;
       }
       case 'C07_TRANSITION': {
         const z = THREE.MathUtils.lerp(30, 12, local);
         pcam.position.set(0, 0, z);
         pcam.lookAt(0, 0, 0);
+        pcam.fov = 50;          // reset from warp's wide FOV
         break;
       }
       case 'C08_EMERGE': {
         const a = t * 0.05;
         pcam.position.set(Math.cos(a) * 12, 1.5, Math.sin(a) * 12);
         pcam.lookAt(0, 0, 0);
+        pcam.fov = 50;
         break;
       }
       case 'C09_PROJECT': {
@@ -38,12 +45,14 @@ export default function CameraRig() {
         const z = THREE.MathUtils.lerp(12, 18, local);
         pcam.position.set(Math.cos(a) * z, 1.5, Math.sin(a) * z);
         pcam.lookAt(0, 0, 0);
+        pcam.fov = 50;
         break;
       }
       default: {
         // IDLE position
         pcam.position.lerp(new THREE.Vector3(0, 2, 30), 0.1);
         pcam.lookAt(new THREE.Vector3(0, 0, 0));
+        pcam.fov = 50;
       }
     }
     pcam.updateProjectionMatrix();

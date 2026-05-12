@@ -16,7 +16,6 @@ import PostFX from './PostFX';
 const WarpScene             = dynamic(() => import('./scenes/WarpScene'),             { ssr: false });
 const AnomalyGlitch         = dynamic(() => import('./scenes/AnomalyGlitch'),         { ssr: false });
 const TransitionConvergence = dynamic(() => import('./scenes/TransitionConvergence'), { ssr: false });
-const EmergeSystem          = dynamic(() => import('./scenes/EmergeSystem'),          { ssr: false });
 const StarField             = dynamic(() => import('./StarField'),                    { ssr: false });
 
 import HUD from '@/components/hud/HUD';
@@ -67,13 +66,12 @@ export default function SceneManager() {
   useKeyboardNavigation();
 
   const showBH    = isBlackHoleCanvas(phase);
-  const showR3F   = isR3FCanvas(phase) || phase === 'C05_WARP';  // overlap during WARP
-  // BH canvas fades out FAST at start of C05 so the user doesn't see
-  // the BH camera flying in -z (which reads as "retreating from the BH"
-  // behind the warp). After fade, only the WarpScene renders → warp streaks.
-  const bhAlpha   = phase === 'C05_WARP'
-    ? Math.max(0, 1 - useScene.getState().localProgress * 8)
-    : (showBH ? 1 : 0);
+  // R3F canvas covers C05+ — WarpScene renders during C05_WARP and C06_ANOMALY.
+  const showR3F   = isR3FCanvas(phase);
+  // BH canvas only renders during C01..C04. By C05 the user is engulfed and
+  // the warp scene takes over — no fading needed since the BH canvas isn't
+  // even mounted.
+  const bhAlpha   = showBH ? 1 : 0;
 
   // ── Journey Remapping ──────────────────────────────────────────────────────
   const local = useScene((s) => s.localProgress);
@@ -82,27 +80,54 @@ export default function SceneManager() {
   // Pure screen-space black overlay that ramps in during C04 (the user is
   // being engulfed by the singularity — the BH renderer alone can't deliver
   // "darkness fills frame" because it's designed for outside-the-BH views).
-  // C04: 0 → 0.96. C05: 0.96 → 0 (warp streaks emerge from the dark).
+  // C04: 0 → 0.96 (the user is engulfed). C05: hold full black briefly so the
+  // engulfment registers, then clear so the user sees the warp drive engage at
+  // its slow start and accelerate. The acceleration curve in WarpScene.tsx
+  // peaks late (combined cp 0.85), so the darkness needs to be GONE early
+  // — otherwise the visible part of the warp is just black.
   const fallDarkness = (() => {
     if (phase === 'C04_HORIZON') return Math.min(0.96, local * 1.1);
     if (phase === 'C05_WARP') {
-      if (local < 0.15) return 0.96;
-      if (local < 0.55) return 0.96 * (1 - (local - 0.15) / 0.40);
+      if (local < 0.01) return 0.96;
+      if (local < 0.05) return 0.96 * (1 - (local - 0.01) / 0.04);
       return 0;
     }
     return 0;
   })();
+  // ── Warp-end white flash ───────────────────────────────────────────────────
+  // The flash now spans ~2× its prior scroll window so the user has to keep
+  // scrolling to escape it — exiting the warp should feel like coming OUT of
+  // something dense, not a quick blink.
+  //
+  //   C06 local 0.78 → 1.0  : ramp 0 → 1   (longer ramp-in as warp decelerates)
+  //   C07 local 0    → 0.45 : hold 1       (sustained white — scroll to escape)
+  //   C07 local 0.45 → 0.90 : fade 1 → 0   (slow reveal of the empty universe)
+  //
+  // Pure CSS overlay — bloom alone can't reliably hit pure white at every
+  // viewport size, and a DOM overlay also covers the post-FX seam during the
+  // canvas swap from R3F → next-phase canvas.
+  const warpFlash = (() => {
+    if (phase === 'C06_ANOMALY' && local > 0.78) {
+      return Math.min(1, (local - 0.78) / 0.22);
+    }
+    if (phase === 'C07_TRANSITION') {
+      if (local < 0.45) return 1;
+      if (local < 0.90) return 1 - (local - 0.45) / 0.45;
+      return 0;
+    }
+    return 0;
+  })();
+
   let bhProgress = cosmicProgress;
   let bhIntensity = 1.0;
 
   if (phase === 'C04_HORIZON') {
-    // Map HORIZON (local 0..1) to internal Phase B (0.55..0.65)
+    // Map HORIZON (local 0..1) to internal Phase B (0.55..0.65) — the plunge
+    // through the singularity. By end of C04 the camera is past the origin
+    // and the disc has scaled to 0; the BH canvas is then unmounted and
+    // WarpScene takes over.
     bhProgress = 0.55 + local * 0.10;
-    // Intensity spike at the crossing (white-flash)
     bhIntensity = 1.0 + local * 0.6;
-  } else if (phase === 'C05_WARP') {
-    // Map WARP (local 0..1) to internal Phase C/D (0.65..0.90)
-    bhProgress = 0.65 + local * 0.25;
   } else if (isBlackHoleCanvas(phase) && cosmicProgress < 0.4) {
     // Scale C01..C03 to fit in the 0.00..0.55 approach window
     bhProgress = (cosmicProgress / 0.4) * 0.55;
@@ -137,11 +162,14 @@ export default function SceneManager() {
         >
           <Suspense fallback={null}>
             <CameraRig />
-            <StarField />
-            {phase === 'C05_WARP' && <WarpScene />}
-            {(phase === 'C06_ANOMALY' || phase === 'C07_TRANSITION') && <AnomalyGlitch />}
-            {phase === 'C07_TRANSITION' && <TransitionConvergence />}
-            {(phase === 'C08_EMERGE' || phase === 'C09_PROJECT') && <EmergeSystem />}
+            {/* StarField hidden during the warp — its background stars at z=400
+                read as motionless distant pinpricks against the bursting warp
+                particles, which breaks the "moving fast" illusion. */}
+            {phase !== 'C05_WARP' && phase !== 'C06_ANOMALY' && <StarField />}
+            {(phase === 'C05_WARP' || phase === 'C06_ANOMALY') && <WarpScene />}
+            {/* C07 → C09: empty universe with stars only. The planets scene
+                (EmergeSystem) is gone — after the white flash the user lands
+                directly into MIRA (rendered via WorkDashboard at zIndex 5). */}
             <PostFX />
           </Suspense>
         </Canvas>
@@ -156,6 +184,19 @@ export default function SceneManager() {
           opacity: fallDarkness,
           pointerEvents: 'none',
           zIndex: 3,  // Above BH canvas (1) and R3F canvas (2); below HUD (50).
+        }}
+      />
+
+      {/* Warp-end white flash — peaks at end of C06, holds through C07 onset,
+          then fades. The "we just landed in a new universe" punctuation. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', inset: 0,
+          background: '#ffffff',
+          opacity: warpFlash,
+          pointerEvents: 'none',
+          zIndex: 4,
         }}
       />
 

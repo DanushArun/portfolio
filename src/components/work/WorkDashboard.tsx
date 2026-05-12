@@ -19,7 +19,14 @@ const ConnectPanel    = dynamic(() => import('./panels/ConnectPanel'),    { ssr:
 
 export default function WorkDashboard() {
   const phase = useScene((s) => s.phase);
-  const visible = isWork(phase) || phase === 'C09_PROJECT';
+  // MIRA now appears directly after the warp's white flash (C07 onwards),
+  // not at W01. The intermediate phases (C07_TRANSITION, C08_EMERGE,
+  // C09_PROJECT) all render the MiraPanel — see the array on its PanelHost
+  // below. Backdrop / pointer events also need to be live for those phases.
+  const visible = isWork(phase)
+    || phase === 'C07_TRANSITION'
+    || phase === 'C08_EMERGE'
+    || phase === 'C09_PROJECT';
 
   return (
     <div
@@ -37,8 +44,13 @@ export default function WorkDashboard() {
     >
       {visible && <WorkBackdrop />}
 
-      {/* Each panel renders absolute and switches visibility based on phase */}
-      <PanelHost phase={phase} which="W01_MIRA"><MiraPanel /></PanelHost>
+      {/* Each panel renders absolute and switches visibility based on phase.
+          MiraPanel covers the whole post-flash band (C07..C09) AND W01_MIRA
+          so the user lands on MIRA the moment the white flash clears. */}
+      <PanelHost
+        phase={phase}
+        which={['C07_TRANSITION', 'C08_EMERGE', 'C09_PROJECT', 'W01_MIRA']}
+      ><MiraPanel /></PanelHost>
       <PanelHost phase={phase} which="W02_AIDEN"><AidenPanel /></PanelHost>
       <PanelHost phase={phase} which="W03_VANGUARD"><VanguardPanel /></PanelHost>
       <PanelHost phase={phase} which="W04_INSPECTION"><InspectionPanel /></PanelHost>
@@ -52,10 +64,10 @@ export default function WorkDashboard() {
 }
 
 function PanelHost({ phase, which, children }: {
-  phase: string; which: string; children: React.ReactNode;
+  phase: string; which: string | string[]; children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const active = phase === which;
+  const active = Array.isArray(which) ? which.includes(phase) : phase === which;
 
   useEffect(() => {
     if (!ref.current) return;
