@@ -62,6 +62,18 @@ export function advanceCycle(): void {
   });
 }
 
+const DENSITY_STEP = 0.020;
+const DENSITY_CAP = 1.00;
+
+export function ingestForLang(lang: MiraLang): void {
+  useMiraState.setState((s) => ({
+    density: {
+      ...s.density,
+      [lang]: Math.min(DENSITY_CAP, s.density[lang] + DENSITY_STEP),
+    },
+  }));
+}
+
 export function resetMiraStateForTest(): void {
   useMiraState.setState({
     activeLang: 'EN',

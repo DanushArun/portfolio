@@ -5,6 +5,7 @@ import {
   useMiraState,
   advanceCycle,
   resetMiraStateForTest,
+  ingestForLang,
 } from '@/lib/mira-state';
 
 beforeEach(() => resetMiraStateForTest());
@@ -57,5 +58,38 @@ describe('mira cycle controller', () => {
     const t1 = useMiraState.getState().cycleStartMs;
     expect(t1).toBeGreaterThanOrEqual(t0);
     expect(useMiraState.getState().cycleIndex).toBe(1);
+  });
+});
+
+describe('mira density accretion', () => {
+  it('starts every language at 0.20', () => {
+    const d = useMiraState.getState().density;
+    expect(d.EN).toBe(0.20);
+    expect(d.HI).toBe(0.20);
+    expect(d.TA).toBe(0.20);
+    expect(d.KN).toBe(0.20);
+    expect(d.TE).toBe(0.20);
+  });
+
+  it('grows density by +0.020 per ingestion', () => {
+    ingestForLang('EN');
+    expect(useMiraState.getState().density.EN).toBeCloseTo(0.22, 5);
+    ingestForLang('EN');
+    expect(useMiraState.getState().density.EN).toBeCloseTo(0.24, 5);
+  });
+
+  it('caps density at 1.00', () => {
+    for (let i = 0; i < 100; i++) ingestForLang('EN');
+    expect(useMiraState.getState().density.EN).toBe(1.00);
+  });
+
+  it('isolates per-language growth (same-knot only)', () => {
+    ingestForLang('EN');
+    const d = useMiraState.getState().density;
+    expect(d.EN).toBeCloseTo(0.22, 5);
+    expect(d.HI).toBe(0.20);
+    expect(d.TA).toBe(0.20);
+    expect(d.KN).toBe(0.20);
+    expect(d.TE).toBe(0.20);
   });
 });
