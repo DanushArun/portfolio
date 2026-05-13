@@ -82,3 +82,46 @@ export function resetMiraStateForTest(): void {
     cycleStartMs: nowMs(),
   });
 }
+
+export type QualityProfile = 'high' | 'low';
+
+export interface QualityProbe {
+  width: number;
+  search: string;
+}
+
+export function detectQualityProfile(probe: QualityProbe): QualityProfile {
+  if (probe.search.includes('quality=low')) return 'low';
+  if (probe.width <= 768) return 'low';
+  return 'high';
+}
+
+export interface MiraDebug {
+  readonly activeLang: MiraLang;
+  readonly density: Readonly<Density>;
+  readonly cycleIndex: number;
+  readonly cycleStartMs: number;
+  readonly reveal: number;
+  readonly qualityProfile: QualityProfile;
+}
+
+export function exposeMiraDebug(target: Window): void {
+  if (process.env.NODE_ENV === 'production') return;
+  Object.defineProperty(target, '__miraDebug', {
+    configurable: true,
+    get(): MiraDebug {
+      const s = useMiraState.getState();
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1440;
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      const reveal = (target as unknown as { __miraReveal?: number }).__miraReveal ?? 0;
+      return {
+        activeLang: s.activeLang,
+        density: s.density,
+        cycleIndex: s.cycleIndex,
+        cycleStartMs: s.cycleStartMs,
+        reveal,
+        qualityProfile: detectQualityProfile({ width, search }),
+      };
+    },
+  });
+}

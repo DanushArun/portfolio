@@ -2,10 +2,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   KNOT_TABLE,
   type MiraLang,
+  type MiraDebug,
   useMiraState,
   advanceCycle,
   resetMiraStateForTest,
   ingestForLang,
+  detectQualityProfile,
+  exposeMiraDebug,
 } from '@/lib/mira-state';
 
 beforeEach(() => resetMiraStateForTest());
@@ -91,5 +94,34 @@ describe('mira density accretion', () => {
     expect(d.TA).toBe(0.20);
     expect(d.KN).toBe(0.20);
     expect(d.TE).toBe(0.20);
+  });
+});
+
+describe('quality profile detection', () => {
+  it('returns "low" for viewport <= 768px', () => {
+    expect(detectQualityProfile({ width: 768, search: '' })).toBe('low');
+    expect(detectQualityProfile({ width: 500, search: '' })).toBe('low');
+  });
+
+  it('returns "high" for desktop viewports', () => {
+    expect(detectQualityProfile({ width: 1440, search: '' })).toBe('high');
+    expect(detectQualityProfile({ width: 1920, search: '' })).toBe('high');
+  });
+
+  it('respects ?quality=low override on desktop', () => {
+    expect(detectQualityProfile({ width: 1440, search: '?quality=low' })).toBe('low');
+  });
+});
+
+describe('window.__miraDebug surface', () => {
+  it('installs a debug getter in non-production envs', () => {
+    const fakeWin = Object.create(window) as Window;
+    exposeMiraDebug(fakeWin);
+    const dbg = (fakeWin as unknown as { __miraDebug: MiraDebug }).__miraDebug;
+    expect(dbg).toBeDefined();
+    expect(dbg.activeLang).toBe('EN');
+    expect(dbg.cycleIndex).toBe(0);
+    expect(dbg.density.EN).toBe(0.20);
+    expect(['high', 'low']).toContain(dbg.qualityProfile);
   });
 });
