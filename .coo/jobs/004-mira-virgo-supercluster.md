@@ -21,7 +21,7 @@ Why this is a metaphor and where it bends honestly: the real Mira agent does not
 
 - [ ] **AC1 — Structural fidelity.** When `phase === 'W01_MIRA'` and `reveal === 1.0`, the rendered scene shows: (a) an irregular diffuse blue-cyan gas cloud occupying ~55–65% of the viewport width, (b) exactly 5 red hotspot "knots" embedded asymmetrically within the gas, (c) a starfield backdrop. No spherical planet, no Aizawa attractor present. Verified by `visual-verifier` screenshot at scroll position p_W01_MIRA mid-panel, 1440×900.
 
-- [ ] **AC2 — Five-knot language mapping.** Each knot has a stable identity bound to one language: `EN` (English), `HI` (Hindi), `TA` (Tamil), `KN` (Kannada), `TE` (Telugu). This 5-set matches the actual product (Mira agent supports English + 4 regional Indian languages — see Decisions). English knot is the largest (≥1.4× radius of the smallest knot); the four regional knots vary 1.0×–1.25× by relative call volume (placeholder distribution OK, document the chosen relative-volume table in `mira-state.ts`). Knot positions and per-knot scales are stable across frames (no random drift between cycles). Verified by `qa-engineer` reading the position + scale tables in `src/lib/mira-state.ts` and confirming each is a named constant, not a per-frame random.
+- [ ] **AC2 — Five-knot language mapping.** Each knot has a stable identity bound to one language: `EN` (English), `HI` (Hindi), `TA` (Tamil), `KN` (Kannada), `TE` (Telugu). This 5-set matches the actual product (Mira agent supports English + 4 regional Indian languages — see Decisions). English knot is the largest (≥1.4× radius of the smallest knot); the four regional knots vary 1.0×–1.25× by relative call volume (placeholder distribution OK, but the table must be a **named constant `KNOT_TABLE`** in `mira-state.ts` — not a runtime random, not inline magic numbers in `MiraKnots.tsx`). `code-reviewer` rejects the PR if the table is not a single source of truth. Knot positions and per-knot scales are stable across frames. Verified by `qa-engineer` reading `KNOT_TABLE` and confirming each entry is a typed constant `{ lang: MiraLang; position: [x,y,z]; relativeScale: number; hue: string }`.
 
 - [ ] **AC3 — Active-knot cycle.** When the panel is in view (phase `W01_MIRA`), a controller advances the active language every 3.0s ± 0.1s, looping `EN → HI → TA → KN → TE → EN…`. The active knot brightens by ≥40% relative to idle knots; the others remain dim. Exactly one knot is active at any moment (matches the agent's no-mixing rule). Verified by `qa-engineer` Playwright test that polls `window.__miraDebug?.activeLang` over 18s and asserts it cycles through all 5 in order with cycle duration in `[2.9s, 3.1s]`.
 
@@ -52,10 +52,11 @@ Why this is a metaphor and where it bends honestly: the real Mira agent does not
   type MiraLang = 'EN' | 'HI' | 'TA' | 'KN' | 'TE';
   interface MiraDebug {
     activeLang: MiraLang;
-    density: Record<MiraLang, number>;  // 0..1 per language
-    cycleIndex: number;                  // monotonic, increments each language change
-    cycleStartMs: number;                // performance.now() at last language change
-    reveal: number;                      // current 0..1 reveal envelope value
+    density: Record<MiraLang, number>;     // 0..1 per language
+    cycleIndex: number;                     // monotonic, increments each language change
+    cycleStartMs: number;                   // performance.now() at last language change
+    reveal: number;                         // current 0..1 reveal envelope value
+    qualityProfile: 'high' | 'low';         // mobile fallback + ?quality=low override
   }
   ```
   Gated behind `process.env.NODE_ENV !== 'production'` so it does not ship in prod builds. Verified by `code-reviewer` reading the export declaration in `mira-state.ts`.
