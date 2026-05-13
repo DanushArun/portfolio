@@ -46,7 +46,8 @@
 - [ ] **Read the reduced-motion contract:** `src/lib/motion/contract.md`. AC9 must comply.
 - [ ] **Read the existing reveal envelope** at `src/components/scene/scenes/MiraScene.tsx:30-39` — reproduce verbatim in the rewrite.
 - [ ] **Inspect the to-be-deleted `MiraAttractor.tsx`** for the ping-pong FBO pattern, the state-save/restore around `renderer.render()`, and the `__miraDebug` exposure approach. The plume in Task 9 reuses this pattern.
-- [ ] **Open the reference image** at `.coo/jobs/004/refs/shapley.png` (deposited by `deep-researcher` in Task 0). Pin it next to the dev browser for every visual task.
+- [ ] **Open the canonical quality-bar storyboard** at `/Users/danusharun/Downloads/Important/portfolio/.coo/jobs/004/refs/quality-bar-storyboard.png`. All 4 panels must remain visible alongside the dev browser throughout every visual task. This is the founder-supplied bar — every screenshot must match its matching panel before commit.
+- [ ] **Open the additional references** at `.coo/jobs/004/refs/` (deposited by `deep-researcher` in Task 0). Use Shapley/Planck composites as secondary references; the storyboard is primary.
 
 ---
 
@@ -427,7 +428,7 @@ git commit -m "feat(mira): add quality profile detection + window.__miraDebug su
 
 Each knot = a sphere with an X-ray-glow shader + a soft halo billboard. Active knot brightens, idle knots dim. Density drives core brightness and halo size.
 
-- [ ] **Step 1 — Pin the reference image.** Open `.coo/jobs/004/refs/shapley.png` side-by-side with the dev browser. Quality bar: each knot must read as a hot X-ray hotspot embedded in gas, not a flat sphere.
+- [ ] **Step 1 — Pin the reference panels.** Open `.coo/jobs/004/refs/quality-bar-storyboard.png` Panel 1 (overview/dormant — knot baseline appearance) and Panel 4 (post-accretion — knot accreted appearance) side-by-side with the dev browser. **Reject the render if any of:** knot cores read as flat red spheres (must be warm white/orange hot cores with visible HDR core saturation per Panel 1's bright nodes); palette has no warm/cool contrast against the web; cores are uniformly sized (English must be visibly the brightest + largest per Panel 4's accreted Hindi node); knots look like geometric primitives rather than astrophotographic hotspots.
 
 - [ ] **Step 2 — Implement the file:**
 
@@ -460,7 +461,7 @@ git commit -m "feat(mira): add MiraKnots — 5 X-ray-glow cluster cores"
 **Files:**
 - Create: `src/components/scene/scenes/MiraSupercluster.tsx`
 
-- [ ] **Step 1 — Decide particle distribution.** Use a deterministic seeded-noise distribution: ~30,000 particles in high quality, ~8,000 in low. Position via Perlin-noise-sculpted density field — particles cluster around the 5 knot positions (so the gas "halos" the knots), with falloff. Implement the density field in CPU at component mount time (one-shot, not per-frame) — store positions in a `Float32Array`.
+- [ ] **Step 1 — Build a cosmic web of filaments, not a uniform gas cloud.** Reference: `quality-bar-storyboard.png` Panel 1 — fine purple/blue thread-mesh with multiple density layers and atmospheric depth. Implementation approach: in addition to a background diffuse particle field, **generate ~80–120 filament curves connecting knot positions via Bezier-like paths with mid-point jitter**; render each filament as a tube of additive-blended sprites with per-vertex colour jitter across the purple/blue/cyan range. Knots sit at filament intersections. Total particle count still capped at 30k high / 8k low. **Reject if the gas reads as uniform fog or a symmetric blob** — the web must have visible thread structure at viewing distance.
 
 - [ ] **Step 2 — Particle shader.** Vertex shader sets `gl_PointSize` from camera distance + a per-particle scale jitter. Fragment shader: circular splat with smooth alpha falloff `1.0 - smoothstep(0.0, 0.5, length(gl_PointCoord - 0.5))`, additive blend, colour ramps blue→cyan via per-particle noise. No flat squares, no banding.
 
@@ -472,7 +473,7 @@ const quality = useMemo(() => detectQualityProfile({
 const count = quality === 'low' ? 8000 : 30000;
 ```
 
-- [ ] **Step 4 — Visual checkpoint.** Render together with Knots from Task 6. Compare to reference. **Reject and iterate** if: gas looks like a uniform fog, no internal structure visible, gas masks the knots completely, colour is monochrome blue instead of cyan-blue gradient. Save accepted to `.coo/jobs/004/screenshots/02-gas+knots.png`.
+- [ ] **Step 4 — Visual checkpoint.** Render together with Knots from Task 6. Compare side-by-side to `quality-bar-storyboard.png` Panel 1. **Reject and iterate** if: filaments look like uniform fog (no thread structure); no internal density layering visible; gas masks the knots completely; palette is monochrome blue instead of the purple-blue-cyan range with warm knot cores poking through. Save accepted to `.coo/jobs/004/screenshots/02-gas+knots.png`.
 
 - [ ] **Step 5 — Lint + typecheck + commit:**
 ```bash
@@ -496,17 +497,22 @@ This is the most complex task. The plume is a GPGPU ping-pong FBO system, struct
   - `life += uDelta * (1.0 / 1.4)` — full life cycle in 1.4s.
   - If `life < 0.5`: outward phase. Velocity = `curlNoise(pos * 0.8 + uTime * 0.4) * 1.8`.
   - If `life ≥ 0.5`: return phase. Velocity = `-curlNoise(pos * 0.8 + uTime * 0.4) * 1.8 + (knotPos - pos) * 3.0` (curl-noise-tinted gravity back to the knot).
-  - At `life ≥ 1.0`: fire ingestion event (next step), then respawn at knot position with `life = 0`.
+  - At `life ≥ 1.0`: respawn at knot position with `life = 0`. Density ingestion is owned by `MiraPlume`'s `useFrame` cycle timer (Step 3), not by per-particle respawn — AC5 = one ingestion per 3000ms cycle.
+
+  **Particles spawn in two interleaved colour cohorts** — 60% warm (knot hue from `KNOT_TABLE`), 40% cool (cyan `#6FB8FF`) — to match the mixed-band plume per `quality-bar-storyboard.png` Panel 2. Encode the cohort flag in the texture by quantising `life`'s LSB (e.g., reserve bit 0 of `life * 2048` for cohort). The render shader reads it back and blends colour accordingly.
 
 - [ ] **Step 3 — Wire ingestion events.** `MiraPlume` owns the single cycle timer for the whole scene. Per `useFrame(state)`: read `useMiraState.getState().cycleStartMs`; when `performance.now() - cycleStartMs >= 3000`, call `ingestForLang(activeLang)` **exactly once** then `advanceCycle()` (which resets `cycleStartMs`). Density accretes **once per cycle** per AC5 — not once per particle reincorporation. The per-particle return trajectory is a *visual* event; the ingestion is a *state* event triggered solely by the cycle timer. Guard the trigger with a local `ingestedThisCycleRef` to prevent double-fire on a slow frame.
 
-- [ ] **Step 4 — Render shader.** Vertex samples position from the FBO; size scales with `1.0 - abs(life - 0.5) * 2.0` (peaks mid-flight, fades at spawn/ingest). Colour from `KNOT_TABLE.find(k => k.lang === activeLang).hue`, blended additively. Fragment is a soft circular splat (same shape as Task 7 gas).
+- [ ] **Step 4 — Render shader — produce sheet-like ribbons, not circular dots.** Vertex samples position from the FBO; size scales with `1.0 - abs(life - 0.5) * 2.0` (peaks mid-flight, fades at spawn/ingest). **Use anisotropic point sizes**: project the per-particle velocity into screen space and elongate `gl_PointSize` along that axis (vertex shader writes a streak orientation to a varying; fragment shader stretches the splat along it). Combined with curl-noise velocity and 6–10k density, this should read as a flowing veil per `quality-bar-storyboard.png` Panel 2 / Panel 3, not a particle cloud. Colour from the per-particle cohort (warm = `KNOT_TABLE` knot hue, cool = `#6FB8FF`), blended additively.
 
 - [ ] **Step 5 — Quality profile gate.** If `quality === 'low'`, do not render the GPGPU pass at all. Instead, render an additive pulse on the active knot's halo (a per-frame brightness oscillation tied to `cycleStartMs`).
 
-- [ ] **Step 6 — Visual checkpoint.** Watch through 3 full language cycles. **Reject and iterate** if: plumes look straight (curl noise too weak), particles don't visibly return (return-phase math off), wrong knot is emitting, no per-cycle ingestion pulse visible on the receiving knot.
+- [ ] **Step 6 — Visual checkpoint — three specific panel comparisons.** Capture three screenshots at distinct cycle phases and compare each side-by-side to its matching storyboard panel:
+  - **(a) Just after spawn** — outward plume — compare to `quality-bar-storyboard.png` **Panel 2**. Reject if: plume reads as circular dots (must be sheet-ribbon); plume is single-colour (must show mixed warm + cool bands); plume direction is isotropic spray (must follow curl-noise sheet structure).
+  - **(b) Mid-return** — compare to **Panel 3** "data embrace". Reject if: return reads as collapse/gravity-fall (must arc back as a veil); return is straight-line (must curve / wrap).
+  - **(c) Post-cycle wide shot** — compare to **Panel 4** accretion. Reject if: receiving knot looks identical to its dormant state (must show visible brightness + scale delta).
 
-Save 3 screenshots to `.coo/jobs/004/screenshots/`: `03-plume-en.png`, `04-plume-hi.png`, `05-plume-te.png` (catch three different active knots).
+  Also reject if: wrong knot is emitting; no per-cycle ingestion pulse visible on the receiving knot. Save 3 screenshots: `.coo/jobs/004/screenshots/03-plume-spawn-en.png`, `04-plume-return-hi.png`, `05-plume-accretion-te.png`.
 
 - [ ] **Step 7 — Commit:**
 ```bash
@@ -777,6 +783,8 @@ Dispatch to `performance-engineer`. Brief in spec Plan step 5.
   - Desktop p95 ≥ 45 FPS (≤ 22ms p95 frame time)
   - Mobile median ≥ 30 FPS (≤ 33ms median frame time)
   - GPU particle count ≤ 80k peak
+
+  **Quality-pass clause:** Performance is a hard floor, but the quality bar (`quality-bar-storyboard.png` panel comparisons in Tasks 6/7/8) is the primary acceptance gate. A render that hits 60 FPS but fails any panel comparison is not done.
 - [ ] **Step 4 — Capture mobile screenshot** at 768×800 viewport via Playwright + save to `.coo/jobs/004/screenshots/08-mobile.png`. Verify it reads as a coherent cosmic-web scene (not a broken low-detail render).
 - [ ] **Step 5 — Write `report.md`** with the numbers + verdict.
 - [ ] **Step 6 — Commit:**
@@ -810,6 +818,7 @@ All four must exit 0 (or unchanged baseline of pre-existing failures).
 - **Bloom over-blowing the knots:** the global `<Bloom>` post-process has a luminanceThreshold of ~0.6. Knots will get bloomed; if they HDR too hard, they read as featureless white blobs. Tune knot fragment output to peak near 2.5–3.0, not higher.
 - **Particle count creep:** TASK 7's CPU-sculpted density field can balloon if you over-sample. Cap at 30k high / 8k low and verify in DevTools.
 - **Cycle drift on tab-throttling:** browsers throttle `requestAnimationFrame` on background tabs. The cycle controller should use `performance.now()` deltas and gracefully accept any single frame's `dt` up to ~100ms.
+- **Quality-bar drift:** without explicit per-panel rejection criteria, "works" renders tend to drift toward debug aesthetics (flat spheres, monochrome gas, isotropic plumes). Mitigation: open all 4 panels of `quality-bar-storyboard.png` side-by-side with the dev browser at the start of every visual task and keep them visible throughout. Each visual checkpoint cites the specific panel — a render that does not visibly match its matching panel is rejected, regardless of FPS or test pass.
 
 ---
 
