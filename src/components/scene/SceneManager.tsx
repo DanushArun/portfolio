@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, Suspense } from 'react';
+import { useEffect, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useScene, isCosmic, isBlackHoleCanvas, isR3FCanvas } from '@/lib/scene-state';
 import dynamic from 'next/dynamic';
@@ -29,30 +29,6 @@ export default function SceneManager() {
   const phase           = useScene((s) => s.phase);
   const veil            = useScene((s) => s.veil);
   const cosmicProgress  = useScene((s) => s.cosmicProgress);
-  const setMouse = useScene((s) => s.setMouse);
-
-  const mousePending   = useRef(false);
-  const pendingMouseX  = useRef(0);
-  const pendingMouseY  = useRef(0);
-
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    pendingMouseX.current = (e.clientX / window.innerWidth) * 2 - 1;
-    pendingMouseY.current = -((e.clientY / window.innerHeight) * 2 - 1);
-    if (!mousePending.current) {
-      mousePending.current = true;
-      requestAnimationFrame(() => {
-        setMouse(pendingMouseX.current, pendingMouseY.current);
-        mousePending.current = false;
-      });
-    }
-  }, [setMouse]);
-
-  useEffect(() => {
-    window.addEventListener('mousemove', onMouseMove, { passive: true });
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-    };
-  }, [onMouseMove]);
 
   useEffect(() => {
     const { beginJourney, phase: p } = useScene.getState();

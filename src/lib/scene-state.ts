@@ -39,8 +39,6 @@ type SceneStore = {
   localProgress: number;     // 0..1 within current phase
 
   // Existing fields retained
-  mouseX: number;
-  mouseY: number;
   scrollVelocity: number;
   orbitAngle: number;
   pulsarActive: boolean;
@@ -51,7 +49,6 @@ type SceneStore = {
 
   setPhase: (p: ScenePhase) => void;
   setProgress: (j: number, c: number, w: number, l: number, phase: ScenePhase) => void;
-  setMouse: (x: number, y: number) => void;
   setScrollVelocity: (v: number) => void;
   setOrbitAngle: (a: number) => void;
   setShatter: (active: boolean) => void;
@@ -69,8 +66,6 @@ export const useScene = create<SceneStore>((set, get) => ({
   cosmicProgress: 0,
   workProgress: 0,
   localProgress: 0,
-  mouseX: 0,
-  mouseY: 0,
   scrollVelocity: 0,
   orbitAngle: 0,
   pulsarActive: false,
@@ -87,8 +82,6 @@ export const useScene = create<SceneStore>((set, get) => ({
         ? { journeyProgress, cosmicProgress, workProgress, localProgress, phase, phaseStart: performance.now() }
         : { journeyProgress, cosmicProgress, workProgress, localProgress }
     ),
-
-  setMouse: (mouseX, mouseY) => set({ mouseX, mouseY }),
 
   setScrollVelocity: (scrollVelocity) => set({ scrollVelocity }),
 

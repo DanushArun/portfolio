@@ -16,3 +16,62 @@
 [   47032ms] [WARNING] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
 [   98317ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
 [   98343ms] [LOG] [Fast Refresh] done in 129ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  901535ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  901655ms] [LOG] [Fast Refresh] done in 192ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  938398ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  938417ms] [LOG] [Fast Refresh] done in 54ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  956296ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  957505ms] [LOG] [Fast Refresh] done in 53ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  995980ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[  996026ms] [LOG] [Fast Refresh] done in 133ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1016277ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1016321ms] ReferenceError: matRef is not defined
+    at CoreBillboards (http://localhost:3000/_next/static/chunks/src_03vbflu._.js?id=%255Bproject%255D%252Fsrc%252Fcomponents%252Fscene%252Fscenes%252FMiraSupercluster.tsx+%255Bapp-client%255D+%2528ecmascript%2529:1020:18)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:13211:32)
+    at It (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:9080:25)
+    at ks (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:10200:374)
+    at tt (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:10531:32)
+    at B (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:7897:70)
+    at Ph (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12423:50)
+    at wh (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12340:36)
+    at Ff (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12331:21)
+    at Lf (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12102:75)
+    at Ap (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:8298:35)
+    at Wa (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:8242:165)
+    at Ls (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12195:51)
+    at Object.hu [as scheduleRefresh] (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:6595:71)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:886:13
+[ 1016309ms] [LOG] [Fast Refresh] done in 108ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1016338ms] ReferenceError: matRef is not defined
+    at CoreBillboards (http://localhost:3000/_next/static/chunks/src_03vbflu._.js?id=%255Bproject%255D%252Fsrc%252Fcomponents%252Fscene%252Fscenes%252FMiraSupercluster.tsx+%255Bapp-client%255D+%2528ecmascript%2529:1020:18)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:13211:32)
+    at It (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:9080:25)
+    at ks (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:10200:374)
+    at tt (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:10531:32)
+    at B (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:7897:70)
+    at Ph (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12423:50)
+    at wh (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12340:36)
+    at Ff (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12331:21)
+    at Lf (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12102:75)
+    at Ap (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:8298:35)
+    at Wa (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:8242:165)
+    at Ls (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:12195:51)
+    at Object.hu [as scheduleRefresh] (http://localhost:3000/_next/static/chunks/node_modules_%40react-three_fiber_dist_08f0.8w._.js:6595:71)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:886:13
+[ 1016475ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1016639ms] [LOG] [Fast Refresh] done in 265ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1016947ms] [LOG] THREE.WebGLRenderer: Context Lost. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1017476ms] [LOG] THREE.WebGLRenderer: Context Lost. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1030987ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1030991ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1031017ms] [LOG] [Fast Refresh] done in 29ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1031115ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ 1031123ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431

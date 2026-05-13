@@ -46,12 +46,12 @@ interface Budget {
   background: number;
 }
 function getBudget(q: Quality): Budget {
-  // Generation is now cached at module scope (no per-frame regen, no
-  // per-mount rebuild) so we can afford density. Per-particle pixel cost
-  // is what matters at frame time; budgets sized for M1 + Bloom.
+  // Cache means we only pay for generation once. Density bumped to read
+  // as the burning-cosmic-web reference. Targets ≥ 50 FPS on M1 with
+  // global Bloom at 1.75 DPR.
   return q === 'high'
-    ? { cluster: 70_000, filament: 200_000, tributary: 60_000, wall: 22_000, background: 8_000 }
-    : { cluster: 18_000, filament:  55_000, tributary: 16_000, wall:  6_000, background: 3_000 };
+    ? { cluster: 100_000, filament: 280_000, tributary: 75_000, wall: 28_000, background: 10_000 }
+    : { cluster:  24_000, filament:  72_000, tributary: 20_000, wall:  8_000, background:  3_000 };
 }
 
 // ─── PRNG + utility math ────────────────────────────────────────────────
@@ -499,34 +499,36 @@ const vert = /* glsl */ `
     if (aType >= 0.5 && aType <= 5.5) {
       // Cluster — jitter (0=core, 1=halo) encoded as NFW radius at gen time.
       float coreness = 1.0 - aJitter;
-      col = mix(uClusterMantle, uClusterCore, smoothstep(0.78, 0.99, coreness));
-      // Densest 6% get controlled HDR boost — sharp white cores, no blowout.
-      float hdr = 1.0 + smoothstep(0.94, 1.0, coreness) * 0.9;
-      intensity = (0.30 + coreness * 0.55) * hdr;
-      // Smaller cluster particles — pinpricks, not blobs. Bloom does the glow.
-      size = 0.95 + coreness * 0.55;
+      col = mix(uClusterMantle, uClusterCore, smoothstep(0.55, 0.96, coreness));
+      // Top 8% cores bloom; everything else dim so 100k particles don't
+      // accumulate to a white wash.
+      float hdr = 1.0 + smoothstep(0.92, 1.0, coreness) * 1.4;
+      intensity = (0.20 + coreness * 0.35) * hdr;
+      size = 1.10 + coreness * 0.70;
     } else if (aType > 5.5 && aType < 6.5) {
       col = uWall;
-      intensity = 0.085 + aJitter * 0.060;
-      size = 0.95;
+      intensity = 0.09 + aJitter * 0.06;
+      size = 1.00;
     } else if (aType > 6.5) {
       col = uBackground;
-      intensity = 0.045 + aJitter * 0.040;
-      size = 0.75 + aJitter * 0.20;
+      intensity = 0.04 + aJitter * 0.04;
+      size = 0.80 + aJitter * 0.25;
     } else {
-      // Filament — 3-stop chromatic ramp: navy → cyan → magenta.
-      vec3 c1 = mix(uFilCool, uFilMid, smoothstep(0.12, 0.55, aJitter));
-      col = mix(c1, uFilWarm, smoothstep(0.55, 0.92, aJitter) * 0.7);
-      intensity = 0.14 + aJitter * 0.20;
-      size = 1.00;
+      // Filament — 4-stop chromatic ramp: navy → cyan → magenta → warm.
+      vec3 c1 = mix(uFilCool, uFilMid, smoothstep(0.05, 0.45, aJitter));
+      vec3 c2 = mix(c1, uFilWarm, smoothstep(0.45, 0.78, aJitter));
+      col = mix(c2, uClusterMantle, smoothstep(0.78, 1.0, aJitter) * 0.85);
+      intensity = 0.14 + aJitter * 0.18;
+      size = 1.15;
     }
 
     vColor = col * intensity;
     vIntensity = intensity;
 
-    // Tight depth attenuation + small clamp range = sharp pinpricks.
-    gl_PointSize = size * uPixelRatio * (24.0 / max(0.5, depth));
-    gl_PointSize = clamp(gl_PointSize * uReveal, 0.55, 2.2);
+    // Depth attenuation with a wider clamp so cluster cores can grow to
+    // 7-8 px (HDR halos register visibly through bloom).
+    gl_PointSize = size * uPixelRatio * (32.0 / max(0.5, depth));
+    gl_PointSize = clamp(gl_PointSize * uReveal, 0.6, 7.5);
   }
 `;
 
@@ -539,14 +541,14 @@ const frag = /* glsl */ `
   varying float vIntensity;
 
   void main() {
-    // Sharper radial fall-off (pow 2.6) → tight pinprick particles, not
-    // soft blobs. Bloom on the HDR cores does the glow externally.
+    // Mid radial fall-off (pow 2.0) — soft enough to overlap into the
+    // burning-web mesh, sharp enough that individual particles read.
     vec2 c = gl_PointCoord - vec2(0.5);
     float d = length(c) * 2.0;
     if (d > 1.0) discard;
-    float fall = pow(1.0 - d, 2.6);
-    float alpha = fall * (0.55 + vIntensity * 0.55) * uReveal;
-    gl_FragColor = vec4(vColor * (0.65 + fall * 1.4) * uReveal, alpha);
+    float fall = pow(1.0 - d, 2.0);
+    float alpha = fall * (0.40 + vIntensity * 0.35) * uReveal;
+    gl_FragColor = vec4(vColor * (0.50 + fall * 1.05) * uReveal, alpha);
   }
 `;
 
@@ -624,9 +626,14 @@ interface ReadyState {
 }
 
 export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): React.ReactElement | null {
-  void useMiraState;
   const pointsRef = useRef<THREE.Points>(null);
-  const revealRef = useRef(reveal);
+  // Sentinel so the first frame always pushes the real reveal value into
+  // the uniform — bug if this starts at `reveal` because the early-return
+  // skips the first uniform write and the particles render at uReveal=0
+  // (invisible).
+  const revealRef = useRef<number>(-1);
+  const activeLang = useMiraState((s) => s.activeLang);
+  const density = useMiraState((s) => s.density);
 
   // Detect quality once.
   const quality = useMemo<Quality>(() => {
@@ -680,13 +687,179 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
 
   if (!ready || reveal < 0.18) return null;
   return (
-    <points
-      ref={pointsRef}
-      geometry={ready.geometry}
-      material={ready.material}
-      frustumCulled={false}
-    />
+    <group>
+      <points
+        ref={pointsRef}
+        geometry={ready.geometry}
+        material={ready.material}
+        frustumCulled={false}
+      />
+      <CoreBillboards reveal={reveal} activeLang={activeLang} density={density} />
+    </group>
   );
+}
+
+// ─── Core billboards — 5 bright HDR sprites at each knot ────────────────
+// Adds the "blazing star" punch the reference shows. Five cheap quads,
+// view-aligned via the vertex shader, with strong HDR center so global
+// Bloom catches them as luminous halos.
+
+const coreVert = /* glsl */ `
+  attribute float aIndex;
+  uniform float uScale;
+  uniform vec3  uPos0;
+  uniform vec3  uPos1;
+  uniform vec3  uPos2;
+  uniform vec3  uPos3;
+  uniform vec3  uPos4;
+  uniform float uSize0;
+  uniform float uSize1;
+  uniform float uSize2;
+  uniform float uSize3;
+  uniform float uSize4;
+  uniform vec3  uHue0;
+  uniform vec3  uHue1;
+  uniform vec3  uHue2;
+  uniform vec3  uHue3;
+  uniform vec3  uHue4;
+  uniform float uActive;
+
+  varying vec2 vUv;
+  varying vec3 vHue;
+  varying float vIsActive;
+
+  void main() {
+    vec3 origin;
+    float s;
+    if (aIndex < 0.5)      { origin = uPos0; s = uSize0; vHue = uHue0; }
+    else if (aIndex < 1.5) { origin = uPos1; s = uSize1; vHue = uHue1; }
+    else if (aIndex < 2.5) { origin = uPos2; s = uSize2; vHue = uHue2; }
+    else if (aIndex < 3.5) { origin = uPos3; s = uSize3; vHue = uHue3; }
+    else                   { origin = uPos4; s = uSize4; vHue = uHue4; }
+
+    vIsActive = abs(aIndex - uActive) < 0.5 ? 1.0 : 0.0;
+    vUv = uv;
+
+    // View-aligned quad — extract camera right + up from the view matrix.
+    vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+    vec3 up    = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+    vec3 world = origin
+               + right * position.x * s
+               + up    * position.y * s;
+    gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
+  }
+`;
+
+const coreFrag = /* glsl */ `
+  precision highp float;
+  uniform float uReveal;
+  varying vec2 vUv;
+  varying vec3 vHue;
+  varying float vIsActive;
+
+  void main() {
+    vec2 p = vUv - vec2(0.5);
+    float r = length(p) * 2.0;
+    if (r > 1.0) discard;
+
+    // Three-stop falloff — pinpoint white-hot centre + bright inner halo +
+    // soft outer glow. Restrained HDR so bloom catches centres without
+    // washing everything around them.
+    float core  = pow(1.0 - r, 8.0);
+    float inner = pow(1.0 - r, 2.5);
+    float halo  = pow(1.0 - r, 1.2);
+    vec3 col = mix(vHue, vec3(1.7, 1.55, 1.20), core);
+    float boost = mix(1.0, 1.55, vIsActive);
+    float intensity = (core * 3.5 + inner * 0.85 + halo * 0.25) * boost * uReveal;
+    float alpha = (inner * 0.35 + halo * 0.18) * (0.65 + vIsActive * 0.35) * uReveal;
+    gl_FragColor = vec4(col * intensity, alpha);
+  }
+`;
+
+interface CoreBillboardsProps {
+  reveal: number;
+  activeLang: MiraLang;
+  density: Record<MiraLang, number>;
+}
+
+function CoreBillboards({ reveal, activeLang, density }: CoreBillboardsProps): React.ReactElement {
+  const { geometry, material } = useMemo(() => {
+    // 5 quads as a single buffer geometry. Each quad has 4 verts + 2 tris.
+    const QUAD = 5;
+    const positions = new Float32Array(QUAD * 4 * 3);
+    const uvs = new Float32Array(QUAD * 4 * 2);
+    const indices = new Uint16Array(QUAD * 6);
+    const idxAttr = new Float32Array(QUAD * 4);
+    for (let q = 0; q < QUAD; q++) {
+      const v = q * 4;
+      // Local quad vertices [-0.5..0.5] in x/y
+      positions[v * 3 + 0] = -0.5; positions[v * 3 + 1] = -0.5; positions[v * 3 + 2] = 0;
+      positions[(v + 1) * 3 + 0] =  0.5; positions[(v + 1) * 3 + 1] = -0.5; positions[(v + 1) * 3 + 2] = 0;
+      positions[(v + 2) * 3 + 0] =  0.5; positions[(v + 2) * 3 + 1] =  0.5; positions[(v + 2) * 3 + 2] = 0;
+      positions[(v + 3) * 3 + 0] = -0.5; positions[(v + 3) * 3 + 1] =  0.5; positions[(v + 3) * 3 + 2] = 0;
+      uvs[v * 2 + 0] = 0; uvs[v * 2 + 1] = 0;
+      uvs[(v + 1) * 2 + 0] = 1; uvs[(v + 1) * 2 + 1] = 0;
+      uvs[(v + 2) * 2 + 0] = 1; uvs[(v + 2) * 2 + 1] = 1;
+      uvs[(v + 3) * 2 + 0] = 0; uvs[(v + 3) * 2 + 1] = 1;
+      idxAttr[v] = q; idxAttr[v + 1] = q; idxAttr[v + 2] = q; idxAttr[v + 3] = q;
+      const tri = q * 6;
+      indices[tri]     = v;     indices[tri + 1] = v + 1; indices[tri + 2] = v + 2;
+      indices[tri + 3] = v;     indices[tri + 4] = v + 2; indices[tri + 5] = v + 3;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    g.setAttribute('uv',       new THREE.BufferAttribute(uvs, 2));
+    g.setAttribute('aIndex',   new THREE.BufferAttribute(idxAttr, 1));
+    g.setIndex(new THREE.BufferAttribute(indices, 1));
+
+    const hueColors = KNOTS_W.map((k) => new THREE.Color(KNOT_TABLE.find((kt) => kt.lang === k.lang)!.hue));
+    const m = new THREE.ShaderMaterial({
+      uniforms: {
+        uReveal: { value: reveal },
+        uScale:  { value: 1 },
+        uActive: { value: 0 },
+        uPos0: { value: new THREE.Vector3(...KNOTS_W[0].pos) },
+        uPos1: { value: new THREE.Vector3(...KNOTS_W[1].pos) },
+        uPos2: { value: new THREE.Vector3(...KNOTS_W[2].pos) },
+        uPos3: { value: new THREE.Vector3(...KNOTS_W[3].pos) },
+        uPos4: { value: new THREE.Vector3(...KNOTS_W[4].pos) },
+        uSize0: { value: 1.05 * KNOTS_W[0].scale },
+        uSize1: { value: 1.05 * KNOTS_W[1].scale },
+        uSize2: { value: 1.05 * KNOTS_W[2].scale },
+        uSize3: { value: 1.05 * KNOTS_W[3].scale },
+        uSize4: { value: 1.05 * KNOTS_W[4].scale },
+        uHue0: { value: hueColors[0] },
+        uHue1: { value: hueColors[1] },
+        uHue2: { value: hueColors[2] },
+        uHue3: { value: hueColors[3] },
+        uHue4: { value: hueColors[4] },
+      },
+      vertexShader: coreVert,
+      fragmentShader: coreFrag,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    return { geometry: g, material: m };
+  }, [reveal]);
+
+  useFrame(() => {
+    material.uniforms.uActive.value = LANG_INDEX[activeLang];
+    material.uniforms.uReveal.value = reveal;
+    // Halo size grows slightly with density (accretion visible).
+    material.uniforms.uSize0.value = 1.05 * KNOTS_W[0].scale * (0.92 + density[KNOTS_W[0].lang] * 0.55);
+    material.uniforms.uSize1.value = 1.05 * KNOTS_W[1].scale * (0.92 + density[KNOTS_W[1].lang] * 0.55);
+    material.uniforms.uSize2.value = 1.05 * KNOTS_W[2].scale * (0.92 + density[KNOTS_W[2].lang] * 0.55);
+    material.uniforms.uSize3.value = 1.05 * KNOTS_W[3].scale * (0.92 + density[KNOTS_W[3].lang] * 0.55);
+    material.uniforms.uSize4.value = 1.05 * KNOTS_W[4].scale * (0.92 + density[KNOTS_W[4].lang] * 0.55);
+  });
+
+  useEffect(() => () => {
+    geometry.dispose();
+    material.dispose();
+  }, [geometry, material]);
+
+  return <mesh geometry={geometry} material={material} frustumCulled={false} />;
 }
 
 function buildReadyState(buf: GeneratedBuffers, pixelRatio: number): ReadyState {
