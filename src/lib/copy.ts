@@ -6,11 +6,11 @@ export const panelCopy = {
     number: '01',
     eyebrow: 'MULTILINGUAL INTELLIGENT REAL-TIME AGENT',
     title: 'MIRA',
-    body: 'Real-time voice AI agent that listens, understands and responds in 5 Indian languages at sub-100ms latency.',
+    body: 'Real-time voice AI agent that listens, understands and responds in 5 languages — English and 4 South Indian regional languages — at sub-100ms latency.',
     metric: { label: 'RESPONSE TIME', value: '482ms' },
     chips: ['REAL-TIME ASR', 'NLU', 'LLM ORCHESTRATION', 'MULTILINGUAL', 'PIPECAT', 'LOW LATENCY'],
     trail: ['NOISE', 'SIGNAL', 'UNDERSTANDING'],
-    languages: ['தமிழ்', 'हिंदी', 'తెలుగు', 'ಕನ್ನಡ', 'বাংলা'],
+    languages: ['ENGLISH', 'हिंदी', 'தமிழ்', 'ಕನ್ನಡ', 'తెలుగు'],
   },
   W02_AIDEN: {
     number: '02',
