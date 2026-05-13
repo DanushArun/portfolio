@@ -498,7 +498,7 @@ This is the most complex task. The plume is a GPGPU ping-pong FBO system, struct
   - If `life ≥ 0.5`: return phase. Velocity = `-curlNoise(pos * 0.8 + uTime * 0.4) * 1.8 + (knotPos - pos) * 3.0` (curl-noise-tinted gravity back to the knot).
   - At `life ≥ 1.0`: fire ingestion event (next step), then respawn at knot position with `life = 0`.
 
-- [ ] **Step 3 — Wire ingestion events.** Each frame, before the compute pass, check how many particles crossed `life ≥ 1.0` this frame (sample a subset, or accumulate fractional reincorporations as one "event" per cycle). When the cycle completes (timer hits `cycleStartMs + 3000ms`), call `ingestForLang(activeLang)` from Task 4, then `advanceCycle()`.
+- [ ] **Step 3 — Wire ingestion events.** `MiraPlume` owns the single cycle timer for the whole scene. Per `useFrame(state)`: read `useMiraState.getState().cycleStartMs`; when `performance.now() - cycleStartMs >= 3000`, call `ingestForLang(activeLang)` **exactly once** then `advanceCycle()` (which resets `cycleStartMs`). Density accretes **once per cycle** per AC5 — not once per particle reincorporation. The per-particle return trajectory is a *visual* event; the ingestion is a *state* event triggered solely by the cycle timer. Guard the trigger with a local `ingestedThisCycleRef` to prevent double-fire on a slow frame.
 
 - [ ] **Step 4 — Render shader.** Vertex samples position from the FBO; size scales with `1.0 - abs(life - 0.5) * 2.0` (peaks mid-flight, fades at spawn/ingest). Colour from `KNOT_TABLE.find(k => k.lang === activeLang).hue`, blended additively. Fragment is a soft circular splat (same shape as Task 7 gas).
 
@@ -522,7 +522,7 @@ git commit -m "feat(mira): add MiraPlume — GPGPU emit/return plume with ingest
 **Files:**
 - Rewrite: `src/components/scene/scenes/MiraScene.tsx`
 
-- [ ] **Step 1 — Preserve the reveal envelope verbatim.** Copy lines 30–39 of the existing file exactly. Do not adjust the thresholds.
+- [ ] **Step 1 — Preserve the reveal envelope verbatim.** Keep the existing file's `'use client'` directive, all imports of `useScene`, and the `computeReveal` function (lines 30–39 of the prior file) **byte-for-byte unchanged**. The only edits are: (a) swap imports — drop `MiraPlasma` / `MiraAttractor`, add `MiraSupercluster` / `MiraKnots` / `MiraPlume`; (b) replace the JSX returned by the default export with the gated composition below.
 
 - [ ] **Step 2 — Compose:**
 ```tsx
@@ -615,7 +615,13 @@ export function isReducedMotion(): boolean {
 }
 ```
 
-  In `MiraScene.tsx`, gate the cycle controller (the `setInterval` or `useFrame` timer that calls `advanceCycle`) behind `!isReducedMotion()`. When reduced motion is on: cycle does not advance, `activeLang` stays on `EN`, plume disabled.
+  Apply the gate **at the composition boundary in `MiraScene.tsx`**, *before* `MiraPlume` mounts — so the cycle timer never installs in the first place:
+  ```tsx
+  const reduced = useMemo(() => isReducedMotion(), []);
+  // ...
+  {reveal >= 0.85 && !reduced && <MiraPlume reveal={reveal} />}
+  ```
+  Rationale: the cycle timer + density accretion both live inside `MiraPlume` (per Task 8 Step 3). Gating `MiraPlume`'s mount short-circuits the entire animation system before any state can change — guarantees `activeLang` stays `EN` and `density.EN` stays `0.20`, satisfying AC9's "no perceptible animation persists." Knots and gas remain visible (they're static under reduced motion); only the cycle freezes.
 
 - [ ] **Step 4 — Verify with DevTools.** Open DevTools → Rendering → "Emulate CSS media feature prefers-reduced-motion: reduce". Scroll to MIRA. Watch for 10 seconds. `activeLang` stays `EN`, no plume animation, gas cloud holds still.
 
