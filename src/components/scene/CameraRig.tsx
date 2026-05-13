@@ -26,26 +26,20 @@ export default function CameraRig() {
         pcam.fov = 100;
         break;
       }
-      case 'C07_TRANSITION': {
-        const z = THREE.MathUtils.lerp(30, 12, local);
-        pcam.position.set(0, 0, z);
+      // C07 → C09 → W01_MIRA: framing the MIRA celestial body. Slow auto-orbit
+      // around Y so 3D depth registers without interaction. Camera sits at
+      // radius 13 with a small Y lift; FOV 45 frames the body + the inner
+      // arcs of the converging streams cleanly without showing the far
+      // origins (radius 16) clipping the frame edges.
+      case 'C07_TRANSITION':
+      case 'C08_EMERGE':
+      case 'C09_PROJECT':
+      case 'W01_MIRA': {
+        const a = t * 0.06;          // ~3.4°/s — slow but visible
+        const r = 13;
+        pcam.position.set(Math.cos(a) * r, 1.4, Math.sin(a) * r);
         pcam.lookAt(0, 0, 0);
-        pcam.fov = 50;          // reset from warp's wide FOV
-        break;
-      }
-      case 'C08_EMERGE': {
-        const a = t * 0.05;
-        pcam.position.set(Math.cos(a) * 12, 1.5, Math.sin(a) * 12);
-        pcam.lookAt(0, 0, 0);
-        pcam.fov = 50;
-        break;
-      }
-      case 'C09_PROJECT': {
-        const a = t * 0.03;
-        const z = THREE.MathUtils.lerp(12, 18, local);
-        pcam.position.set(Math.cos(a) * z, 1.5, Math.sin(a) * z);
-        pcam.lookAt(0, 0, 0);
-        pcam.fov = 50;
+        pcam.fov = 45;
         break;
       }
       default: {

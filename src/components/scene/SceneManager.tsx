@@ -16,6 +16,7 @@ import PostFX from './PostFX';
 const WarpScene             = dynamic(() => import('./scenes/WarpScene'),             { ssr: false });
 const AnomalyGlitch         = dynamic(() => import('./scenes/AnomalyGlitch'),         { ssr: false });
 const TransitionConvergence = dynamic(() => import('./scenes/TransitionConvergence'), { ssr: false });
+const MiraScene             = dynamic(() => import('./scenes/MiraScene'),             { ssr: false });
 const StarField             = dynamic(() => import('./StarField'),                    { ssr: false });
 
 import HUD from '@/components/hud/HUD';
@@ -167,9 +168,11 @@ export default function SceneManager() {
                 particles, which breaks the "moving fast" illusion. */}
             {phase !== 'C05_WARP' && phase !== 'C06_ANOMALY' && <StarField />}
             {(phase === 'C05_WARP' || phase === 'C06_ANOMALY') && <WarpScene />}
-            {/* C07 → C09: empty universe with stars only. The planets scene
-                (EmergeSystem) is gone — after the white flash the user lands
-                directly into MIRA (rendered via WorkDashboard at zIndex 5). */}
+            {/* MIRA reveal: pulsing star + 11 converging streams. Active from
+                C07 (post-flash emergence) through W01_MIRA (full body). The
+                MiraPanel chrome (text + chips + languages) overlays at zIndex 5. */}
+            {(phase === 'C07_TRANSITION' || phase === 'C08_EMERGE'
+              || phase === 'C09_PROJECT' || phase === 'W01_MIRA') && <MiraScene />}
             <PostFX />
           </Suspense>
         </Canvas>
