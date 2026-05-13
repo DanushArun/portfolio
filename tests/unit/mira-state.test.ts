@@ -1,5 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { KNOT_TABLE, type MiraLang } from '@/lib/mira-state';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  KNOT_TABLE,
+  type MiraLang,
+  useMiraState,
+  advanceCycle,
+  resetMiraStateForTest,
+} from '@/lib/mira-state';
+
+beforeEach(() => resetMiraStateForTest());
 
 describe('KNOT_TABLE', () => {
   it('contains exactly 5 entries in EN→HI→TA→KN→TE order', () => {
@@ -24,5 +32,30 @@ describe('KNOT_TABLE', () => {
     for (const k of KNOT_TABLE) {
       expect(k.hue).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
+  });
+});
+
+describe('mira cycle controller', () => {
+  it('starts on EN at cycleIndex 0', () => {
+    const s = useMiraState.getState();
+    expect(s.activeLang).toBe('EN');
+    expect(s.cycleIndex).toBe(0);
+  });
+
+  it('advances EN→HI→TA→KN→TE→EN on advanceCycle()', () => {
+    const order: MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE', 'EN'];
+    expect(useMiraState.getState().activeLang).toBe(order[0]);
+    for (let i = 1; i < order.length; i++) {
+      advanceCycle();
+      expect(useMiraState.getState().activeLang).toBe(order[i]);
+    }
+  });
+
+  it('updates cycleStartMs monotonically on each advance', () => {
+    const t0 = useMiraState.getState().cycleStartMs;
+    advanceCycle();
+    const t1 = useMiraState.getState().cycleStartMs;
+    expect(t1).toBeGreaterThanOrEqual(t0);
+    expect(useMiraState.getState().cycleIndex).toBe(1);
   });
 });

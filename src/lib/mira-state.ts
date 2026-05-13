@@ -2,6 +2,8 @@
 // State + cycle controller for the MIRA Virgo Supercluster scene.
 // Spec: .coo/jobs/004-mira-virgo-supercluster.md
 
+import { create } from 'zustand';
+
 export type MiraLang = 'EN' | 'HI' | 'TA' | 'KN' | 'TE';
 
 export interface KnotSpec {
@@ -22,3 +24,49 @@ export const KNOT_TABLE: readonly KnotSpec[] = [
   { lang: 'KN', position: [-1.10, -0.80,  0.55], relativeScale: 1.05, hue: '#FFC58C' },
   { lang: 'TE', position: [ 1.95,  0.35, -0.25], relativeScale: 1.00, hue: '#FF9A5C' },
 ] as const;
+
+const CYCLE_ORDER: readonly MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE'];
+
+type Density = Record<MiraLang, number>;
+
+const INITIAL_DENSITY: Density = {
+  EN: 0.20, HI: 0.20, TA: 0.20, KN: 0.20, TE: 0.20,
+};
+
+interface MiraState {
+  activeLang: MiraLang;
+  density: Density;
+  cycleIndex: number;
+  cycleStartMs: number;
+}
+
+function nowMs(): number {
+  return typeof performance !== 'undefined' ? performance.now() : 0;
+}
+
+export const useMiraState = create<MiraState>(() => ({
+  activeLang: 'EN',
+  density: { ...INITIAL_DENSITY },
+  cycleIndex: 0,
+  cycleStartMs: nowMs(),
+}));
+
+export function advanceCycle(): void {
+  useMiraState.setState((s) => {
+    const nextIndex = s.cycleIndex + 1;
+    return {
+      activeLang: CYCLE_ORDER[nextIndex % CYCLE_ORDER.length],
+      cycleIndex: nextIndex,
+      cycleStartMs: nowMs(),
+    };
+  });
+}
+
+export function resetMiraStateForTest(): void {
+  useMiraState.setState({
+    activeLang: 'EN',
+    density: { ...INITIAL_DENSITY },
+    cycleIndex: 0,
+    cycleStartMs: nowMs(),
+  });
+}
