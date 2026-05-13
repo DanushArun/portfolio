@@ -152,39 +152,124 @@ const KNOTS_W: ReadonlyArray<KnotW> = KNOT_TABLE.map((k) => ({
 
 interface PSet { pos: Float32Array; type: Float32Array; jitter: Float32Array }
 
+/**
+ * Build five galaxies — each knot becomes a real spiral galaxy with:
+ *   • Bulge — dense central Gaussian (20% of galaxy's particles)
+ *   • Disk — log-spiral arms (65%) — 2 arms, tight pitch, in-plane scatter
+ *   • Halo — diffuse outer envelope (15%)
+ *
+ * Each galaxy gets its own random inclination + yaw rotation matrix so the
+ * five read as 3D objects in space (some face-on, some edge-on-ish) instead
+ * of all coplanar.
+ */
 function buildClusters(rng: Rng, count: number): PSet {
   const pos = new Float32Array(count * 3);
   const type = new Float32Array(count);
   const jitter = new Float32Array(count);
   const total = KNOTS_W.reduce((a, k) => a + k.scale, 0);
   let cursor = 0;
+
   for (let ki = 0; ki < KNOTS_W.length; ki++) {
     const k = KNOTS_W[ki];
     const slice = ki === KNOTS_W.length - 1
       ? count - cursor : Math.floor((k.scale / total) * count);
-    const aAx = 0.18 + k.scale * 0.10;
-    const bAx = aAx * (0.55 + rng() * 0.30);
-    const cAx = aAx * (0.55 + rng() * 0.30);
+
+    // Galaxy size scales with relativeScale; max disk radius in world units.
+    const galaxyR = (0.42 + k.scale * 0.22) * WORLD_SCALE;
+    const bulgeR  = galaxyR * 0.20;
+    const haloR   = galaxyR * 1.30;
+
+    // Random galactic orientation — inclination 15–70° from face-on.
+    const inc = (0.18 + rng() * 0.55) * Math.PI * 0.5;
     const yaw = rng() * Math.PI * 2;
+    const roll = (rng() - 0.5) * 0.4;
+    const ci = Math.cos(inc); const si = Math.sin(inc);
     const cy = Math.cos(yaw); const sy = Math.sin(yaw);
-    for (let i = 0; i < slice; i++) {
-      // NFW-ish: bias toward center, longer tails.
-      const r01 = Math.pow(rng(), 0.45);
-      const lx = gauss(rng) * aAx * r01;
-      const ly = gauss(rng) * bAx * r01 * 0.80;
-      const lz = gauss(rng) * cAx * r01;
-      const wx = lx * cy - lz * sy;
-      const wz = lx * sy + lz * cy;
-      const subgroup = fbm3(lx * 12, ly * 12, lz * 12) * 0.018;
+    const cr = Math.cos(roll); const sr = Math.sin(roll);
+
+    // Apply rotation: yaw around Y, then inclination around X, then roll
+    // around Z. Returns a function so we can reuse it cheaply per-particle.
+    const rotate = (lx: number, ly: number, lz: number): [number, number, number] => {
+      // Roll (Z)
+      const rx = lx * cr - ly * sr;
+      const ry = lx * sr + ly * cr;
+      const rz = lz;
+      // Inclination (X)
+      const ix = rx;
+      const iy = ry * ci - rz * si;
+      const iz = ry * si + rz * ci;
+      // Yaw (Y)
+      const fx = ix * cy + iz * sy;
+      const fy = iy;
+      const fz = -ix * sy + iz * cy;
+      return [fx, fy, fz];
+    };
+
+    // Spiral parameters — 2 logarithmic arms, tight pitch.
+    const armCount = 2;
+    const a = 0.06 * galaxyR;
+    const b = 0.42;       // tightness (larger = looser)
+
+    const bulgeCount = Math.floor(slice * 0.20);
+    const diskCount  = Math.floor(slice * 0.65);
+    const haloCount  = slice - bulgeCount - diskCount;
+
+    // — Bulge: dense Gaussian, thin in z.
+    for (let i = 0; i < bulgeCount; i++) {
+      const lx = gauss(rng) * bulgeR * 0.80;
+      const ly = gauss(rng) * bulgeR * 0.78;
+      const lz = gauss(rng) * bulgeR * 0.55;
+      const r01 = Math.min(1, Math.hypot(lx, ly, lz) / galaxyR);
+      const [wx, wy, wz] = rotate(lx, ly, lz);
       const idx = (cursor + i) * 3;
-      pos[idx + 0] = k.pos[0] + (wx + subgroup) * WORLD_SCALE;
-      pos[idx + 1] = k.pos[1] + (ly + subgroup) * WORLD_SCALE;
-      pos[idx + 2] = k.pos[2] + (wz + subgroup) * WORLD_SCALE;
-      type[cursor + i] = LANG_INDEX[k.lang] + 1;     // 1..5
-      // r01 also encodes "core-ness" — densest 15% gets HDR boost in shader.
-      jitter[cursor + i] = r01;
+      pos[idx + 0] = k.pos[0] + wx;
+      pos[idx + 1] = k.pos[1] + wy;
+      pos[idx + 2] = k.pos[2] + wz;
+      type[cursor + i] = LANG_INDEX[k.lang] + 1;
+      // Low r01 = core = bright; encoded for shader's "coreness".
+      jitter[cursor + i] = r01 * 0.4;
     }
-    cursor += slice;
+    cursor += bulgeCount;
+
+    // — Disk: 2 logarithmic spiral arms with perpendicular scatter.
+    for (let i = 0; i < diskCount; i++) {
+      const arm = i % armCount;
+      const rNorm = Math.pow(rng(), 0.55);             // bias inward
+      const r = a + rNorm * (galaxyR - a);
+      const baseTheta = Math.log(r / a) / b;
+      const thetaJitter = gauss(rng) * 0.15;
+      const theta = baseTheta + (2 * Math.PI * arm) / armCount + thetaJitter;
+      // Perpendicular Gaussian scatter, wider at outer disk.
+      const scatter = (0.04 + rNorm * 0.10) * galaxyR;
+      const xL = r * Math.cos(theta) + gauss(rng) * scatter;
+      const yL = r * Math.sin(theta) + gauss(rng) * scatter;
+      const zL = gauss(rng) * 0.025 * galaxyR;          // very thin disk
+      const [wx, wy, wz] = rotate(xL, yL, zL);
+      const idx = (cursor + i) * 3;
+      pos[idx + 0] = k.pos[0] + wx;
+      pos[idx + 1] = k.pos[1] + wy;
+      pos[idx + 2] = k.pos[2] + wz;
+      type[cursor + i] = LANG_INDEX[k.lang] + 1;
+      // Disk particles read as "mid-coreness" — bright at small r, dim outer.
+      jitter[cursor + i] = 0.30 + (1 - rNorm) * 0.55;
+    }
+    cursor += diskCount;
+
+    // — Halo: diffuse outer Gaussian envelope.
+    for (let i = 0; i < haloCount; i++) {
+      const lx = gauss(rng) * haloR;
+      const ly = gauss(rng) * haloR * 0.75;
+      const lz = gauss(rng) * haloR * 0.95;
+      const [wx, wy, wz] = rotate(lx, ly, lz);
+      const idx = (cursor + i) * 3;
+      pos[idx + 0] = k.pos[0] + wx;
+      pos[idx + 1] = k.pos[1] + wy;
+      pos[idx + 2] = k.pos[2] + wz;
+      type[cursor + i] = LANG_INDEX[k.lang] + 1;
+      // Halo particles read as dimmest = highest jitter.
+      jitter[cursor + i] = 0.85 + rng() * 0.15;
+    }
+    cursor += haloCount;
   }
   return { pos, type, jitter };
 }

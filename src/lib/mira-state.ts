@@ -13,16 +13,16 @@ export interface KnotSpec {
   readonly hue: string;
 }
 
-// Hand-tuned for screen composition. Inspired by Shapley's asymmetric web,
-// not traced from it. English central + largest; regionals scattered along
-// filament intersections. Hues lean warm white/orange to match the canonical
-// quality-bar storyboard Panel 1 (warm cores over cool web).
+// Hexagonal layout from founder's reference storyboard — EN top-left (largest),
+// HI top-right, TA middle-left, KN bottom-right, TE bottom-centre. Each hue
+// distinct per-language so language identity reads at a glance against the
+// cool blue/purple web.
 export const KNOT_TABLE: readonly KnotSpec[] = [
-  { lang: 'EN', position: [ 0.00,  0.20,  0.00], relativeScale: 1.40, hue: '#FFD9A8' },
-  { lang: 'HI', position: [-1.80,  0.55, -0.40], relativeScale: 1.10, hue: '#FFB07A' },
-  { lang: 'TA', position: [ 1.55, -0.65,  0.30], relativeScale: 1.20, hue: '#FFA86E' },
-  { lang: 'KN', position: [-1.10, -0.80,  0.55], relativeScale: 1.05, hue: '#FFC58C' },
-  { lang: 'TE', position: [ 1.95,  0.35, -0.25], relativeScale: 1.00, hue: '#FF9A5C' },
+  { lang: 'EN', position: [-1.55,  0.95,  0.00], relativeScale: 1.40, hue: '#FF6648' },
+  { lang: 'HI', position: [ 1.80,  1.05,  0.25], relativeScale: 1.15, hue: '#FF5B6F' },
+  { lang: 'TA', position: [-1.95, -0.25,  0.40], relativeScale: 1.20, hue: '#FF7A8C' },
+  { lang: 'KN', position: [ 1.55, -1.20, -0.20], relativeScale: 1.10, hue: '#B57BFF' },
+  { lang: 'TE', position: [ 0.00, -1.55,  0.30], relativeScale: 1.00, hue: '#5FD0E0' },
 ] as const;
 
 const CYCLE_ORDER: readonly MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE'];
