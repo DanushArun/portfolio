@@ -20,6 +20,7 @@
 import { useEffect } from 'react';
 import { useScene } from '@/lib/scene-state';
 import { exposeMiraDebug } from '@/lib/mira-state';
+import MiraSupercluster from './MiraSupercluster';
 
 function computeReveal(phase: string, local: number): number {
   if (phase === 'C07_TRANSITION') {
@@ -47,6 +48,5 @@ export default function MiraScene() {
     }
   }, [reveal]);
 
-  // Phase 0: nothing renders. Phase A wires <MiraSupercluster /> here.
-  return null;
+  return <MiraSupercluster reveal={reveal} />;
 }
