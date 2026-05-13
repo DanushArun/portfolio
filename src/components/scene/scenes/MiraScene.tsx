@@ -1,19 +1,15 @@
 'use client';
 
 /**
- * MiraScene — top-level wrapper for MIRA's celestial-body visualization.
+ * MiraScene — Phase 0 stub.
  *
- * Renders inside the main R3F canvas (no extra WebGL context). Currently
- * wired to MiraKnots only (Task 6 checkpoint).
+ * The previous shader-sphere and broken supercluster were deleted per founder
+ * directive ("clear out the old mira code first. then start"). This file
+ * keeps the reveal envelope verbatim from the spec, exposes the debug
+ * surface, and renders nothing. Phase A will compose `<MiraSupercluster />`.
  *
- * TODO Task 9: compose with MiraSupercluster + MiraPlume once built.
- *
- * Reveal envelope
- * ───────────────
- * Children take a `reveal` value in [0..1] that ramps as the user scrolls
- * from the warp's white flash → MIRA. Mapping (matches the white-flash
- * schedule in SceneManager.tsx):
- *
+ * Reveal envelope (preserved verbatim from .coo/jobs/004-...md AC7)
+ * ─────────────────────────────────────────────────────────────────
  *   C07_TRANSITION local 0.00 → 0.45  : reveal = 0          (under flash)
  *   C07_TRANSITION local 0.45 → 1.00  : reveal = 0   → 0.40 (flash fading)
  *   C08_EMERGE     local 0.00 → 1.00  : reveal = 0.40 → 0.80
@@ -23,7 +19,7 @@
 
 import { useEffect } from 'react';
 import { useScene } from '@/lib/scene-state';
-import MiraKnots from './MiraKnots';
+import { exposeMiraDebug } from '@/lib/mira-state';
 
 function computeReveal(phase: string, local: number): number {
   if (phase === 'C07_TRANSITION') {
@@ -41,18 +37,16 @@ export default function MiraScene() {
   const local = useScene((s) => s.localProgress);
   const reveal = computeReveal(phase, local);
 
-  // Expose reveal for the debug surface — must be an effect, not render body,
-  // to satisfy react-hooks/immutability (window is external mutable state).
+  useEffect(() => {
+    if (typeof window !== 'undefined') exposeMiraDebug(window);
+  }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as unknown as { __miraReveal?: number }).__miraReveal = reveal;
     }
   }, [reveal]);
 
-  return (
-    <group>
-      {/* TODO Task 9: compose with MiraSupercluster + MiraPlume once built */}
-      <MiraKnots reveal={reveal} />
-    </group>
-  );
+  // Phase 0: nothing renders. Phase A wires <MiraSupercluster /> here.
+  return null;
 }
