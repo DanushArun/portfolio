@@ -23,7 +23,7 @@
  * Reference: .coo/jobs/004/refs/quality-bar-storyboard.png Panel 1.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -46,13 +46,12 @@ interface Budget {
   background: number;
 }
 function getBudget(q: Quality): Budget {
-  // Sharper than Phase B v1: bumped filament + tributary so threads read
-  // as continuous, reduced wall + background so voids stay black. Each
-  // particle is a small pinprick; bloom on the densest 6% of cluster
-  // particles carries the glow without blowing out the rest.
+  // Generation is now cached at module scope (no per-frame regen, no
+  // per-mount rebuild) so we can afford density. Per-particle pixel cost
+  // is what matters at frame time; budgets sized for M1 + Bloom.
   return q === 'high'
-    ? { cluster: 38_000, filament: 110_000, tributary: 32_000, wall: 9_000, background: 4_000 }
-    : { cluster: 12_000, filament:  32_000, tributary: 10_000, wall: 3_000, background: 2_000 };
+    ? { cluster: 70_000, filament: 200_000, tributary: 60_000, wall: 22_000, background: 8_000 }
+    : { cluster: 18_000, filament:  55_000, tributary: 16_000, wall:  6_000, background: 3_000 };
 }
 
 // ─── PRNG + utility math ────────────────────────────────────────────────
@@ -551,16 +550,85 @@ const frag = /* glsl */ `
   }
 `;
 
+// ─── Module-level particle generation cache ─────────────────────────────
+//
+// CRITICAL: generation runs ONCE per quality profile per page load. Stored
+// at module scope so re-mounting the component (scroll-out + back) is
+// instant. No `reveal` in any dep array — reveal updates ride uniforms only.
+
+interface GeneratedBuffers {
+  positions: Float32Array;
+  types: Float32Array;
+  jitters: Float32Array;
+  count: number;
+}
+
+const CACHE = new Map<Quality, GeneratedBuffers>();
+
+function generate(quality: Quality): GeneratedBuffers {
+  const hit = CACHE.get(quality);
+  if (hit) return hit;
+  const budget = getBudget(quality);
+  const rng = mulberry32(0xC05A1234);
+  const specs = makeFilamentSpecs(rng);
+  const cluster = buildClusters(rng, budget.cluster);
+  const filament = buildFilaments(rng, budget.filament, specs);
+  const tributary = buildTributaries(rng, budget.tributary, specs);
+  const wall = buildWalls(rng, budget.wall, specs);
+  const bg = buildBackground(rng, budget.background);
+
+  const sets = [cluster, filament, tributary, wall, bg];
+  const total = sets.reduce((a, s) => a + s.type.length, 0);
+  const positions = new Float32Array(total * 3);
+  const typesArr = new Float32Array(total);
+  const jitters = new Float32Array(total);
+  let off1 = 0; let off3 = 0;
+  for (const s of sets) {
+    positions.set(s.pos, off3);
+    typesArr.set(s.type, off1);
+    jitters.set(s.jitter, off1);
+    off3 += s.pos.length;
+    off1 += s.type.length;
+  }
+  const out: GeneratedBuffers = { positions, types: typesArr, jitters, count: total };
+  CACHE.set(quality, out);
+  return out;
+}
+
+// Off-main-thread mounting helper. requestIdleCallback fallback for Safari.
+type IdleHandle = number;
+function scheduleIdle(cb: () => void): IdleHandle {
+  const w = window as unknown as {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  };
+  if (typeof w.requestIdleCallback === 'function') {
+    return w.requestIdleCallback(cb, { timeout: 600 });
+  }
+  return window.setTimeout(cb, 0);
+}
+function cancelIdle(handle: IdleHandle): void {
+  const w = window as unknown as { cancelIdleCallback?: (h: number) => void };
+  if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(handle);
+  else window.clearTimeout(handle);
+}
+
 // ─── Component ──────────────────────────────────────────────────────────
 
 export interface MiraSuperclusterProps {
   reveal: number;
 }
 
-export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): React.ReactElement | null {
-  const pointsRef = useRef<THREE.Points>(null);
-  void useMiraState;
+interface ReadyState {
+  geometry: THREE.BufferGeometry;
+  material: THREE.ShaderMaterial;
+}
 
+export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): React.ReactElement | null {
+  void useMiraState;
+  const pointsRef = useRef<THREE.Points>(null);
+  const revealRef = useRef(reveal);
+
+  // Detect quality once.
   const quality = useMemo<Quality>(() => {
     if (typeof window === 'undefined') return 'high';
     return detectQualityProfile({
@@ -570,71 +638,82 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
 
   const pixelRatio = useMemo(() => {
     if (typeof window === 'undefined') return 1;
-    return Math.min(window.devicePixelRatio || 1, 2);
+    return Math.min(window.devicePixelRatio || 1, 1.75);    // capped 1.75 for fill-rate
   }, []);
 
-  const { geometry, material } = useMemo(() => {
-    const budget = getBudget(quality);
-    const rng = mulberry32(0xC05A1234);
-    const specs = makeFilamentSpecs(rng);
-
-    const cluster = buildClusters(rng, budget.cluster);
-    const filament = buildFilaments(rng, budget.filament, specs);
-    const tributary = buildTributaries(rng, budget.tributary, specs);
-    const wall = buildWalls(rng, budget.wall, specs);
-    const bg = buildBackground(rng, budget.background);
-
-    const sets = [cluster, filament, tributary, wall, bg];
-    const total = sets.reduce((a, s) => a + s.type.length, 0);
-    const pos = new Float32Array(total * 3);
-    const type = new Float32Array(total);
-    const jit = new Float32Array(total);
-    let off1 = 0; let off3 = 0;
-    for (const s of sets) {
-      pos.set(s.pos, off3);
-      type.set(s.type, off1);
-      jit.set(s.jitter, off1);
-      off3 += s.pos.length;
-      off1 += s.type.length;
-    }
-
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('aType',    new THREE.BufferAttribute(type, 1));
-    g.setAttribute('aJitter',  new THREE.BufferAttribute(jit, 1));
-    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 6 * WORLD_SCALE);
-
-    const m = new THREE.ShaderMaterial({
-      uniforms: {
-        uPixelRatio:    { value: pixelRatio },
-        uReveal:        { value: reveal },
-        uClusterCore:   { value: new THREE.Color('#FFF7E0') },   // near-white
-        uClusterMantle: { value: new THREE.Color('#FFA86A') },   // warm amber
-        uFilCool:       { value: new THREE.Color('#1A2F6E') },   // deep navy
-        uFilMid:        { value: new THREE.Color('#5C9DFF') },   // cyan
-        uFilWarm:       { value: new THREE.Color('#A06CFF') },   // magenta
-        uWall:          { value: new THREE.Color('#3F5BAE') },
-        uBackground:    { value: new THREE.Color('#4F6BB8') },
-      },
-      vertexShader: vert,
-      fragmentShader: frag,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    return { geometry: g, material: m };
-  }, [quality, pixelRatio, reveal]);
-
-  useEffect(() => () => {
-    geometry.dispose();
-    material.dispose();
-  }, [geometry, material]);
-
-  useFrame(() => {
-    material.uniforms.uReveal.value = reveal;
+  // Lazy mount: if the cache already has buffers, use them on first render.
+  // Otherwise schedule generation in idle time so we don't block scroll.
+  const [ready, setReady] = useState<ReadyState | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const buf = CACHE.get(quality);
+    if (!buf) return null;
+    return buildReadyState(buf, pixelRatio);
   });
 
-  if (reveal < 0.18) return null;
-  return <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} />;
+  useEffect(() => {
+    if (ready) return;
+    const handle = scheduleIdle(() => {
+      const buf = generate(quality);
+      const r = buildReadyState(buf, pixelRatio);
+      setReady(r);
+    });
+    return () => cancelIdle(handle);
+  }, [ready, quality, pixelRatio]);
+
+  // Dispose on unmount of THIS instance (geometry/material are per-instance,
+  // not cached — only the raw Float32Array buffers are cached).
+  useEffect(() => {
+    if (!ready) return;
+    return () => {
+      ready.geometry.dispose();
+      ready.material.dispose();
+    };
+  }, [ready]);
+
+  // The ONLY per-frame work — single uniform write. Skip if unchanged.
+  useFrame(() => {
+    if (!ready) return;
+    if (revealRef.current === reveal) return;
+    revealRef.current = reveal;
+    ready.material.uniforms.uReveal.value = reveal;
+  });
+
+  if (!ready || reveal < 0.18) return null;
+  return (
+    <points
+      ref={pointsRef}
+      geometry={ready.geometry}
+      material={ready.material}
+      frustumCulled={false}
+    />
+  );
+}
+
+function buildReadyState(buf: GeneratedBuffers, pixelRatio: number): ReadyState {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(buf.positions, 3));
+  g.setAttribute('aType',    new THREE.BufferAttribute(buf.types, 1));
+  g.setAttribute('aJitter',  new THREE.BufferAttribute(buf.jitters, 1));
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 6 * WORLD_SCALE);
+
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      uPixelRatio:    { value: pixelRatio },
+      uReveal:        { value: 0 },
+      uClusterCore:   { value: new THREE.Color('#FFF7E0') },
+      uClusterMantle: { value: new THREE.Color('#FFA86A') },
+      uFilCool:       { value: new THREE.Color('#1A2F6E') },
+      uFilMid:        { value: new THREE.Color('#5C9DFF') },
+      uFilWarm:       { value: new THREE.Color('#A06CFF') },
+      uWall:          { value: new THREE.Color('#3F5BAE') },
+      uBackground:    { value: new THREE.Color('#4F6BB8') },
+    },
+    vertexShader: vert,
+    fragmentShader: frag,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  return { geometry: g, material: m };
 }

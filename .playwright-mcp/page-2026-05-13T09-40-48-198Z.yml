@@ -1,0 +1,88 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic: VLS-001 · MIRA · 01
+          - generic: RA 12ʰ 35ᵐ · DEC −05° 12′ · z = 0.0067
+        - generic:
+          - generic: The Virgo Supercluster
+          - generic: Mira’s multilingual brain · unified by knowledge, specialised by language
+        - generic:
+          - img
+          - heading [level=1]: MIRA
+          - generic: Virgo Linguistic Supercluster
+          - paragraph: Real-time voice AI agent that listens, understands and responds in 5 languages — English and 4 South Indian regional languages — at sub-100ms latency.
+        - generic:
+          - generic:
+            - generic:
+              - generic: Active Core
+            - generic:
+              - generic: EN
+              - generic: ·
+              - generic: English
+            - generic: Live · 482ms
+            - generic: Training signal+2.0% / call
+          - generic:
+            - generic: Model Strength · Density
+            - generic:
+              - generic:
+                - generic: EN
+                - generic: English
+                - generic: "0.20"
+              - generic:
+                - generic: HI
+                - generic: हिंदी
+                - generic: "0.20"
+              - generic:
+                - generic: TA
+                - generic: தமிழ்
+                - generic: "0.20"
+              - generic:
+                - generic: KN
+                - generic: ಕನ್ನಡ
+                - generic: "0.20"
+              - generic:
+                - generic: TE
+                - generic: తెలుగు
+                - generic: "0.20"
+        - generic:
+          - generic: ⌖ drag · rotate
+          - generic: ⊙ hover · probe
+          - generic: ◐ click · activate
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+    - generic:
+      - generic: Stub
+  - generic "Scene controls":
+    - generic [ref=e5]:
+      - generic "Phase 1 of 18" [ref=e6]:
+        - generic [ref=e7]: 01 / 18
+      - button "Skip to next phase" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: ↓
+        - generic [ref=e10]: next
+    - generic [ref=e11]:
+      - button "Toggle audio (unavailable)" [disabled] [ref=e12]:
+        - generic [ref=e13]: ⌀
+      - button "Toggle reduced motion (unavailable)" [disabled] [ref=e14]:
+        - generic [ref=e15]: =
+      - button "Toggle quality (unavailable)" [disabled] [ref=e16]:
+        - generic [ref=e17]: ◐
+  - generic:
+    - generic:
+      - img
+    - generic: INITIALISING SINGULARITY
+  - button "Enable audio" [ref=e18] [cursor=pointer]: AUDIO OFF
+  - alert [ref=e19]
