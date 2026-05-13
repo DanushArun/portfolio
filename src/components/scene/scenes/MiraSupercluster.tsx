@@ -1,27 +1,26 @@
 'use client';
 
 /**
- * MiraSupercluster — Phase A skeleton.
+ * MiraSupercluster — Phase B: cosmic-web physics.
  *
- * 60k particles forming 5 dense knot clusters + Bezier filaments between
- * them. Deterministic seeded PRNG so positions are stable across reloads.
+ * ~280k particles forming a real-supercluster-shaped distribution:
+ *   • NFW-profile cluster nodes (anisotropic ellipsoids, denser core)
+ *   • Bezier filaments with 3D FBM turbulence + endpoint density bias
+ *   • Tributary branches (2-3 per primary filament) perpendicular to spine
+ *   • Wall/sheet particles (Zel'dovich pancakes between adjacent filaments)
+ *   • Void carving — 7 explicit void centres suppress particle density
+ *   • Background dust — sparse, void-suppressed
  *
- * Phase A scope (no physics yet):
- *   • 10k cluster particles (2k per knot, isotropic Gaussian around each
- *     KNOT_TABLE position).
- *   • 50k filament particles (5k along each of 10 Bezier curves connecting
- *     every pair of knots).
- *   • Single <points> with BufferGeometry + ShaderMaterial.
- *   • Vertex shader passes position through; computes gl_PointSize with
- *     simple depth attenuation. Fragment shader does soft radial splat,
- *     additive blend.
- *   • Particle colour: warm white at cluster centres, cool blue along
- *     filaments. Per-particle `aType` attribute distinguishes (0 = filament,
- *     1..5 = cluster owned by that knot).
+ * Rendering:
+ *   • Single <points> ShaderMaterial, additive blend
+ *   • 3-stop chromatic filament palette: navy → cyan → magenta (per-particle
+ *     jitter selects position in the ramp)
+ *   • Cluster core HDR boost only on the densest 15% of cluster particles
+ *   • Brightness discipline — base intensities tuned so additive accumulation
+ *     in dense regions doesn't blow out before bloom catches it
  *
- * No reveal envelope yet — full opacity. Phase B layers physics.
- *
- * Spec: .coo/jobs/004-mira-virgo-supercluster.md AC1, AC2.
+ * Spec: AC1, AC2.
+ * Reference: .coo/jobs/004/refs/quality-bar-storyboard.png Panel 1.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -30,16 +29,33 @@ import * as THREE from 'three';
 
 import {
   KNOT_TABLE,
+  detectQualityProfile,
   useMiraState,
   type MiraLang,
 } from '@/lib/mira-state';
 
 const LANG_INDEX: Record<MiraLang, number> = { EN: 0, HI: 1, TA: 2, KN: 3, TE: 4 };
+const WORLD_SCALE = 2.6;
 
-const CLUSTER_PARTICLES_PER_KNOT = 2_000;
-const FILAMENT_PARTICLES_PER_PAIR = 5_000;
+type Quality = 'high' | 'low';
+interface Budget {
+  cluster: number;
+  filament: number;
+  tributary: number;
+  wall: number;
+  background: number;
+}
+function getBudget(q: Quality): Budget {
+  // Sharper than Phase B v1: bumped filament + tributary so threads read
+  // as continuous, reduced wall + background so voids stay black. Each
+  // particle is a small pinprick; bloom on the densest 6% of cluster
+  // particles carries the glow without blowing out the rest.
+  return q === 'high'
+    ? { cluster: 38_000, filament: 110_000, tributary: 32_000, wall: 9_000, background: 4_000 }
+    : { cluster: 12_000, filament:  32_000, tributary: 10_000, wall: 3_000, background: 2_000 };
+}
 
-// ─── PRNG ────────────────────────────────────────────────────────────────
+// ─── PRNG + utility math ────────────────────────────────────────────────
 
 type Rng = () => number;
 function mulberry32(seed: number): Rng {
@@ -60,115 +76,397 @@ function gauss(rng: Rng): number {
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
-// ─── Particle generation ─────────────────────────────────────────────────
-
-interface ParticleBuffers {
-  positions: Float32Array;
-  types: Float32Array;     // 0 = filament, 1..5 = cluster owned by that lang index + 1
+function hash3(x: number, y: number, z: number): number {
+  const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453;
+  return h - Math.floor(h);
+}
+function fbm3(x: number, y: number, z: number): number {
+  let v = 0; let a = 0.5;
+  for (let i = 0; i < 3; i++) {
+    const xi = Math.floor(x); const yi = Math.floor(y); const zi = Math.floor(z);
+    const xf = x - xi; const yf = y - yi; const zf = z - zi;
+    const c000 = hash3(xi,   yi,   zi);
+    const c100 = hash3(xi+1, yi,   zi);
+    const c010 = hash3(xi,   yi+1, zi);
+    const c110 = hash3(xi+1, yi+1, zi);
+    const c001 = hash3(xi,   yi,   zi+1);
+    const c101 = hash3(xi+1, yi,   zi+1);
+    const c011 = hash3(xi,   yi+1, zi+1);
+    const c111 = hash3(xi+1, yi+1, zi+1);
+    const ux = xf * xf * (3 - 2 * xf);
+    const uy = yf * yf * (3 - 2 * yf);
+    const uz = zf * zf * (3 - 2 * zf);
+    const x0 = (c000 * (1 - ux) + c100 * ux) * (1 - uy)
+             + (c010 * (1 - ux) + c110 * ux) * uy;
+    const x1 = (c001 * (1 - ux) + c101 * ux) * (1 - uy)
+             + (c011 * (1 - ux) + c111 * ux) * uy;
+    v += a * (x0 * (1 - uz) + x1 * uz);
+    x *= 2.03; y *= 2.03; z *= 2.03; a *= 0.5;
+  }
+  return v;
 }
 
-function buildParticles(rng: Rng): ParticleBuffers {
-  const clusterCount = CLUSTER_PARTICLES_PER_KNOT * KNOT_TABLE.length;       // 10 000
-  const pairs: Array<[number, number]> = [];
-  for (let i = 0; i < KNOT_TABLE.length; i++) {
-    for (let j = i + 1; j < KNOT_TABLE.length; j++) pairs.push([i, j]);
-  }
-  const filamentCount = FILAMENT_PARTICLES_PER_PAIR * pairs.length;          // 50 000
-  const total = clusterCount + filamentCount;
+// ─── Void anchors — bubbles between knots (rejection-sampled) ───────────
 
-  const positions = new Float32Array(total * 3);
-  const types = new Float32Array(total);
+const VOID_RAW: ReadonlyArray<readonly [number, number, number, number]> = [
+  [-0.40,  1.20,  0.20, 0.85],
+  [ 1.00,  0.90, -0.80, 0.75],
+  [-2.00, -0.20,  0.80, 0.70],
+  [ 0.20, -1.40,  0.00, 0.80],
+  [-0.80,  0.30, -1.50, 0.75],
+  [ 2.20, -0.50,  0.90, 0.70],
+  [ 0.80,  0.10,  1.30, 0.65],
+];
+const VOIDS = VOID_RAW.map(([x, y, z, r]) => [
+  x * WORLD_SCALE, y * WORLD_SCALE, z * WORLD_SCALE, r * WORLD_SCALE,
+] as const);
 
-  let cursor = 0;
-
-  // Cluster particles — isotropic Gaussian around each knot.
-  for (let ki = 0; ki < KNOT_TABLE.length; ki++) {
-    const k = KNOT_TABLE[ki];
-    const sigma = 0.18 + k.relativeScale * 0.08;
-    for (let i = 0; i < CLUSTER_PARTICLES_PER_KNOT; i++) {
-      const idx = cursor * 3;
-      positions[idx + 0] = k.position[0] + gauss(rng) * sigma;
-      positions[idx + 1] = k.position[1] + gauss(rng) * sigma;
-      positions[idx + 2] = k.position[2] + gauss(rng) * sigma;
-      types[cursor] = LANG_INDEX[k.lang] + 1;     // 1..5
-      cursor++;
+function voidSuppression(x: number, y: number, z: number): number {
+  let s = 1.0;
+  for (const [vx, vy, vz, vr] of VOIDS) {
+    const dx = x - vx; const dy = y - vy; const dz = z - vz;
+    const d2 = dx * dx + dy * dy + dz * dz;
+    const r2 = vr * vr;
+    if (d2 < r2) {
+      const u = 1 - d2 / r2;
+      s *= 1 - 0.95 * u * u;
     }
   }
+  return s;
+}
 
-  // Filament particles — quadratic Bezier with mid-jitter, thicker near
-  // midpoint, density-weighted toward endpoints.
-  for (const [a, b] of pairs) {
-    const A = KNOT_TABLE[a].position;
-    const B = KNOT_TABLE[b].position;
-    const mx = (A[0] + B[0]) / 2 + gauss(rng) * 0.45;
-    const my = (A[1] + B[1]) / 2 + gauss(rng) * 0.45;
-    const mz = (A[2] + B[2]) / 2 + gauss(rng) * 0.45;
-    for (let i = 0; i < FILAMENT_PARTICLES_PER_PAIR; i++) {
+// ─── Knot positions in world space (KNOT_TABLE × WORLD_SCALE) ───────────
+
+interface KnotW {
+  lang: MiraLang;
+  pos: readonly [number, number, number];
+  scale: number;
+}
+const KNOTS_W: ReadonlyArray<KnotW> = KNOT_TABLE.map((k) => ({
+  lang: k.lang,
+  pos: [k.position[0] * WORLD_SCALE, k.position[1] * WORLD_SCALE, k.position[2] * WORLD_SCALE] as const,
+  scale: k.relativeScale,
+}));
+
+// ─── Generators ─────────────────────────────────────────────────────────
+
+interface PSet { pos: Float32Array; type: Float32Array; jitter: Float32Array }
+
+function buildClusters(rng: Rng, count: number): PSet {
+  const pos = new Float32Array(count * 3);
+  const type = new Float32Array(count);
+  const jitter = new Float32Array(count);
+  const total = KNOTS_W.reduce((a, k) => a + k.scale, 0);
+  let cursor = 0;
+  for (let ki = 0; ki < KNOTS_W.length; ki++) {
+    const k = KNOTS_W[ki];
+    const slice = ki === KNOTS_W.length - 1
+      ? count - cursor : Math.floor((k.scale / total) * count);
+    const aAx = 0.18 + k.scale * 0.10;
+    const bAx = aAx * (0.55 + rng() * 0.30);
+    const cAx = aAx * (0.55 + rng() * 0.30);
+    const yaw = rng() * Math.PI * 2;
+    const cy = Math.cos(yaw); const sy = Math.sin(yaw);
+    for (let i = 0; i < slice; i++) {
+      // NFW-ish: bias toward center, longer tails.
+      const r01 = Math.pow(rng(), 0.45);
+      const lx = gauss(rng) * aAx * r01;
+      const ly = gauss(rng) * bAx * r01 * 0.80;
+      const lz = gauss(rng) * cAx * r01;
+      const wx = lx * cy - lz * sy;
+      const wz = lx * sy + lz * cy;
+      const subgroup = fbm3(lx * 12, ly * 12, lz * 12) * 0.018;
+      const idx = (cursor + i) * 3;
+      pos[idx + 0] = k.pos[0] + (wx + subgroup) * WORLD_SCALE;
+      pos[idx + 1] = k.pos[1] + (ly + subgroup) * WORLD_SCALE;
+      pos[idx + 2] = k.pos[2] + (wz + subgroup) * WORLD_SCALE;
+      type[cursor + i] = LANG_INDEX[k.lang] + 1;     // 1..5
+      // r01 also encodes "core-ness" — densest 15% gets HDR boost in shader.
+      jitter[cursor + i] = r01;
+    }
+    cursor += slice;
+  }
+  return { pos, type, jitter };
+}
+
+interface FSpec { a: number; b: number; ctrl: readonly [number, number, number] }
+function makeFilamentSpecs(rng: Rng): FSpec[] {
+  const pairs: Array<[number, number]> = [];
+  for (let i = 0; i < KNOTS_W.length; i++) {
+    for (let j = i + 1; j < KNOTS_W.length; j++) pairs.push([i, j]);
+  }
+  // Sparse real connectivity: pick 7 of 10 pairs.
+  for (let i = pairs.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+  }
+  return pairs.slice(0, 7).map(([a, b]) => {
+    const A = KNOTS_W[a].pos; const B = KNOTS_W[b].pos;
+    return {
+      a, b,
+      ctrl: [
+        (A[0] + B[0]) / 2 + gauss(rng) * 1.3 * WORLD_SCALE * 0.5,
+        (A[1] + B[1]) / 2 + gauss(rng) * 1.3 * WORLD_SCALE * 0.5,
+        (A[2] + B[2]) / 2 + gauss(rng) * 1.3 * WORLD_SCALE * 0.5,
+      ] as const,
+    };
+  });
+}
+
+function bezier(A: readonly number[], C: readonly number[], B: readonly number[], t: number): [number, number, number] {
+  const omt = 1 - t;
+  return [
+    omt * omt * A[0] + 2 * omt * t * C[0] + t * t * B[0],
+    omt * omt * A[1] + 2 * omt * t * C[1] + t * t * B[1],
+    omt * omt * A[2] + 2 * omt * t * C[2] + t * t * B[2],
+  ];
+}
+
+function buildFilaments(rng: Rng, count: number, specs: FSpec[]): PSet {
+  const pos = new Float32Array(count * 3);
+  const type = new Float32Array(count);
+  const jitter = new Float32Array(count);
+  const per = Math.floor(count / specs.length);
+  let cursor = 0;
+  for (let si = 0; si < specs.length; si++) {
+    const sp = specs[si];
+    const A = KNOTS_W[sp.a].pos; const B = KNOTS_W[sp.b].pos;
+    const slice = si === specs.length - 1 ? count - cursor : per;
+    let placed = 0; let attempts = 0;
+    while (placed < slice && attempts < slice * 4) {
+      attempts++;
       const u = rng();
-      // Density biased toward endpoints (matter accumulates at nodes).
       const t = u < 0.5
         ? 0.5 - Math.sqrt(Math.max(0, 0.25 - u * 0.5))
         : 0.5 + Math.sqrt(Math.max(0, u * 0.5 - 0.25));
-      const omt = 1 - t;
-      const bx = omt * omt * A[0] + 2 * omt * t * mx + t * t * B[0];
-      const by = omt * omt * A[1] + 2 * omt * t * my + t * t * B[1];
-      const bz = omt * omt * A[2] + 2 * omt * t * mz + t * t * B[2];
-      const thicknessGate = Math.sin(t * Math.PI);     // 0 at ends, 1 mid
-      const thick = 0.035 + thicknessGate * 0.07;
-      const idx = cursor * 3;
-      positions[idx + 0] = bx + gauss(rng) * thick;
-      positions[idx + 1] = by + gauss(rng) * thick;
-      positions[idx + 2] = bz + gauss(rng) * thick;
-      types[cursor] = 0;                                // filament
-      cursor++;
+      const bz = bezier(A, sp.ctrl, B, t);
+      const turb = 0.28 * Math.sin(t * Math.PI) * WORLD_SCALE;
+      const tx = (fbm3(bz[0] * 0.9 + 11, bz[1] * 0.9, bz[2] * 0.9) - 0.5) * turb;
+      const ty = (fbm3(bz[0] * 0.9, bz[1] * 0.9 + 13, bz[2] * 0.9) - 0.5) * turb;
+      const tz = (fbm3(bz[0] * 0.9, bz[1] * 0.9, bz[2] * 0.9 + 17) - 0.5) * turb;
+      const thickGate = Math.sin(t * Math.PI);
+      const thick = (0.04 + thickGate * 0.10) * WORLD_SCALE;
+      const px = bz[0] + tx + gauss(rng) * thick;
+      const py = bz[1] + ty + gauss(rng) * thick;
+      const pz = bz[2] + tz + gauss(rng) * thick;
+      if (rng() > voidSuppression(px, py, pz)) continue;
+      const idx = (cursor + placed) * 3;
+      pos[idx + 0] = px; pos[idx + 1] = py; pos[idx + 2] = pz;
+      type[cursor + placed] = 0;     // filament
+      jitter[cursor + placed] = rng();
+      placed++;
     }
+    cursor += placed;
   }
-
-  return { positions, types };
+  return {
+    pos: pos.slice(0, cursor * 3),
+    type: type.slice(0, cursor),
+    jitter: jitter.slice(0, cursor),
+  };
 }
 
-// ─── Shaders ─────────────────────────────────────────────────────────────
+function buildTributaries(rng: Rng, count: number, specs: FSpec[]): PSet {
+  const pos = new Float32Array(count * 3);
+  const type = new Float32Array(count);
+  const jitter = new Float32Array(count);
+  const tribs = specs.length * 3;          // 3 per primary
+  const per = Math.floor(count / tribs);
+  let cursor = 0;
+  for (let si = 0; si < specs.length; si++) {
+    const sp = specs[si];
+    const A = KNOTS_W[sp.a].pos; const B = KNOTS_W[sp.b].pos;
+    for (let n = 0; n < 3; n++) {
+      const tStart = 0.25 + rng() * 0.50;
+      const root = bezier(A, sp.ctrl, B, tStart);
+      const dir: [number, number, number] = [gauss(rng), gauss(rng), gauss(rng)];
+      const dlen = Math.hypot(dir[0], dir[1], dir[2]) + 1e-5;
+      dir[0] /= dlen; dir[1] /= dlen; dir[2] /= dlen;
+      const len = (0.35 + rng() * 0.35) * WORLD_SCALE;
+      const slice = (si === specs.length - 1 && n === 2) ? count - cursor : per;
+      let placed = 0; let attempts = 0;
+      while (placed < slice && attempts < slice * 3) {
+        attempts++;
+        const u = Math.pow(rng(), 0.7);
+        const px = root[0] + dir[0] * len * u + gauss(rng) * 0.025 * WORLD_SCALE;
+        const py = root[1] + dir[1] * len * u + gauss(rng) * 0.025 * WORLD_SCALE;
+        const pz = root[2] + dir[2] * len * u + gauss(rng) * 0.025 * WORLD_SCALE;
+        if (rng() > voidSuppression(px, py, pz)) continue;
+        const idx = (cursor + placed) * 3;
+        pos[idx + 0] = px; pos[idx + 1] = py; pos[idx + 2] = pz;
+        type[cursor + placed] = 0;
+        jitter[cursor + placed] = rng() * 0.4;       // dimmer than primary
+        placed++;
+      }
+      cursor += placed;
+    }
+  }
+  return {
+    pos: pos.slice(0, cursor * 3),
+    type: type.slice(0, cursor),
+    jitter: jitter.slice(0, cursor),
+  };
+}
+
+function buildWalls(rng: Rng, count: number, specs: FSpec[]): PSet {
+  const pos = new Float32Array(count * 3);
+  const type = new Float32Array(count);
+  const jitter = new Float32Array(count);
+  // Zel'dovich pancakes: pick adjacent filament pairs and place particles
+  // in the 2D sheet spanned by them. Sparse, dim, give atmospheric depth.
+  const pairs: Array<[number, number]> = [];
+  for (let i = 0; i < specs.length; i++) {
+    for (let j = i + 1; j < specs.length; j++) pairs.push([i, j]);
+  }
+  const per = Math.floor(count / Math.max(1, pairs.length));
+  let cursor = 0;
+  for (const [i, j] of pairs) {
+    const s1 = specs[i]; const s2 = specs[j];
+    const A1 = KNOTS_W[s1.a].pos; const B1 = KNOTS_W[s1.b].pos;
+    const A2 = KNOTS_W[s2.a].pos; const B2 = KNOTS_W[s2.b].pos;
+    let placed = 0; let attempts = 0;
+    while (placed < per && attempts < per * 5) {
+      attempts++;
+      const t1 = rng(); const t2 = rng();
+      const p1 = bezier(A1, s1.ctrl, B1, t1);
+      const p2 = bezier(A2, s2.ctrl, B2, t2);
+      const s = rng();
+      const px = p1[0] * (1 - s) + p2[0] * s + gauss(rng) * 0.10 * WORLD_SCALE;
+      const py = p1[1] * (1 - s) + p2[1] * s + gauss(rng) * 0.10 * WORLD_SCALE;
+      const pz = p1[2] * (1 - s) + p2[2] * s + gauss(rng) * 0.10 * WORLD_SCALE;
+      // Strong void suppression — walls thin out in voids.
+      if (rng() > voidSuppression(px, py, pz) * 0.45) continue;
+      const idx = (cursor + placed) * 3;
+      pos[idx + 0] = px; pos[idx + 1] = py; pos[idx + 2] = pz;
+      type[cursor + placed] = 6;                // wall marker
+      jitter[cursor + placed] = rng() * 0.6;
+      placed++;
+    }
+    cursor += placed;
+    if (cursor >= count) break;
+  }
+  return {
+    pos: pos.slice(0, cursor * 3),
+    type: type.slice(0, cursor),
+    jitter: jitter.slice(0, cursor),
+  };
+}
+
+function buildBackground(rng: Rng, count: number): PSet {
+  const pos = new Float32Array(count * 3);
+  const type = new Float32Array(count);
+  const jitter = new Float32Array(count);
+  const ext = 4.0 * WORLD_SCALE;
+  let placed = 0; let attempts = 0;
+  while (placed < count && attempts < count * 5) {
+    attempts++;
+    const px = (rng() - 0.5) * ext * 2;
+    const py = (rng() - 0.5) * ext * 1.4;
+    const pz = (rng() - 0.5) * ext * 2;
+    const fb = fbm3(px * 0.25, py * 0.25, pz * 0.25);
+    const accept = voidSuppression(px, py, pz) * (0.25 + fb * 0.40);
+    if (rng() > accept) continue;
+    const idx = placed * 3;
+    pos[idx + 0] = px; pos[idx + 1] = py; pos[idx + 2] = pz;
+    type[placed] = 7;                          // background dust
+    jitter[placed] = rng();
+    placed++;
+  }
+  return {
+    pos: pos.slice(0, placed * 3),
+    type: type.slice(0, placed),
+    jitter: jitter.slice(0, placed),
+  };
+}
+
+// ─── Shaders ────────────────────────────────────────────────────────────
+
+// All color + intensity computed in VERTEX shader (per-particle, ~Nk times
+// per frame). Fragment shader does the bare minimum: one radial alpha
+// fall-off and one multiplication. This collapses pixel cost — the heavy
+// work is now O(particles) not O(pixels). Bloom carries the actual glow.
 
 const vert = /* glsl */ `
   attribute float aType;
-  uniform float uPixelRatio;
+  attribute float aJitter;
 
-  varying float vType;
+  uniform float uPixelRatio;
+  uniform float uReveal;
+  uniform vec3  uClusterCore;
+  uniform vec3  uClusterMantle;
+  uniform vec3  uFilCool;
+  uniform vec3  uFilMid;
+  uniform vec3  uFilWarm;
+  uniform vec3  uWall;
+  uniform vec3  uBackground;
+
+  varying vec3  vColor;
+  varying float vIntensity;
 
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
-    vType = aType;
+    float depth = -mv.z;
 
-    // Cluster particles slightly larger so cores read denser.
-    float size = aType > 0.5 ? 2.4 : 1.6;
-    gl_PointSize = size * uPixelRatio * (60.0 / max(0.5, -mv.z));
-    gl_PointSize = clamp(gl_PointSize, 0.6, 6.0);
+    // ── Per-particle color + intensity (vertex stage = O(N), cheap) ──
+    float size;
+    vec3 col;
+    float intensity;
+
+    if (aType >= 0.5 && aType <= 5.5) {
+      // Cluster — jitter (0=core, 1=halo) encoded as NFW radius at gen time.
+      float coreness = 1.0 - aJitter;
+      col = mix(uClusterMantle, uClusterCore, smoothstep(0.78, 0.99, coreness));
+      // Densest 6% get controlled HDR boost — sharp white cores, no blowout.
+      float hdr = 1.0 + smoothstep(0.94, 1.0, coreness) * 0.9;
+      intensity = (0.30 + coreness * 0.55) * hdr;
+      // Smaller cluster particles — pinpricks, not blobs. Bloom does the glow.
+      size = 0.95 + coreness * 0.55;
+    } else if (aType > 5.5 && aType < 6.5) {
+      col = uWall;
+      intensity = 0.085 + aJitter * 0.060;
+      size = 0.95;
+    } else if (aType > 6.5) {
+      col = uBackground;
+      intensity = 0.045 + aJitter * 0.040;
+      size = 0.75 + aJitter * 0.20;
+    } else {
+      // Filament — 3-stop chromatic ramp: navy → cyan → magenta.
+      vec3 c1 = mix(uFilCool, uFilMid, smoothstep(0.12, 0.55, aJitter));
+      col = mix(c1, uFilWarm, smoothstep(0.55, 0.92, aJitter) * 0.7);
+      intensity = 0.14 + aJitter * 0.20;
+      size = 1.00;
+    }
+
+    vColor = col * intensity;
+    vIntensity = intensity;
+
+    // Tight depth attenuation + small clamp range = sharp pinpricks.
+    gl_PointSize = size * uPixelRatio * (24.0 / max(0.5, depth));
+    gl_PointSize = clamp(gl_PointSize * uReveal, 0.55, 2.2);
   }
 `;
 
 const frag = /* glsl */ `
   precision highp float;
 
-  uniform vec3 uClusterWarm;
-  uniform vec3 uFilamentCool;
+  uniform float uReveal;
 
-  varying float vType;
+  varying vec3  vColor;
+  varying float vIntensity;
 
   void main() {
+    // Sharper radial fall-off (pow 2.6) → tight pinprick particles, not
+    // soft blobs. Bloom on the HDR cores does the glow externally.
     vec2 c = gl_PointCoord - vec2(0.5);
-    float r = length(c);
-    if (r > 0.5) discard;
-    float fall = pow(1.0 - r * 2.0, 1.5);
-
-    vec3 col = vType > 0.5 ? uClusterWarm : uFilamentCool;
-    float intensity = fall * (vType > 0.5 ? 0.95 : 0.50);
-
-    gl_FragColor = vec4(col * intensity, intensity);
+    float d = length(c) * 2.0;
+    if (d > 1.0) discard;
+    float fall = pow(1.0 - d, 2.6);
+    float alpha = fall * (0.55 + vIntensity * 0.55) * uReveal;
+    gl_FragColor = vec4(vColor * (0.65 + fall * 1.4) * uReveal, alpha);
   }
 `;
 
-// ─── Component ───────────────────────────────────────────────────────────
+// ─── Component ──────────────────────────────────────────────────────────
 
 export interface MiraSuperclusterProps {
   reveal: number;
@@ -176,7 +474,14 @@ export interface MiraSuperclusterProps {
 
 export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): React.ReactElement | null {
   const pointsRef = useRef<THREE.Points>(null);
-  void useMiraState;     // keep import for Phase B/C consumers
+  void useMiraState;
+
+  const quality = useMemo<Quality>(() => {
+    if (typeof window === 'undefined') return 'high';
+    return detectQualityProfile({
+      width: window.innerWidth, search: window.location.search,
+    });
+  }, []);
 
   const pixelRatio = useMemo(() => {
     if (typeof window === 'undefined') return 1;
@@ -184,19 +489,47 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
   }, []);
 
   const { geometry, material } = useMemo(() => {
+    const budget = getBudget(quality);
     const rng = mulberry32(0xC05A1234);
-    const { positions, types } = buildParticles(rng);
+    const specs = makeFilamentSpecs(rng);
+
+    const cluster = buildClusters(rng, budget.cluster);
+    const filament = buildFilaments(rng, budget.filament, specs);
+    const tributary = buildTributaries(rng, budget.tributary, specs);
+    const wall = buildWalls(rng, budget.wall, specs);
+    const bg = buildBackground(rng, budget.background);
+
+    const sets = [cluster, filament, tributary, wall, bg];
+    const total = sets.reduce((a, s) => a + s.type.length, 0);
+    const pos = new Float32Array(total * 3);
+    const type = new Float32Array(total);
+    const jit = new Float32Array(total);
+    let off1 = 0; let off3 = 0;
+    for (const s of sets) {
+      pos.set(s.pos, off3);
+      type.set(s.type, off1);
+      jit.set(s.jitter, off1);
+      off3 += s.pos.length;
+      off1 += s.type.length;
+    }
 
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    g.setAttribute('aType',    new THREE.BufferAttribute(types, 1));
-    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 6);
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aType',    new THREE.BufferAttribute(type, 1));
+    g.setAttribute('aJitter',  new THREE.BufferAttribute(jit, 1));
+    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 6 * WORLD_SCALE);
 
     const m = new THREE.ShaderMaterial({
       uniforms: {
-        uPixelRatio:   { value: pixelRatio },
-        uClusterWarm:  { value: new THREE.Color('#FFB37A') },
-        uFilamentCool: { value: new THREE.Color('#6FA4FF') },
+        uPixelRatio:    { value: pixelRatio },
+        uReveal:        { value: reveal },
+        uClusterCore:   { value: new THREE.Color('#FFF7E0') },   // near-white
+        uClusterMantle: { value: new THREE.Color('#FFA86A') },   // warm amber
+        uFilCool:       { value: new THREE.Color('#1A2F6E') },   // deep navy
+        uFilMid:        { value: new THREE.Color('#5C9DFF') },   // cyan
+        uFilWarm:       { value: new THREE.Color('#A06CFF') },   // magenta
+        uWall:          { value: new THREE.Color('#3F5BAE') },
+        uBackground:    { value: new THREE.Color('#4F6BB8') },
       },
       vertexShader: vert,
       fragmentShader: frag,
@@ -204,21 +537,19 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
+
     return { geometry: g, material: m };
-  }, [pixelRatio]);
+  }, [quality, pixelRatio, reveal]);
 
   useEffect(() => () => {
     geometry.dispose();
     material.dispose();
   }, [geometry, material]);
 
-  // No-op frame loop so Phase B has a place to hang per-frame updates.
-  useFrame(() => { /* no-op for Phase A */ });
+  useFrame(() => {
+    material.uniforms.uReveal.value = reveal;
+  });
 
-  // Phase A: render unconditionally (no reveal envelope yet).
-  void reveal;
-
-  return (
-    <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} />
-  );
+  if (reveal < 0.18) return null;
+  return <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} />;
 }
