@@ -48,5 +48,9 @@ export default function MiraScene() {
     }
   }, [reveal]);
 
-  return <MiraSupercluster reveal={reveal} />;
+  return (
+    <>
+      <MiraSupercluster reveal={reveal} />
+    </>
+  );
 }

@@ -1,40 +1,34 @@
 'use client';
 
+/* eslint-disable react-hooks/immutability */
+
 /**
- * PostFX — selective bloom + scroll-driven chromatic aberration.
+ * PostFX — phase-aware bloom + scroll-driven chromatic aberration.
  *
- * Bloom: only fragments brighter than `luminanceThreshold` halo. Keeps the
- * void black; lights up emissives (warp particles, pulsar, jet, etc).
+ * Both effects are constructed imperatively and mutated each frame
+ * (mirror of the caEffect pattern). This avoids the React 19 circular-JSON
+ * bug from the postprocessing wrappers and enables per-phase tuning without
+ * conditional JSX.
  *
- * Chromatic aberration: matched to o2bomb/space-warp's CA envelope. Ramps to
- * peak at C05_WARP onset (engulfment) and decays as 0.5^t through C05+C06,
- * exactly like upstream's `Math.pow(0.5, elapsedTime) * CHROMATIC_ABBERATION_OFFSET`.
- * Off in every other phase.
+ * Bloom per-phase tuning:
+ *   W01_MIRA — threshold 0.15, smoothing 0.40, intensity 2.00 (spec: everything glows, cores erupt)
+ *   all other — threshold 0.60, smoothing 0.9,  intensity 0.40 (general bloom)
  *
- * Note: ChromaticAberrationEffect is constructed imperatively and mounted via
- * <primitive>, NOT via the wrapped <ChromaticAberration> component. Reason:
- * the wrapper does `useMemo(..., [JSON.stringify(a)])` over its rest-props.
- * In React 19 `ref` is a regular prop. After first render `ref.current` points
- * to the Effect instance whose `parent` (EffectPass) circular-refs back to it
- * via `children[0]`, so JSON.stringify throws "Converting circular structure
- * to JSON". Using <primitive> sidesteps the wrapper entirely.
+ * Chromatic aberration: ramps on C05_WARP + C06_ANOMALY only.
  */
 
 import { useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import { BlendFunction, ChromaticAberrationEffect } from 'postprocessing';
+import { useFrame, useThree } from '@react-three/fiber';
+import { EffectComposer } from '@react-three/postprocessing';
+import { BlendFunction, ChromaticAberrationEffect, BloomEffect } from 'postprocessing';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
 
-// Strong CA so each white motion streak splits into visible R / G / B
-// channels — the "RGB-shift" look. Bloom at moderate intensity (0.4) keeps
-// the haloing in check at this offset. If the user wants even more dramatic
-// channel separation, push to 0.025; if it disco-balls, drop to 0.012.
 const CA_PEAK = 0.018;
 
 export default function PostFX() {
-  // Construct the effect once, mutate its uniforms each frame.
+  const { scene } = useThree();
+
   const caEffect = useMemo(
     () => new ChromaticAberrationEffect({
       blendFunction: BlendFunction.NORMAL,
@@ -45,18 +39,59 @@ export default function PostFX() {
     [],
   );
 
+  const bloomEffect = useMemo(
+    () => new BloomEffect({
+      blendFunction: BlendFunction.ADD,
+      intensity: 0.4,
+      luminanceThreshold: 0.6,
+      luminanceSmoothing: 0.9,
+      mipmapBlur: true,
+    }),
+    [],
+  );
+
   useFrame(() => {
     const phase  = useScene.getState().phase;
     const cosmic = useScene.getState().cosmicProgress;
+    const local  = useScene.getState().localProgress;
+    const isMira = phase === 'W01_MIRA';
 
+    // Phase-aware bloom uniform mutation.
+    if (isMira) {
+      bloomEffect.luminanceMaterial.threshold  = 0.90;
+      bloomEffect.luminanceMaterial.smoothing  = 0.20;
+      bloomEffect.intensity                    = 2.00;
+    } else {
+      bloomEffect.luminanceMaterial.threshold  = 0.60;
+      bloomEffect.luminanceMaterial.smoothing  = 0.9;
+      bloomEffect.intensity                    = 0.40;
+    }
+
+    // Phase-aware scene background.
+    let reveal = 0;
+    if (phase === 'C07_TRANSITION') {
+      reveal = local < 0.45 ? 0 : ((local - 0.45) / 0.55) * 0.40;
+    } else if (phase === 'C08_EMERGE') {
+      reveal = 0.40 + Math.min(1, local) * 0.40;
+    } else if (phase === 'C09_PROJECT') {
+      reveal = 0.80 + Math.min(1, local) * 0.15;
+    } else if (phase === 'W01_MIRA') {
+      reveal = 1.0;
+    }
+
+    const isMiraBg = phase === 'W01_MIRA' || phase === 'C09_PROJECT' || (phase === 'C08_EMERGE' && reveal > 0.4);
+    if (isMiraBg) {
+      scene.background = new THREE.Color(0.008, 0.008, 0.015);
+    } else {
+      scene.background = new THREE.Color(0, 0, 0);
+    }
+
+    // Chromatic aberration — active only during warp phases.
     if (phase !== 'C05_WARP' && phase !== 'C06_ANOMALY') {
       caEffect.offset.x = 0;
       caEffect.offset.y = 0;
       return;
     }
-    // CA tied to the same acceleration curve as the warp velocity in
-    // WarpScene.tsx — physically coupled, so chromatic shift grows AS the
-    // user accelerates. Subtle at the slow start, peaks with peak warp.
     const cp = Math.max(0, Math.min(1, (cosmic - 0.50) / 0.25));
     const BASE_V = 0.08;
     const accelInput = Math.min(1, cp / 0.85);
@@ -69,13 +104,7 @@ export default function PostFX() {
 
   return (
     <EffectComposer enableNormalPass={false}>
-      <Bloom
-        intensity={0.4}
-        luminanceThreshold={0.6}
-        luminanceSmoothing={0.9}
-        mipmapBlur
-        blendFunction={BlendFunction.ADD}
-      />
+      <primitive object={bloomEffect} dispose={null} />
       <primitive object={caEffect} dispose={null} />
     </EffectComposer>
   );

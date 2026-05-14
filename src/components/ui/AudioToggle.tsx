@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useScene } from '@/lib/scene-state';
 // import { audioEngine } from '@/lib/audio';
 
 /**
  * AudioToggle — fixed top-right, Space Mono 9px.
  * First click creates the AudioContext (browser gesture requirement).
+ * Hidden on W01_MIRA per founder direction 2026-05-13.
  */
 export default function AudioToggle() {
   const [on, setOn] = useState(false);
+  const phase = useScene((s) => s.phase);
 
   const toggle = useCallback(() => {
     // if (!on) {
@@ -18,6 +21,8 @@ export default function AudioToggle() {
     // }
     setOn((prev) => !prev);
   }, [on]);
+
+  if (phase === 'W01_MIRA') return null;
 
   return (
     <button

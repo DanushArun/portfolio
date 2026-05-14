@@ -24,9 +24,12 @@ function c04Opacity(journey: number): number {
   return Math.max(0, Math.min(1, dist));
 }
 
-export default function HUD(): React.JSX.Element {
+export default function HUD(): React.JSX.Element | null {
   const journey = useScene((s) => s.journeyProgress);
+  const phase = useScene((s) => s.phase);
   const opacity = c04Opacity(journey);
+  // W01_MIRA: founder direction 2026-05-13 — only the panel title block shows.
+  if (phase === 'W01_MIRA') return null;
   return (
     <div className={styles.root} aria-label="Scene controls" style={{ opacity }}>
       <div className={styles.cluster + ' ' + styles.bottomRight}>

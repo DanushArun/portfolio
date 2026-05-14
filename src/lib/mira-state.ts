@@ -13,16 +13,16 @@ export interface KnotSpec {
   readonly hue: string;
 }
 
-// Hexagonal layout from founder's reference storyboard — EN top-left (largest),
-// HI top-right, TA middle-left, KN bottom-right, TE bottom-centre. Each hue
-// distinct per-language so language identity reads at a glance against the
-// cool blue/purple web.
+// Positions adapted from the canonical spec frame (±45) by dividing by 22.5
+// into the existing ±2 KNOT_TABLE coordinate system. Hues are exact spec hexes
+// so EN/HI/TA/KN/TE read as warm-orange / gold / violet / magenta / cyan
+// against the cool filament web.
 export const KNOT_TABLE: readonly KnotSpec[] = [
-  { lang: 'EN', position: [-1.55,  0.95,  0.00], relativeScale: 1.40, hue: '#FF6648' },
-  { lang: 'HI', position: [ 1.80,  1.05,  0.25], relativeScale: 1.15, hue: '#FF5B6F' },
-  { lang: 'TA', position: [-1.95, -0.25,  0.40], relativeScale: 1.20, hue: '#FF7A8C' },
-  { lang: 'KN', position: [ 1.55, -1.20, -0.20], relativeScale: 1.10, hue: '#B57BFF' },
-  { lang: 'TE', position: [ 0.00, -1.55,  0.30], relativeScale: 1.00, hue: '#5FD0E0' },
+  { lang: 'EN', position: [-2.00,  1.42,  0.53], relativeScale: 1.40, hue: '#FF9933' },
+  { lang: 'HI', position: [ 1.69,  1.11, -0.67], relativeScale: 1.15, hue: '#FFB84D' },
+  { lang: 'TA', position: [-1.69, -0.53,  0.36], relativeScale: 1.20, hue: '#B266FF' },
+  { lang: 'KN', position: [ 1.87, -0.98, -0.22], relativeScale: 1.10, hue: '#E680FF' },
+  { lang: 'TE', position: [ 0.22, -1.69,  0.80], relativeScale: 1.00, hue: '#3399FF' },
 ] as const;
 
 const CYCLE_ORDER: readonly MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE'];

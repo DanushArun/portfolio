@@ -26,20 +26,29 @@ export default function CameraRig() {
         pcam.fov = 100;
         break;
       }
-      // C07 → C09 → W01_MIRA: framing the MIRA celestial body. Slow auto-orbit
-      // around Y so 3D depth registers without interaction. Camera sits at
-      // radius 13 with a small Y lift; FOV 45 frames the body + the inner
-      // arcs of the converging streams cleanly without showing the far
-      // origins (radius 16) clipping the frame edges.
+      // C07 → C09: framing the MIRA celestial body for the build-up arc.
+      // Radius 13 keeps the body + inner stream arcs tight in frame.
       case 'C07_TRANSITION':
       case 'C08_EMERGE':
-      case 'C09_PROJECT':
-      case 'W01_MIRA': {
-        const a = t * 0.06;          // ~3.4°/s — slow but visible
+      case 'C09_PROJECT': {
+        const a = t * 0.06;
         const r = 13;
         pcam.position.set(Math.cos(a) * r, 1.4, Math.sin(a) * r);
         pcam.lookAt(0, 0, 0);
         pcam.fov = 45;
+        break;
+      }
+      // W01_MIRA: pull camera back so the full Virgo Linguistic Supercluster
+      // (±8.84 world units) fits in frame. Radius 18, FOV 52 → visible plane
+      // ≈17.6 units at origin, snug fit with light bleed at the edges (the
+      // reference frames the cluster wall-to-wall). Slower orbit so the
+      // wider view doesn't whip past the structure.
+      case 'W01_MIRA': {
+        const a = t * 0.04;
+        const r = 18;
+        pcam.position.set(Math.cos(a) * r, 1.8, Math.sin(a) * r);
+        pcam.lookAt(0, 0, 0);
+        pcam.fov = 52;
         break;
       }
       default: {
