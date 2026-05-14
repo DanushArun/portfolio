@@ -3,12 +3,12 @@ import { test, expect } from '@playwright/test';
 
 const SETTLE_MS = 1500;
 
-test('default cursor visible at scroll=0', async ({ page }) => {
+test('system cursor hidden at scroll=0', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('canvas', { timeout: 30_000 });
   await page.waitForTimeout(SETTLE_MS);
   const bodyCursor = await page.evaluate(() => getComputedStyle(document.body).cursor);
-  expect(bodyCursor).not.toBe('none');
+  expect(bodyCursor).toBe('none');
   expect(await page.locator('[data-custom-cursor]').count()).toBe(1);
 });
 

@@ -64,11 +64,10 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   Object.assign(renderer.domElement.style, {
     position: 'absolute', top: '0', left: '0', width: '100%', height: '100%',
-    cursor: 'grab',  // overrides body { cursor: none } so the user sees a grab handle
   });
-  renderer.domElement.addEventListener('pointerdown', () => { renderer.domElement.style.cursor = 'grabbing'; });
-  renderer.domElement.addEventListener('pointerup', () => { renderer.domElement.style.cursor = 'grab'; });
-  renderer.domElement.addEventListener('pointercancel', () => { renderer.domElement.style.cursor = 'grab'; });
+  renderer.domElement.addEventListener('pointerdown', () => { document.body.dataset.cursor = 'dragging'; });
+  renderer.domElement.addEventListener('pointerup', () => { delete document.body.dataset.cursor; });
+  renderer.domElement.addEventListener('pointercancel', () => { delete document.body.dataset.cursor; });
   target.appendChild(renderer.domElement);
 
   // ── Scenes ──────────────────────────────────────────────────────────────────

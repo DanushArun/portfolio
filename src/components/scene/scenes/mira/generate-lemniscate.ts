@@ -1,4 +1,4 @@
-import { makePSet, type PSet, mulberry32, gauss } from './buffers';
+import { makePSet, type PSet, mulberry32, gauss, curlNoise3D_JS } from './buffers';
 import { KNOTS_W, PARTICLE_BUDGET, type Quality } from './knot-config';
 import { KNOT_TABLE } from '@/lib/mira-state';
 
@@ -21,7 +21,7 @@ export function generateLemniscate(quality: Quality): PSet {
   const rgb = hiSpec ? hexToRgb(hiSpec.hue) : [1, 0.72, 0.3];
   
   const a = 1.11; // 25 / 22.5
-  const thickness = 0.04;
+  const thickness = 0.01; // thinner base strands
   
   // Rotation 35 deg around X, 25 deg around Z
   const rotX = 35 * Math.PI / 180;
@@ -30,7 +30,16 @@ export function generateLemniscate(quality: Quality): PSet {
   const cx = Math.cos(rotX); const sx = Math.sin(rotX);
   const cz = Math.cos(rotZ); const sz = Math.sin(rotZ);
   
+  const numStrands = 15;
+  const strands = Array.from({length: numStrands}, () => {
+    return {
+      ox: (rng() - 0.5) * 0.15,
+      oy: (rng() - 0.5) * 0.15,
+    };
+  });
+  
   for (let i = 0; i < count; i++) {
+    const strand = strands[Math.floor(rng() * numStrands)];
     const t = rng() * Math.PI * 2;
     const sinT = Math.sin(t);
     const cosT = Math.cos(t);
@@ -63,11 +72,24 @@ export function generateLemniscate(quality: Quality): PSet {
     const crossLen = Math.sqrt(crossX*crossX + crossY*crossY + crossZ*crossZ) || 1;
     crossX /= crossLen; crossY /= crossLen; crossZ /= crossLen;
     
-    const offset = Math.abs(gauss(rng)) * thickness;
+    // Create a perpendicular basis to apply the strand offset
+    let b2X = Ty * crossZ - Tz * crossY;
+    let b2Y = Tz * crossX - Tx * crossZ;
+    let b2Z = Tx * crossY - Ty * crossX;
+    const b2Len = Math.sqrt(b2X*b2X + b2Y*b2Y + b2Z*b2Z) || 1;
+    b2X /= b2Len; b2Y /= b2Len; b2Z /= b2Len;
     
-    const pxFinal = bx + crossX * offset;
-    const pyFinal = by + crossY * offset;
-    const pzFinal = bz + crossZ * offset;
+    // Base position on the strand
+    const sx_pos = bx + crossX * strand.ox + b2X * strand.oy;
+    const sy_pos = by + crossY * strand.ox + b2Y * strand.oy;
+    const sz_pos = bz + crossZ * strand.ox + b2Z * strand.oy;
+    
+    const offset = Math.abs(gauss(rng)) * thickness;
+    const angle = rng() * Math.PI * 2;
+    
+    const pxFinal = sx_pos + Math.cos(angle) * offset;
+    const pyFinal = sy_pos + Math.sin(angle) * offset;
+    const pzFinal = sz_pos + (rng() - 0.5) * offset;
     
     // Apply rotX
     const y1 = pyFinal * cx - pzFinal * sx;
@@ -79,10 +101,19 @@ export function generateLemniscate(quality: Quality): PSet {
     const y2 = x1 * sz + y1 * cz;
     const z2 = z1;
     
+    let px = hiKnot.pos[0] + x2;
+    let py = hiKnot.pos[1] + y2;
+    let pz = hiKnot.pos[2] + z2;
+    
+    const curl = curlNoise3D_JS(px * 0.4, py * 0.4, pz * 0.4);
+    px += curl[0] * 0.2;
+    py += curl[1] * 0.2;
+    pz += curl[2] * 0.2;
+    
     const idx = i * 3;
-    out.pos[idx] = hiKnot.pos[0] + x2;
-    out.pos[idx+1] = hiKnot.pos[1] + y2;
-    out.pos[idx+2] = hiKnot.pos[2] + z2;
+    out.pos[idx] = px;
+    out.pos[idx+1] = py;
+    out.pos[idx+2] = pz;
     
     out.color[idx] = rgb[0];
     out.color[idx+1] = rgb[1];

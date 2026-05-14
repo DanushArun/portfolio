@@ -37,8 +37,8 @@ export function generateTendrils(quality: Quality): PSet {
   }
   
   let placed = 0;
-  // Deep space blue/purple void color for the dark tendrils
-  const voidColor = [0.05, 0.15, 0.5]; 
+  // Vibrant deep electric blue for the vast void filaments
+  const voidColor = [0.05, 0.25, 0.95]; 
   
   edges.forEach((edge) => {
     const edgeCount = Math.floor((edge.len / totalLen) * count);
@@ -66,10 +66,10 @@ export function generateTendrils(quality: Quality): PSet {
     const P0 = A;
     const P3 = B;
     
-    // Create distinct strands per edge to bundle particles into fibers
-    const numStrands = 35;
+    // Massive number of strands to create complex branching
+    const numStrands = 180;
     const strands = Array.from({length: numStrands}, () => {
-      const spread = 2.0; 
+      const spread = 5.5; // Huge spread to fill the volume
       const off1X = (rng() - 0.5) * spread;
       const off1Y = (rng() - 0.5) * spread;
       const off2X = (rng() - 0.5) * spread;
@@ -102,8 +102,8 @@ export function generateTendrils(quality: Quality): PSet {
       const by = mt3*P0[1] + 3*mt2*t*P1[1] + 3*mt*t2*P2[1] + t3*P3[1];
       const bz = mt3*P0[2] + 3*mt2*t*P1[2] + 3*mt*t2*P2[2] + t3*P3[2];
       
-      // Tight scatter around the strand core
-      const radius = 0.04;
+      // Extremely tight scatter to form sharp threads
+      const radius = 0.015;
       const offset = Math.abs(gauss(rng)) * radius;
       const angle = rng() * Math.PI * 2;
       
@@ -111,12 +111,24 @@ export function generateTendrils(quality: Quality): PSet {
       let py = by + Math.sin(angle) * offset;
       let pz = bz + (rng() - 0.5) * offset;
       
-      // Powerful, low-frequency curl noise to twist strands organically
-      const curl = curlNoise3D_JS(px * 0.3, py * 0.3, pz * 0.3);
-      const curlAmp = 0.45;
-      px += curl[0] * curlAmp;
-      py += curl[1] * curlAmp;
-      pz += curl[2] * curlAmp;
+      // Multi-octave advection for sweeping organic webs
+      // Octave 1: Large sweeping structure
+      let curl = curlNoise3D_JS(px * 0.15, py * 0.15, pz * 0.15);
+      px += curl[0] * 1.8;
+      py += curl[1] * 1.8;
+      pz += curl[2] * 1.8;
+      
+      // Octave 2: Mid-level branching and tearing
+      curl = curlNoise3D_JS(px * 0.45, py * 0.45, pz * 0.45);
+      px += curl[0] * 0.6;
+      py += curl[1] * 0.6;
+      pz += curl[2] * 0.6;
+
+      // Octave 3: High-frequency crinkles
+      curl = curlNoise3D_JS(px * 1.2, py * 1.2, pz * 1.2);
+      px += curl[0] * 0.15;
+      py += curl[1] * 0.15;
+      pz += curl[2] * 0.15;
       
       const idx = placed * 3;
       out.pos[idx] = px;
@@ -124,7 +136,7 @@ export function generateTendrils(quality: Quality): PSet {
       out.pos[idx+2] = pz;
       
       const distFromEnd = Math.abs(t - 0.5) * 2.0; // 0 at mid, 1 at ends
-      const density = 1.0 - distFromEnd * 0.6; 
+      const density = 1.0 - distFromEnd * 0.8; 
       
       const endColor = [
         edge.colorA[0] * (1 - t) + edge.colorB[0] * t,
@@ -132,7 +144,7 @@ export function generateTendrils(quality: Quality): PSet {
         edge.colorA[2] * (1 - t) + edge.colorB[2] * t
       ];
       
-      const mixFactor = Math.pow(distFromEnd, 1.5); 
+      const mixFactor = Math.pow(distFromEnd, 2.5); // Push more towards void color in the middle
       
       out.color[idx] = voidColor[0] * (1 - mixFactor) + endColor[0] * mixFactor;
       out.color[idx+1] = voidColor[1] * (1 - mixFactor) + endColor[1] * mixFactor;
@@ -140,7 +152,7 @@ export function generateTendrils(quality: Quality): PSet {
       
       out.isCore[placed] = 0.0;
       out.isLoop[placed] = 0.0;
-      out.densityLevel[placed] = density;
+      out.densityLevel[placed] = Math.max(0, density);
       
       placed++;
     }
