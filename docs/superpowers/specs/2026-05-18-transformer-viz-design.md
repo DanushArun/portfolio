@@ -29,6 +29,26 @@ A scroll-driven, split-screen visualization of the complete transformer forward 
 - Lenis (existing)
 - Tailwind CSS v4 (existing)
 
+### Type Definitions
+
+```typescript
+type Matrix = Float32Array;  // Row-major, shape tracked separately
+type Vector = Float32Array;
+
+interface Tensor {
+  data: Float32Array;
+  shape: [number, number];  // [rows, cols]
+}
+
+interface TransformerStage {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+  formula: string;
+}
+```
+
 ### File Structure
 
 ```
@@ -91,7 +111,7 @@ src/
 - Q = XW^Q, K = XW^K, V = XW^V
 - W^Q, W^K, W^V ∈ ℝ^(d_model × d_k)
 - Attention(Q,K,V) = softmax(QK^T / √d_k)V
-- 8 heads, d_k = 64 per head
+- 8 heads, d_k = d_model / n_heads = 512 / 8 = 64 per head
 - Show actual 4×4 attention weight matrix per head
 
 ### Stage 4: Attention Output & Residual
@@ -118,7 +138,7 @@ src/
 **3D Scene**: Each token passes through independent MLP. Two linear layers with GELU activation between.
 
 **Math Panel**:
-- FFN(x) = max(0, xW_1 + b_1)W_2 + b_2
+- FFN(x) = GELU(xW_1 + b_1)W_2 + b_2
 - W_1 ∈ ℝ^(d_model × d_ff), W_2 ∈ ℝ^(d_ff × d_model)
 - d_ff = 2048
 - Residual: X'' = X_ln + FFN(X_ln)
@@ -172,7 +192,7 @@ Pre-computed values stored in `lib/transformer/constants.ts`:
 - FFN weight matrices
 - All intermediate computation results
 
-A generation script `scripts/generate-transformer-data.ts` produces these constants from a reference PyTorch implementation for verification.
+A generation script `scripts/generate-transformer-data.mjs` (Node.js, no PyTorch dependency) produces these constants using a minimal reference implementation. Output is pasted into `constants.ts`. Run once to regenerate if token input changes.
 
 ### Font Specification
 
@@ -190,6 +210,13 @@ All labels use `var(--font-composer)` — the existing JetBrains Mono variant al
 - Matrix values animate from 0 to final value
 - Token nodes pulse when active
 - Residual connections shown as dashed parallel paths
+
+### Performance Budget
+
+- Target: 60fps on M1 MacBook Air
+- Cap visible matrix cells at 16×16 for display (full 512-dim vectors truncated)
+- At `md: 768px`: Reduce 3D particle count by 70%, disable post-processing
+- At `sm: 640px`: Hide 3D scene entirely, Math panel only
 
 ## Integration with Existing Codebase
 
