@@ -81,7 +81,7 @@ export default function PostFX() {
 
     const isMiraBg = phase === 'W01_MIRA' || phase === 'C09_PROJECT' || (phase === 'C08_EMERGE' && reveal > 0.4);
     if (isMiraBg) {
-      scene.background = new THREE.Color(0.008, 0.008, 0.015);
+      scene.background = new THREE.Color(0, 0, 0); // Pure pitch black for deep space
     } else {
       scene.background = new THREE.Color(0, 0, 0);
     }
