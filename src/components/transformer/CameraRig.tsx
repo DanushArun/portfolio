@@ -27,9 +27,11 @@ export default function CameraRig() {
     const targetY = stageCam.pos[1] + (nextCam.pos[1] - stageCam.pos[1]) * t;
     const targetZ = stageCam.pos[2] + (nextCam.pos[2] - stageCam.pos[2]) * t;
 
-    camera.position.x += (targetX - camera.position.x) * 0.05;
-    camera.position.y += (targetY - camera.position.y) * 0.05;
-    camera.position.z += (targetZ - camera.position.z) * 0.05;
+    camera.position.set(
+      camera.position.x + (targetX - camera.position.x) * 0.05,
+      camera.position.y + (targetY - camera.position.y) * 0.05,
+      camera.position.z + (targetZ - camera.position.z) * 0.05,
+    );
     camera.lookAt(0, 0, 0);
   });
 

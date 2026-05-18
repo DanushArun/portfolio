@@ -1,4 +1,4 @@
-import { makePSet, type PSet, mulberry32, fastTurbulence, gauss } from './buffers';
+import { makePSet, type PSet, mulberry32, gauss } from './buffers';
 import { KNOTS_W, PARTICLE_BUDGET, type Quality } from './knot-config';
 import { KNOT_TABLE } from '@/lib/mira-state';
 
@@ -17,51 +17,53 @@ export function generateHubs(quality: Quality): PSet {
     const out = makePSet(count);
     const rng = mulberry32(0x1000 + i * 42);
     
-    const sigInner = 0.08; 
-    const sigOuter = 1.2; 
-    
     const knotSpec = KNOT_TABLE.find(k => k.lang === knot.lang);
     const rgb = knotSpec ? hexToRgb(knotSpec.hue) : [1, 1, 1];
 
-    const numStrands = Math.max(10, Math.floor(count / 150));
-    const strands = [];
-    for(let s = 0; s < numStrands; s++) {
-        strands.push({
-            isInner: rng() < 0.20,
-            baseR: Math.abs(gauss(rng)),
-            thetaBase: Math.acos(2 * rng() - 1),
-            phiBase: 2 * Math.PI * rng(),
-            tLength: rng() * Math.PI * 1.5,
-            noiseOffset: rng() * 100.0
+    // Generate crisp "rays" emanating from the core
+    const numRays = Math.max(50, Math.floor(count / 200));
+    const rays = [];
+    for(let s = 0; s < numRays; s++) {
+        const theta = Math.acos(2 * rng() - 1);
+        const phi = 2 * Math.PI * rng();
+        rays.push({
+            dirX: Math.sin(theta) * Math.cos(phi),
+            dirY: Math.sin(theta) * Math.sin(phi),
+            dirZ: Math.cos(theta),
+            length: 0.3 + Math.abs(gauss(rng)) * 0.8,
+            thickness: Math.abs(gauss(rng)) * 0.02
         });
     }
     
     for (let j = 0; j < count; j++) {
-      const strand = strands[j % numStrands];
-      const isInner = strand.isInner;
-      const t = rng(); 
+      // 80% of particles form the ultra-dense center
+      const isCore = rng() < 0.80;
       
-      const currentPhi = strand.phiBase + t * strand.tLength;
-      const currentTheta = strand.thetaBase + Math.sin(t * Math.PI) * 0.5;
+      let dx, dy, dz, r;
       
-      const r = strand.baseR * (isInner ? sigInner : sigOuter) * (0.8 + 0.4 * Math.sin(t * Math.PI));
-      
-      let dx = r * Math.sin(currentTheta) * Math.cos(currentPhi);
-      let dy = r * Math.sin(currentTheta) * Math.sin(currentPhi);
-      let dz = r * Math.cos(currentTheta);
-      
-      if (isInner) {
-         const coreCurl = fastTurbulence(knot.pos[0]+dx, knot.pos[1]+dy, knot.pos[2]+dz, strand.noiseOffset, 6.0);
-         dx += coreCurl[0] * 0.08;
-         dy += coreCurl[1] * 0.08;
-         dz += coreCurl[2] * 0.08;
+      if (isCore) {
+        // Ultra-dense core sphere
+        r = Math.abs(gauss(rng)) * 0.08;
+        const theta = Math.acos(2 * rng() - 1);
+        const phi = 2 * Math.PI * rng();
+        dx = r * Math.sin(theta) * Math.cos(phi);
+        dy = r * Math.sin(theta) * Math.sin(phi);
+        dz = r * Math.cos(theta);
       } else {
-        const curl = fastTurbulence(knot.pos[0]+dx, knot.pos[1]+dy, knot.pos[2]+dz, strand.noiseOffset, 1.8);
-        const curlMicro = fastTurbulence(knot.pos[0]+dx, knot.pos[1]+dy, knot.pos[2]+dz, strand.noiseOffset * 2.0, 4.0);
+        // Rays shooting outward
+        const ray = rays[j % numRays];
+        const t = rng(); // position along ray
+        // Exponential distribution so more particles are near the center
+        const tExp = t * t * t;
+        r = tExp * ray.length;
         
-        dx += curl[0] * 0.8 + curlMicro[0] * 0.15;
-        dy += curl[1] * 0.8 + curlMicro[1] * 0.15;
-        dz += curl[2] * 0.8 + curlMicro[2] * 0.15;
+        // Micro-scatter for ray thickness
+        const angle1 = rng() * Math.PI * 2;
+        const angle2 = Math.acos(2 * rng() - 1);
+        
+        dx = ray.dirX * r + Math.sin(angle2) * Math.cos(angle1) * ray.thickness;
+        dy = ray.dirY * r + Math.sin(angle2) * Math.sin(angle1) * ray.thickness;
+        dz = ray.dirZ * r + Math.cos(angle2) * ray.thickness;
       }
       
       const idx = j * 3;
@@ -73,10 +75,10 @@ export function generateHubs(quality: Quality): PSet {
       out.color[idx + 1] = rgb[1];
       out.color[idx + 2] = rgb[2];
       
-      out.isCore[j] = isInner ? 1.0 : 0.0;
+      out.isCore[j] = isCore ? 1.0 : 0.0;
       out.isLoop[j] = 0.0;
       
-      out.densityLevel[j] = isInner ? 1.2 : Math.max(0, 1.0 - (r / sigOuter));
+      out.densityLevel[j] = isCore ? 1.5 : Math.max(0, 1.0 - (r / 1.5));
     }
     
     sets.push(out);

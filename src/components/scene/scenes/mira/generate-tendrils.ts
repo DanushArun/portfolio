@@ -1,4 +1,4 @@
-import { makePSet, type PSet, slicePSet, mulberry32, fastTurbulence, gauss } from './buffers';
+import { makePSet, type PSet, slicePSet, mulberry32, gauss } from './buffers';
 import { KNOTS_W, PARTICLE_BUDGET, type Quality } from './knot-config';
 import { KNOT_TABLE } from '@/lib/mira-state';
 
@@ -9,6 +9,22 @@ function hexToRgb(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
+// Cubic Bezier interpolation
+function getBezierPoint(t: number, p0: number[], p1: number[], p2: number[], p3: number[]): number[] {
+  const u = 1 - t;
+  const tt = t * t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * t;
+
+  let p = [
+    uuu * p0[0] + 3 * uu * t * p1[0] + 3 * u * tt * p2[0] + ttt * p3[0],
+    uuu * p0[1] + 3 * uu * t * p1[1] + 3 * u * tt * p2[1] + ttt * p3[1],
+    uuu * p0[2] + 3 * uu * t * p1[2] + 3 * u * tt * p2[2] + ttt * p3[2],
+  ];
+  return p;
+}
+
 export function generateTendrils(quality: Quality): PSet {
   const count = PARTICLE_BUDGET[quality].Tendrils;
   const out = makePSet(count);
@@ -16,7 +32,6 @@ export function generateTendrils(quality: Quality): PSet {
   
   let placed = 0;
 
-  // 100% budget to filaments to increase density
   const edges: { a: number, b: number, len: number, colorA: number[], colorB: number[] }[] = [];
   let totalLen = 0;
   for (let i = 0; i < KNOTS_W.length; i++) {
@@ -39,76 +54,88 @@ export function generateTendrils(quality: Quality): PSet {
     }
   }
 
+  // Deep electric blue for the void web
+  const voidColor = [0.05, 0.20, 1.0]; 
+
   for (const edge of edges) {
     const edgeParticles = Math.floor((edge.len / totalLen) * count);
-    const A = KNOTS_W[edge.a].pos;
-    const B = KNOTS_W[edge.b].pos;
+    const A = [KNOTS_W[edge.a].pos[0], KNOTS_W[edge.a].pos[1], KNOTS_W[edge.a].pos[2]];
+    const B = [KNOTS_W[edge.b].pos[0], KNOTS_W[edge.b].pos[1], KNOTS_W[edge.b].pos[2]];
     
-    const dx = B[0] - A[0];
-    const dy = B[1] - A[1];
-    const dz = B[2] - A[2];
+    // Generate 3 main "trunks" per edge for organic bundling
+    const numTrunks = 3;
+    const trunks = [];
     
-    const upX = 0; const upY = 1; const upZ = 0;
-    let p1X = dy * upZ - dz * upY;
-    let p1Y = dz * upX - dx * upZ;
-    let p1Z = dx * upY - dy * upX;
-    const p1Len = Math.sqrt(p1X*p1X + p1Y*p1Y + p1Z*p1Z) || 1;
-    p1X /= p1Len; p1Y /= p1Len; p1Z /= p1Len;
-    
-    let p2X = dy * p1Z - dz * p1Y;
-    let p2Y = dz * p1X - dx * p1Z;
-    let p2Z = dx * p1Y - dy * p1X;
-    const p2Len = Math.sqrt(p2X*p2X + p2Y*p2Y + p2Z*p2Z) || 1;
-    p2X /= p2Len; p2Y /= p2Len; p2Z /= p2Len;
+    for(let k = 0; k < numTrunks; k++) {
+      // Trunk control points push out sideways to create curved sweeping lines
+      const mid = [(A[0]+B[0])/2, (A[1]+B[1])/2, (A[2]+B[2])/2];
+      const ortho = [
+        (rng() - 0.5) * edge.len * 0.4,
+        (rng() - 0.5) * edge.len * 0.4,
+        (rng() - 0.5) * edge.len * 0.4,
+      ];
+      
+      trunks.push({
+        c1: [A[0] + (mid[0]-A[0])*0.5 + ortho[0], A[1] + (mid[1]-A[1])*0.5 + ortho[1], A[2] + (mid[2]-A[2])*0.5 + ortho[2]],
+        c2: [B[0] + (mid[0]-B[0])*0.5 + ortho[0], B[1] + (mid[1]-B[1])*0.5 + ortho[1], B[2] + (mid[2]-B[2])*0.5 + ortho[2]],
+      });
+    }
 
-    const numStrands = Math.max(25, Math.floor(edgeParticles / 80));
+    // Generate hundreds of individual micro-strands that follow the trunks
+    const numStrands = Math.max(50, Math.floor(edgeParticles / 200));
     const strands = [];
     for(let s = 0; s < numStrands; s++) {
+      const parentTrunk = trunks[Math.floor(rng() * trunks.length)];
+      // Strands deviate slightly from their parent trunk
+      const deviation = 0.5;
       strands.push({
-        radius: Math.abs(gauss(rng)) * 0.5, 
-        angle: rng() * Math.PI * 2,
-        noiseOffset: rng() * 100.0,
-        fossilized: rng() < 0.05
+        c1: [
+          parentTrunk.c1[0] + gauss(rng) * deviation,
+          parentTrunk.c1[1] + gauss(rng) * deviation,
+          parentTrunk.c1[2] + gauss(rng) * deviation,
+        ],
+        c2: [
+          parentTrunk.c2[0] + gauss(rng) * deviation,
+          parentTrunk.c2[1] + gauss(rng) * deviation,
+          parentTrunk.c2[2] + gauss(rng) * deviation,
+        ],
+        thickness: Math.abs(gauss(rng)) * 0.05,
       });
     }
 
     for (let i = 0; i < edgeParticles && placed < count; i++) {
       const strand = strands[i % numStrands];
-      const t = rng(); 
+      // Exponentiate t slightly to cluster more particles near the hubs
+      let tRaw = rng();
+      const t = tRaw < 0.5 ? 0.5 * Math.pow(2 * tRaw, 1.5) : 1 - 0.5 * Math.pow(2 * (1 - tRaw), 1.5);
       
-      const bulge = Math.sin(t * Math.PI); 
-      const currentRadius = strand.radius * (0.1 + 0.9 * bulge);
+      const p = getBezierPoint(t, A, strand.c1, strand.c2, B);
       
-      let px = A[0] + dx * t + p1X * currentRadius * Math.cos(strand.angle) + p2X * currentRadius * Math.sin(strand.angle);
-      let py = A[1] + dy * t + p1Y * currentRadius * Math.cos(strand.angle) + p2Y * currentRadius * Math.sin(strand.angle);
-      let pz = A[2] + dz * t + p1Z * currentRadius * Math.cos(strand.angle) + p2Z * currentRadius * Math.sin(strand.angle);
+      // Micro-scatter for strand thickness
+      const angle1 = rng() * Math.PI * 2;
+      const angle2 = Math.acos(2 * rng() - 1);
+      p[0] += Math.sin(angle2) * Math.cos(angle1) * strand.thickness;
+      p[1] += Math.sin(angle2) * Math.sin(angle1) * strand.thickness;
+      p[2] += Math.cos(angle2) * strand.thickness;
 
-      const curl1 = fastTurbulence(px, py, pz, strand.noiseOffset, 0.3);
-      const curl2 = fastTurbulence(px, py, pz, strand.noiseOffset * 2.0, 1.5);
-
-      px += curl1[0] * 1.5 * bulge + curl2[0] * 0.3 * bulge;
-      py += curl1[1] * 1.5 * bulge + curl2[1] * 0.3 * bulge;
-      pz += curl1[2] * 1.5 * bulge + curl2[2] * 0.3 * bulge;
-
-      const distFromEnd = Math.abs(t - 0.5) * 2.0; 
+      // Color mapping: Starts at Hub A, fades to Deep Blue Void, ends at Hub B
+      const distFromEnd = Math.abs(t - 0.5) * 2.0; // 0 in middle, 1 at ends
       const endColor = [
         edge.colorA[0] * (1 - t) + edge.colorB[0] * t,
         edge.colorA[1] * (1 - t) + edge.colorB[1] * t,
         edge.colorA[2] * (1 - t) + edge.colorB[2] * t
       ];
 
-      // Fade out into pitch black
-      const mixFactor = Math.pow(distFromEnd, 0.8);
-      let cR = endColor[0] * mixFactor;
-      let cG = endColor[1] * mixFactor;
-      let cB = endColor[2] * mixFactor;
-
-      if (strand.fossilized) { cR *= 0.1; cG *= 0.1; cB *= 0.2; }
+      // Sharp mix into electric blue web
+      const mixFactor = Math.pow(distFromEnd, 2.5);
+      let cR = voidColor[0] * (1 - mixFactor) + endColor[0] * mixFactor;
+      let cG = voidColor[1] * (1 - mixFactor) + endColor[1] * mixFactor;
+      let cB = voidColor[2] * (1 - mixFactor) + endColor[2] * mixFactor;
 
       const idx = placed * 3;
-      out.pos[idx] = px;
-      out.pos[idx+1] = py;
-      out.pos[idx+2] = pz;
+      out.pos[idx] = p[0];
+      out.pos[idx+1] = p[1];
+      out.pos[idx+2] = p[2];
       
       out.color[idx] = cR;
       out.color[idx+1] = cG;
@@ -116,7 +143,7 @@ export function generateTendrils(quality: Quality): PSet {
       
       out.isCore[placed] = 0.0;
       out.isLoop[placed] = 0.0;
-      out.densityLevel[placed] = strand.fossilized ? -1.0 : Math.max(0.0, 1.0 - currentRadius * 1.5) * mixFactor; 
+      out.densityLevel[placed] = 0.5 + mixFactor * 0.5; // Brighter near hubs
       
       placed++;
     }
