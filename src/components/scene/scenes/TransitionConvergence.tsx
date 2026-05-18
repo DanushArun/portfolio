@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
@@ -12,13 +12,13 @@ const RING_PARTICLE_COUNT = 5000;
 export default function TransitionConvergence() {
   const local = useScene((s) => s.localProgress);
   const phase = useScene((s) => s.phase);
-  
+
   const fragmentsRef = useRef<THREE.InstancedMesh>(null);
   const ringsRef = useRef<THREE.Points>(null);
   const starRef = useRef<THREE.Mesh>(null);
 
   // Pre-calculate chaotic starts and orbital targets for fragments
-  const { fragmentStarts, fragmentTargets, fragmentRotations, fragmentSizes } = useMemo(() => {
+  const [{ fragmentStarts, fragmentTargets, fragmentRotations, fragmentSizes }] = useState(() => {
     const starts = new Float32Array(FRAGMENT_COUNT * 3);
     const targets = new Float32Array(FRAGMENT_COUNT * 3);
     const rotations = new Float32Array(FRAGMENT_COUNT * 3);
@@ -34,7 +34,7 @@ export default function TransitionConvergence() {
       const radius = 6 + Math.random() * 8;
       const angle = Math.random() * Math.PI * 2;
       const height = (Math.random() - 0.5) * 2;
-      
+
       targets[i*3]   = Math.cos(angle) * radius;
       targets[i*3+1] = height;
       targets[i*3+2] = Math.sin(angle) * radius;
@@ -46,11 +46,10 @@ export default function TransitionConvergence() {
       sizes[i] = 0.2 + Math.random() * 0.4;
     }
     return { fragmentStarts: starts, fragmentTargets: targets, fragmentRotations: rotations, fragmentSizes: sizes };
-  }, []);
+  });
 
   // Pre-calculate dense rings
-  const ringGeo = useMemo(() => {
-    const g = new THREE.BufferGeometry();
+  const [ringGeo] = useState(() => {    const g = new THREE.BufferGeometry();
     const pos = new Float32Array(RING_PARTICLE_COUNT * 3);
     const colors = new Float32Array(RING_PARTICLE_COUNT * 3);
     const colorBlue = new THREE.Color(palette.cream);
@@ -88,15 +87,9 @@ export default function TransitionConvergence() {
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return g;
-  }, []);
+    });
 
-  const tmpMatrix = new THREE.Matrix4();
-  const tmpPos = new THREE.Vector3();
-  const tmpEul = new THREE.Euler();
-  const tmpQuat = new THREE.Quaternion();
-  const tmpScale = new THREE.Vector3();
-
-  useFrame((state) => {
+    useFrame((state) => {
     if (phase !== 'C07_TRANSITION') return;
 
     // Smoothstep easing for cinematic convergence

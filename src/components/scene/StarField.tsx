@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import * as THREE from 'three';
 
 /**
@@ -16,7 +16,7 @@ import * as THREE from 'three';
 const COUNT = 6000;
 
 export default function StarField() {
-  const { geo, mat } = useMemo(() => {
+  const [{ geo, mat }] = useState(() => {
     const pos = new Float32Array(COUNT * 3);
     for (let i = 0; i < COUNT; i++) {
       const theta = 2 * Math.PI * Math.random();

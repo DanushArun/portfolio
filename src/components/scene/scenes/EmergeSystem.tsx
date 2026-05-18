@@ -119,11 +119,11 @@ function AccretionDisk({ color, radius }: { color: string, radius: number }) {
   const count = 3000;
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
-  const { positions, scales, phases } = useMemo(() => {
+  const [{ positions, scales, phases }] = useState(() => {
     const positions = new Float32Array(count * 3);
     const scales = new Float32Array(count);
     const phases = new Float32Array(count);
-    
+
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       // Dense near center, tapering off
@@ -131,13 +131,12 @@ function AccretionDisk({ color, radius }: { color: string, radius: number }) {
       positions[i * 3 + 0] = Math.cos(angle) * r;
       positions[i * 3 + 1] = (Math.random() - 0.5) * 0.2; // slight vertical scatter
       positions[i * 3 + 2] = Math.sin(angle) * r;
-      
+
       scales[i] = Math.random();
       phases[i] = Math.random() * Math.PI * 2;
     }
     return { positions, scales, phases };
-  }, [radius]);
-  
+  });  
   const dummy = useMemo(() => new THREE.Object3D(), []);
   
   useFrame((state) => {

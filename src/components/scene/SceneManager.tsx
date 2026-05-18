@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, Suspense } from 'react';
+import { usePathname } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import { useScene, isCosmic, isBlackHoleCanvas, isR3FCanvas } from '@/lib/scene-state';
 import dynamic from 'next/dynamic';
@@ -14,8 +15,6 @@ import PostFX from './PostFX';
 
 // New high-fidelity R3F components
 const WarpScene             = dynamic(() => import('./scenes/WarpScene'),             { ssr: false });
-const AnomalyGlitch         = dynamic(() => import('./scenes/AnomalyGlitch'),         { ssr: false });
-const TransitionConvergence = dynamic(() => import('./scenes/TransitionConvergence'), { ssr: false });
 const MiraScene             = dynamic(() => import('./scenes/MiraScene'),             { ssr: false });
 const StarField             = dynamic(() => import('./StarField'),                    { ssr: false });
 
@@ -29,6 +28,9 @@ export default function SceneManager() {
   const phase           = useScene((s) => s.phase);
   const veil            = useScene((s) => s.veil);
   const cosmicProgress  = useScene((s) => s.cosmicProgress);
+  const pathname        = usePathname();
+
+  if (pathname !== '/') return null;
 
   useEffect(() => {
     const { beginJourney, phase: p } = useScene.getState();
@@ -96,7 +98,6 @@ export default function SceneManager() {
   })();
 
   let bhProgress = cosmicProgress;
-  let bhIntensity = 1.0;
 
   if (phase === 'C04_HORIZON') {
     // Map HORIZON (local 0..1) to internal Phase B (0.55..0.65) — the plunge
@@ -104,7 +105,6 @@ export default function SceneManager() {
     // and the disc has scaled to 0; the BH canvas is then unmounted and
     // WarpScene takes over.
     bhProgress = 0.55 + local * 0.10;
-    bhIntensity = 1.0 + local * 0.6;
   } else if (isBlackHoleCanvas(phase) && cosmicProgress < 0.4) {
     // Scale C01..C03 to fit in the 0.00..0.55 approach window
     bhProgress = (cosmicProgress / 0.4) * 0.55;

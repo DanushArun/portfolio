@@ -7,14 +7,14 @@
  */
 
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useRef, useMemo } from 'react';
+import { useRef, useState } from 'react';
 import * as THREE from 'three';
 
 const STAR_COUNT = 1500;
 
 function Stars() {
   const ref = useRef<THREE.Points>(null);
-  const geo = useMemo(() => {
+  const [geo] = useState(() => {
     const g = new THREE.BufferGeometry();
     const pos = new Float32Array(STAR_COUNT * 3);
     for (let i = 0; i < STAR_COUNT; i++) {
@@ -27,7 +27,7 @@ function Stars() {
     }
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     return g;
-  }, []);
+  });
 
   useFrame((state) => {
     if (ref.current) ref.current.rotation.y = state.clock.elapsedTime * 0.005;

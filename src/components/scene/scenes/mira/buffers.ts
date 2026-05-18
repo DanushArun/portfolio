@@ -61,6 +61,14 @@ export function curlNoise3D_JS(
   ];
 }
 
+export function fastTurbulence(x: number, y: number, z: number, offset: number, scale: number): [number, number, number] {
+  const sx = x * scale; const sy = y * scale; const sz = z * scale;
+  const s1 = Math.sin(sy + offset) * Math.cos(sz);
+  const s2 = Math.sin(sz + offset) * Math.cos(sx);
+  const s3 = Math.sin(sx + offset) * Math.cos(sy);
+  return [s1, s2, s3];
+}
+
 export interface PSet {
   pos: Float32Array;
   color: Float32Array;

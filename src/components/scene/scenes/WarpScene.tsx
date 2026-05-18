@@ -13,7 +13,7 @@
 //      and full-spectrum accents) instead of pure white. Reads as "warp streaks"
 //      rather than uniform stars.
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
@@ -24,6 +24,12 @@ const Z_BOUNDS = 20;
 const MAX_SPEED_FACTOR = 2;
 const MAX_SCALE_FACTOR = 50;
 const PARTICLE_RADIUS = 0.025;     // half of upstream's 0.05 per request
+
+// Temp objects for instance manipulation
+const temp       = new THREE.Matrix4();
+const tempPos    = new THREE.Vector3();
+const tempObject = new THREE.Object3D();
+const tempColor  = new THREE.Color();
 
 // Combined progress through C05+C06.
 //   C05_WARP    → cosmic 0.50..0.65
@@ -48,7 +54,7 @@ export default function WarpScene() {
   //
   // Slight blue-white variance (98% pure white, 2% faint amber) just to
   // avoid the streaks looking like a uniform pixel-grid.
-  const baseColors = useMemo(() => {
+  const [baseColors] = useState(() => {
     const arr = new Float32Array(COUNT * 3);
     const c = new THREE.Color();
     for (let i = 0; i < COUNT; i++) {
@@ -62,7 +68,7 @@ export default function WarpScene() {
       arr[i * 3 + 2] = c.b;
     }
     return arr;
-  }, []);
+  });
 
   useEffect(() => {
     if (!meshRef.current) return;
@@ -77,11 +83,6 @@ export default function WarpScene() {
     }
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, []);
-
-  const temp       = useMemo(() => new THREE.Matrix4(), []);
-  const tempPos    = useMemo(() => new THREE.Vector3(), []);
-  const tempObject = useMemo(() => new THREE.Object3D(), []);
-  const tempColor  = useMemo(() => new THREE.Color(), []);
 
   useFrame((_state, delta) => {
     const m = meshRef.current;

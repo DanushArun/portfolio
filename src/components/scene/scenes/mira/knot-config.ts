@@ -29,21 +29,22 @@ export type Quality = 'high' | 'low';
 
 export const PARTICLE_BUDGET = {
   high: {
-    EN: 120_000,
-    HI: 120_000,
-    TA: 80_000,
-    KN: 90_000,
-    TE: 80_000,
-    HILoop: 60_000,
-    Tendrils: 450_000,
+    EN: 100000,
+    HI: 100000,
+    TA: 80000,
+    KN: 80000,
+    TE: 80000,
+    HILoop: 100000,
+    Tendrils: 1500000, // 1.5 Million particles for massive density
   },
   low: {
-    EN: 30_000,
-    HI: 30_000,
-    TA: 20_000,
-    KN: 22_500,
-    TE: 20_000,
-    HILoop: 15_000,
-    Tendrils: 112_500,
+    EN: 15000,
+    HI: 15000,
+    TA: 12000,
+    KN: 12000,
+    TE: 12000,
+    HILoop: 15000,
+    Tendrils: 150000,
   }
 };
+

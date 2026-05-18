@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { useScene } from '@/lib/scene-state';
 import { exposeMiraDebug } from '@/lib/mira-state';
 import MiraSupercluster from './MiraSupercluster';
+import MiraPlume from './MiraPlume';
 
 function computeReveal(phase: string, local: number): number {
   if (phase === 'C07_TRANSITION') {
@@ -49,8 +50,9 @@ export default function MiraScene() {
   }, [reveal]);
 
   return (
-    <>
-      <MiraSupercluster reveal={reveal} />
-    </>
+    <group>
+      {reveal >= 0.20 && <MiraSupercluster reveal={reveal} />}
+      {reveal >= 0.85 && <MiraPlume reveal={reveal} />}
+    </group>
   );
 }

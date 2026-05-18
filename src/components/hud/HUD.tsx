@@ -28,8 +28,59 @@ export default function HUD(): React.JSX.Element | null {
   const journey = useScene((s) => s.journeyProgress);
   const phase = useScene((s) => s.phase);
   const opacity = c04Opacity(journey);
-  // W01_MIRA: founder direction 2026-05-13 — only the panel title block shows.
-  if (phase === 'W01_MIRA') return null;
+
+  if (phase === 'W01_MIRA') {
+    return (
+      <div className={styles.root} style={{ opacity }}>
+        {/* Top Left: Metadata */}
+        <div style={{
+          position: 'absolute', top: '1.5rem', left: '1.5rem',
+          fontFamily: 'var(--font-composer)', fontSize: '10px',
+          letterSpacing: '0.12em', color: '#E8E4D8', opacity: 0.8,
+        }}>
+          <div style={{ marginBottom: '0.4rem' }}>VLS-001 • MIRA • ONLINE</div>
+          <div style={{ opacity: 0.5 }}>RA 12h 35m &nbsp; DEC -05° 12&apos; &nbsp; Z = 0.0067</div>
+        </div>
+
+        {/* Top Right: Audio Toggle */}
+        <div style={{
+          position: 'absolute', top: '1.5rem', right: '1.5rem',
+          fontFamily: 'var(--font-composer)', fontSize: '10px',
+          letterSpacing: '0.12em', color: '#E8E4D8', opacity: 0.5,
+          display: 'flex', alignItems: 'center', gap: '0.6rem',
+        }}>
+          AUDIO OFF <div style={{ width: '4px', height: '4px', backgroundColor: '#E8E4D8', opacity: 0.5 }} />
+        </div>
+
+        {/* Bottom Center: Interaction Hints */}
+        <div style={{
+          position: 'absolute', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', gap: '2rem', fontFamily: 'var(--font-composer)',
+          fontSize: '9px', letterSpacing: '0.2em', color: '#E8E4D8', opacity: 0.6,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '8px', height: '8px', border: '1px solid #E8E4D8', borderRadius: '50%' }} /> ROTATE
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '8px', height: '8px', border: '1px solid #E8E4D8', borderRadius: '50%' }} /> HOVER
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '8px', height: '8px', border: '1px solid #E8E4D8', borderRadius: '50%' }} /> PROBE
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '8px', height: '8px', border: '1px solid #E8E4D8', borderRadius: '2px' }} /> ACTIVATE
+          </div>
+        </div>
+
+        {/* Bottom Right: Phase Indicator (existing component) */}
+        <div className={styles.cluster + ' ' + styles.bottomRight}>
+          <PhaseIndicator />
+          <SkipToNextButton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.root} aria-label="Scene controls" style={{ opacity }}>
       <div className={styles.cluster + ' ' + styles.bottomRight}>

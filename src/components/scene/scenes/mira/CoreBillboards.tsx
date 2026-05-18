@@ -36,24 +36,30 @@ const coreVert = /* glsl */ `
 const coreFrag = /* glsl */ `
   precision highp float;
   uniform float uReveal;
+  uniform float uTime;
   varying vec2 vUv; varying vec3 vHue; varying float vIsActive;
 
   void main() {
     vec2 p = vUv - vec2(0.5);
     float r = length(p) * 2.0;
     if (r > 1.0) discard;
-    float core  = pow(1.0 - r, 6.0);
-    float inner = pow(1.0 - r, 2.2);
-    float halo  = pow(1.0 - r, 1.0);
+
+    // 482ms heartbeat pulse
+    float period = 0.482;
+    float phase = mod(uTime, period) / period;
+    float pulse = exp(-pow(phase * 18.0, 2.0)) * 0.70 + exp(-pow((phase - 0.15) * 24.0, 2.0)) * 0.30;
+    
+    float core  = pow(1.0 - r, 12.0); // Tighter core
+    float inner = pow(1.0 - r, 3.0);
+    float halo  = pow(1.0 - r, 1.5);
     
     // Core goes extremely bright white, then falls off to the hue color.
-    vec3 col = mix(vHue, vec3(1.0, 0.95, 0.85), core);
-    float boost = mix(1.0, 1.10, vIsActive);
+    vec3 col = mix(vHue, vec3(1.0, 0.98, 0.90), core);
+    float boost = mix(1.0, 1.0 + pulse * 0.4, vIsActive);
     
-    // Intensity needs to be high enough to hit the 0.90 bloom threshold
-    // so we multiply core by 2.0.
-    float intensity = (core*2.0 + inner*1.0 + halo*0.4) * boost * uReveal;
-    float alpha = (inner*0.8 + halo*0.4) * (0.8 + vIsActive*0.2) * uReveal;
+    // Intensity needs to be high enough to hit the 0.90 bloom threshold, but not blowout the screen
+    float intensity = (core * 2.2 + inner * 0.8 + halo * 0.2) * boost * uReveal;
+    float alpha = (inner * 0.7 + halo * 0.3) * (0.6 + vIsActive * 0.4) * uReveal;
     
     gl_FragColor = vec4(col * intensity, alpha);
   }
@@ -101,6 +107,7 @@ export function CoreBillboards({ reveal, activeLang, density }: CoreBillboardsPr
     const m = new THREE.ShaderMaterial({
       uniforms: {
         uReveal: { value: reveal },
+        uTime:   { value: 0 },
         uScale:  { value: 1 },
         uActive: { value: 0 },
         uPos0: { value: new THREE.Vector3(...KNOTS_W[0].pos) },
@@ -126,7 +133,8 @@ export function CoreBillboards({ reveal, activeLang, density }: CoreBillboardsPr
     return { geometry: g, material: m };
   }, [reveal]);
 
-  useFrame(() => {
+  useFrame((state) => {
+    material.uniforms.uTime.value = state.clock.elapsedTime;
     material.uniforms.uActive.value = LANG_INDEX[activeLang];
     material.uniforms.uReveal.value = reveal;
     material.uniforms.uSize0.value = 0.45*KNOTS_W[0].scale*(0.92+density[KNOTS_W[0].lang]*0.55);

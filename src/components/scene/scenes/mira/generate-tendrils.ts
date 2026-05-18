@@ -1,4 +1,4 @@
-import { makePSet, type PSet, slicePSet, mulberry32, gauss, curlNoise3D_JS } from './buffers';
+import { makePSet, type PSet, slicePSet, mulberry32, fastTurbulence, gauss } from './buffers';
 import { KNOTS_W, PARTICLE_BUDGET, type Quality } from './knot-config';
 import { KNOT_TABLE } from '@/lib/mira-state';
 
@@ -14,6 +14,9 @@ export function generateTendrils(quality: Quality): PSet {
   const out = makePSet(count);
   const rng = mulberry32(0x9999);
   
+  let placed = 0;
+
+  // 100% budget to filaments to increase density
   const edges: { a: number, b: number, len: number, colorA: number[], colorB: number[] }[] = [];
   let totalLen = 0;
   for (let i = 0; i < KNOTS_W.length; i++) {
@@ -35,13 +38,9 @@ export function generateTendrils(quality: Quality): PSet {
       totalLen += len;
     }
   }
-  
-  let placed = 0;
-  // Vibrant deep electric blue for the vast void filaments
-  const voidColor = [0.05, 0.25, 0.95]; 
-  
-  edges.forEach((edge) => {
-    const edgeCount = Math.floor((edge.len / totalLen) * count);
+
+  for (const edge of edges) {
+    const edgeParticles = Math.floor((edge.len / totalLen) * count);
     const A = KNOTS_W[edge.a].pos;
     const B = KNOTS_W[edge.b].pos;
     
@@ -49,7 +48,6 @@ export function generateTendrils(quality: Quality): PSet {
     const dy = B[1] - A[1];
     const dz = B[2] - A[2];
     
-    // Perpendicular basis
     const upX = 0; const upY = 1; const upZ = 0;
     let p1X = dy * upZ - dz * upY;
     let p1Y = dz * upX - dx * upZ;
@@ -62,104 +60,67 @@ export function generateTendrils(quality: Quality): PSet {
     let p2Z = dx * p1Y - dy * p1X;
     const p2Len = Math.sqrt(p2X*p2X + p2Y*p2Y + p2Z*p2Z) || 1;
     p2X /= p2Len; p2Y /= p2Len; p2Z /= p2Len;
-    
-    const P0 = A;
-    const P3 = B;
-    
-    // Massive number of strands to create complex branching
-    const numStrands = 180;
-    const strands = Array.from({length: numStrands}, () => {
-      const spread = 5.5; // Huge spread to fill the volume
-      const off1X = (rng() - 0.5) * spread;
-      const off1Y = (rng() - 0.5) * spread;
-      const off2X = (rng() - 0.5) * spread;
-      const off2Y = (rng() - 0.5) * spread;
-      return { off1X, off1Y, off2X, off2Y };
-    });
-    
-    for (let i = 0; i < edgeCount && placed < count; i++) {
-      const strand = strands[Math.floor(rng() * numStrands)];
-      const t = rng();
-      
-      const mt = 1 - t;
-      const mt2 = mt * mt;
-      const mt3 = mt2 * mt;
-      const t2 = t * t;
-      const t3 = t2 * t;
-      
-      const P1 = [
-        A[0] + dx * 0.35 + p1X * strand.off1X + p2X * strand.off1Y,
-        A[1] + dy * 0.35 + p1Y * strand.off1X + p2Y * strand.off1Y,
-        A[2] + dz * 0.35 + p1Z * strand.off1X + p2Z * strand.off1Y
-      ];
-      const P2 = [
-        B[0] - dx * 0.35 + p1X * strand.off2X + p2X * strand.off2Y,
-        B[1] - dy * 0.35 + p1Y * strand.off2X + p2Y * strand.off2Y,
-        B[2] - dz * 0.35 + p1Z * strand.off2X + p2Z * strand.off2Y
-      ];
-      
-      const bx = mt3*P0[0] + 3*mt2*t*P1[0] + 3*mt*t2*P2[0] + t3*P3[0];
-      const by = mt3*P0[1] + 3*mt2*t*P1[1] + 3*mt*t2*P2[1] + t3*P3[1];
-      const bz = mt3*P0[2] + 3*mt2*t*P1[2] + 3*mt*t2*P2[2] + t3*P3[2];
-      
-      // Extremely tight scatter to form sharp threads
-      const radius = 0.015;
-      const offset = Math.abs(gauss(rng)) * radius;
-      const angle = rng() * Math.PI * 2;
-      
-      let px = bx + Math.cos(angle) * offset;
-      let py = by + Math.sin(angle) * offset;
-      let pz = bz + (rng() - 0.5) * offset;
-      
-      // Multi-octave advection for sweeping organic webs
-      // Octave 1: Large sweeping structure
-      let curl = curlNoise3D_JS(px * 0.15, py * 0.15, pz * 0.15);
-      px += curl[0] * 1.8;
-      py += curl[1] * 1.8;
-      pz += curl[2] * 1.8;
-      
-      // Octave 2: Mid-level branching and tearing
-      curl = curlNoise3D_JS(px * 0.45, py * 0.45, pz * 0.45);
-      px += curl[0] * 0.6;
-      py += curl[1] * 0.6;
-      pz += curl[2] * 0.6;
 
-      // Octave 3: High-frequency crinkles
-      curl = curlNoise3D_JS(px * 1.2, py * 1.2, pz * 1.2);
-      px += curl[0] * 0.15;
-      py += curl[1] * 0.15;
-      pz += curl[2] * 0.15;
+    const numStrands = Math.max(25, Math.floor(edgeParticles / 80));
+    const strands = [];
+    for(let s = 0; s < numStrands; s++) {
+      strands.push({
+        radius: Math.abs(gauss(rng)) * 0.5, 
+        angle: rng() * Math.PI * 2,
+        noiseOffset: rng() * 100.0,
+        fossilized: rng() < 0.05
+      });
+    }
+
+    for (let i = 0; i < edgeParticles && placed < count; i++) {
+      const strand = strands[i % numStrands];
+      const t = rng(); 
       
-      const idx = placed * 3;
-      out.pos[idx] = px;
-      out.pos[idx+1] = py;
-      out.pos[idx+2] = pz;
+      const bulge = Math.sin(t * Math.PI); 
+      const currentRadius = strand.radius * (0.1 + 0.9 * bulge);
       
-      const distFromEnd = Math.abs(t - 0.5) * 2.0; // 0 at mid, 1 at ends
-      const density = 1.0 - distFromEnd * 0.8; 
-      
+      let px = A[0] + dx * t + p1X * currentRadius * Math.cos(strand.angle) + p2X * currentRadius * Math.sin(strand.angle);
+      let py = A[1] + dy * t + p1Y * currentRadius * Math.cos(strand.angle) + p2Y * currentRadius * Math.sin(strand.angle);
+      let pz = A[2] + dz * t + p1Z * currentRadius * Math.cos(strand.angle) + p2Z * currentRadius * Math.sin(strand.angle);
+
+      const curl1 = fastTurbulence(px, py, pz, strand.noiseOffset, 0.3);
+      const curl2 = fastTurbulence(px, py, pz, strand.noiseOffset * 2.0, 1.5);
+
+      px += curl1[0] * 1.5 * bulge + curl2[0] * 0.3 * bulge;
+      py += curl1[1] * 1.5 * bulge + curl2[1] * 0.3 * bulge;
+      pz += curl1[2] * 1.5 * bulge + curl2[2] * 0.3 * bulge;
+
+      const distFromEnd = Math.abs(t - 0.5) * 2.0; 
       const endColor = [
         edge.colorA[0] * (1 - t) + edge.colorB[0] * t,
         edge.colorA[1] * (1 - t) + edge.colorB[1] * t,
         edge.colorA[2] * (1 - t) + edge.colorB[2] * t
       ];
+
+      // Fade out into pitch black
+      const mixFactor = Math.pow(distFromEnd, 0.8);
+      let cR = endColor[0] * mixFactor;
+      let cG = endColor[1] * mixFactor;
+      let cB = endColor[2] * mixFactor;
+
+      if (strand.fossilized) { cR *= 0.1; cG *= 0.1; cB *= 0.2; }
+
+      const idx = placed * 3;
+      out.pos[idx] = px;
+      out.pos[idx+1] = py;
+      out.pos[idx+2] = pz;
       
-      const mixFactor = Math.pow(distFromEnd, 2.5); // Push more towards void color in the middle
-      
-      out.color[idx] = voidColor[0] * (1 - mixFactor) + endColor[0] * mixFactor;
-      out.color[idx+1] = voidColor[1] * (1 - mixFactor) + endColor[1] * mixFactor;
-      out.color[idx+2] = voidColor[2] * (1 - mixFactor) + endColor[2] * mixFactor;
+      out.color[idx] = cR;
+      out.color[idx+1] = cG;
+      out.color[idx+2] = cB;
       
       out.isCore[placed] = 0.0;
       out.isLoop[placed] = 0.0;
-      out.densityLevel[placed] = Math.max(0, density);
+      out.densityLevel[placed] = strand.fossilized ? -1.0 : Math.max(0.0, 1.0 - currentRadius * 1.5) * mixFactor; 
       
       placed++;
     }
-  });
-  
-  if (placed < count) {
-    return slicePSet(out, placed);
   }
-  return out;
+
+  return slicePSet(out, placed);
 }

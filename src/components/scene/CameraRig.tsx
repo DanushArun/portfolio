@@ -23,6 +23,7 @@ export default function CameraRig() {
       case 'C06_ANOMALY': {
         pcam.position.set(0, 0, 5);
         pcam.lookAt(0, 0, 0);
+        // eslint-disable-next-line react-hooks/immutability
         pcam.fov = 100;
         break;
       }

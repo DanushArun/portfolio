@@ -1,9 +1,8 @@
 'use client';
 
 /**
- * MiraPanel — center-left title block only.
- * All other overlays (catalog, supercluster caption, dashboard column,
- * interaction hints) intentionally removed per founder direction 2026-05-13.
+ * MiraPanel — center-left title block + language status column.
+ * Matches the canonical spec frame (2026-05-13).
  */
 
 import { useEffect, useState } from 'react';
@@ -23,6 +22,35 @@ export default function MiraPanel() {
       width: '100%', height: '100%', position: 'relative',
       color: '#E8E4D8', pointerEvents: 'none', overflow: 'hidden',
     }}>
+      {/* 1. Language status column (bottom-left) */}
+      <div style={{
+        position: 'absolute', bottom: 'clamp(2rem, 4vw, 4rem)', left: 'clamp(2rem, 4vw, 4rem)',
+        display: 'flex', flexDirection: 'column', gap: '0.8rem',
+      }}>
+        {KNOT_TABLE.map((k) => {
+          const isActive = k.lang === activeLang;
+          return (
+            <div key={k.lang} style={{
+              display: 'flex', alignItems: 'center', gap: '0.85rem',
+              opacity: isActive ? 1 : 0.45, transition: 'opacity 0.4s',
+            }}>
+              <div style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                backgroundColor: k.hue, boxShadow: isActive ? `0 0 12px ${k.hue}` : 'none',
+              }} />
+              <div style={{
+                fontFamily: type.mono, fontSize: '10px', letterSpacing: '0.1em',
+                display: 'flex', gap: '0.6rem',
+              }}>
+                <span style={{ fontWeight: 600 }}>{k.lang}</span>
+                <span style={{ opacity: 0.6 }}>{c.languages[LANG_ORDER.indexOf(k.lang)]}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 2. Main Title Block (center-left) */}
       <div style={{
         position: 'absolute', top: '50%', left: 'clamp(2rem, 4vw, 4rem)',
         transform: 'translateY(-50%)', maxWidth: 'min(380px, 30vw)',
@@ -54,6 +82,20 @@ export default function MiraPanel() {
         }}>
           {c.body}
         </p>
+      </div>
+
+      {/* 3. Live Ticker (bottom-center) */}
+      <div style={{
+        position: 'absolute', bottom: 'clamp(2rem, 4vw, 4rem)', left: '50%',
+        transform: 'translateX(-50%)', textAlign: 'center',
+        fontFamily: type.mono, letterSpacing: '0.05em',
+      }}>
+        <div style={{ fontSize: '12px', color: hue.accent, marginBottom: '0.25rem' }}>
+          LIVE · <span style={{ color: '#FFF' }}>{c.languages[LANG_ORDER.indexOf(activeLang)]}</span> · 482ms
+        </div>
+        <div style={{ fontSize: '9px', opacity: 0.5 }}>
+          TRAINING SIGNAL · <span style={{ color: hue.accent }}>+2.0% / call</span>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
@@ -10,11 +10,10 @@ export default function AnomalyGlitch() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const phase = useScene((s) => s.phase);
   const localProgress = useScene((s) => s.localProgress);
-  
+
   const count = 500;
-  
-  const { positions, randoms } = useMemo(() => {
-    const positions = new Float32Array(count * 3);
+
+  const [{ positions, randoms }] = useState(() => {    const positions = new Float32Array(count * 3);
     const randoms = new Float32Array(count);
     
     for (let i = 0; i < count; i++) {
