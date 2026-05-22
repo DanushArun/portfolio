@@ -1,1 +1,5 @@
-export default function WaveFieldPanel() { return <div>Stub</div>; }
+import ProjectPanel from '../ProjectPanel';
+
+export default function WaveFieldPanel(): React.JSX.Element {
+  return <ProjectPanel phaseId="W05_WAVEFIELD" />;
+}

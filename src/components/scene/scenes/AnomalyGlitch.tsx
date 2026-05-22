@@ -23,7 +23,7 @@ export default function AnomalyGlitch() {
       randoms[i] = Math.random();
     }
     return { positions, randoms };
-  }, []);
+  });
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
 

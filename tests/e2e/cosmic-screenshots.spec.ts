@@ -22,7 +22,10 @@ for (const t of TARGETS) {
     // Drive scene state directly — window.scrollTo bypasses Lenis and never
     // reaches ScrollTrigger, so the 3D scene wouldn't update.
     await page.evaluate((p) => {
-      (window as any).__setJourneyProgress?.(p);
+      const testWindow = window as Window & {
+        __setJourneyProgress?: (progress: number) => void;
+      };
+      testWindow.__setJourneyProgress?.(p);
     }, t.progress);
 
     await page.waitForTimeout(t.settle);

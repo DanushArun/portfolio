@@ -20,8 +20,7 @@ export function generateHubs(quality: Quality): PSet {
     const knotSpec = KNOT_TABLE.find(k => k.lang === knot.lang);
     const rgb = knotSpec ? hexToRgb(knotSpec.hue) : [1, 1, 1];
 
-    // Generate crisp "rays" emanating from the core
-    const numRays = Math.max(50, Math.floor(count / 200));
+    const numRays = Math.max(100, Math.floor(count / 100));
     const rays = [];
     for(let s = 0; s < numRays; s++) {
         const theta = Math.acos(2 * rng() - 1);
@@ -30,40 +29,34 @@ export function generateHubs(quality: Quality): PSet {
             dirX: Math.sin(theta) * Math.cos(phi),
             dirY: Math.sin(theta) * Math.sin(phi),
             dirZ: Math.cos(theta),
-            length: 0.3 + Math.abs(gauss(rng)) * 0.8,
-            thickness: Math.abs(gauss(rng)) * 0.02
+            length: 0.8 + Math.abs(gauss(rng)) * 2.0,
+            thickness: Math.abs(gauss(rng)) * 0.01,
+            noiseOffset: rng() * 1000,
         });
     }
     
     for (let j = 0; j < count; j++) {
-      // 80% of particles form the ultra-dense center
-      const isCore = rng() < 0.80;
-      
+      const isCore = rng() < 0.50;
       let dx, dy, dz, r;
-      
+      const ray = rays[j % numRays];
+
       if (isCore) {
-        // Ultra-dense core sphere
-        r = Math.abs(gauss(rng)) * 0.08;
+        r = Math.abs(gauss(rng)) * 0.05;
         const theta = Math.acos(2 * rng() - 1);
         const phi = 2 * Math.PI * rng();
         dx = r * Math.sin(theta) * Math.cos(phi);
         dy = r * Math.sin(theta) * Math.sin(phi);
         dz = r * Math.cos(theta);
       } else {
-        // Rays shooting outward
-        const ray = rays[j % numRays];
-        const t = rng(); // position along ray
-        // Exponential distribution so more particles are near the center
-        const tExp = t * t * t;
+        const t = rng();
+        const tExp = t * t;
         r = tExp * ray.length;
-        
-        // Micro-scatter for ray thickness
         const angle1 = rng() * Math.PI * 2;
         const angle2 = Math.acos(2 * rng() - 1);
-        
-        dx = ray.dirX * r + Math.sin(angle2) * Math.cos(angle1) * ray.thickness;
-        dy = ray.dirY * r + Math.sin(angle2) * Math.sin(angle1) * ray.thickness;
-        dz = ray.dirZ * r + Math.cos(angle2) * ray.thickness;
+        const scatterDist = Math.abs(gauss(rng)) * ray.thickness;
+        dx = ray.dirX * r + Math.sin(angle2) * Math.cos(angle1) * scatterDist;
+        dy = ray.dirY * r + Math.sin(angle2) * Math.sin(angle1) * scatterDist;
+        dz = ray.dirZ * r + Math.cos(angle2) * scatterDist;
       }
       
       const idx = j * 3;
@@ -77,10 +70,12 @@ export function generateHubs(quality: Quality): PSet {
       
       out.isCore[j] = isCore ? 1.0 : 0.0;
       out.isLoop[j] = 0.0;
-      
-      out.densityLevel[j] = isCore ? 1.5 : Math.max(0, 1.0 - (r / 1.5));
+      out.densityLevel[j] = isCore ? 1.5 : Math.max(0, 1.0 - (r / 2.0));
+
+      out.warpParams[idx]   = isCore ? 0.0 : ray.noiseOffset;
+      out.warpParams[idx+1] = isCore ? 0.0 : r * 0.8; // Grow chaos with distance
+      out.warpParams[idx+2] = 0.0;
     }
-    
     sets.push(out);
   });
   
@@ -94,6 +89,7 @@ export function generateHubs(quality: Quality): PSet {
     result.isCore.set(s.isCore, off1);
     result.isLoop.set(s.isLoop, off1);
     result.densityLevel.set(s.densityLevel, off1);
+    result.warpParams.set(s.warpParams, off3);
     off3 += n * 3; off1 += n;
   }
   return result;

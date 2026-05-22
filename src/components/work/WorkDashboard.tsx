@@ -1,21 +1,20 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useScene, isWork } from '@/lib/scene-state';
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
+import { useScene, isWork, type ScenePhase } from '@/lib/scene-state';
+import { panelCopy } from '@/lib/copy';
 
 const WorkBackdrop = dynamic(() => import('./WorkBackdrop'), { ssr: false });
 
-const MiraPanel       = dynamic(() => import('./panels/MiraPanel'),       { ssr: false });
-const AidenPanel      = dynamic(() => import('./panels/AidenPanel'),      { ssr: false });
-const VanguardPanel   = dynamic(() => import('./panels/VanguardPanel'),   { ssr: false });
-const InspectionPanel = dynamic(() => import('./panels/InspectionPanel'), { ssr: false });
-const WaveFieldPanel  = dynamic(() => import('./panels/WaveFieldPanel'),  { ssr: false });
-const EmiPanel        = dynamic(() => import('./panels/EmiPanel'),        { ssr: false });
-const FormulaPanel    = dynamic(() => import('./panels/FormulaPanel'),    { ssr: false });
-const AboutPanel      = dynamic(() => import('./panels/AboutPanel'),      { ssr: false });
-const ConnectPanel    = dynamic(() => import('./panels/ConnectPanel'),    { ssr: false });
+import MiraPanel from './panels/MiraPanel';
+import AidenPanel from './panels/AidenPanel';
+import VanguardPanel from './panels/VanguardPanel';
+import InspectionPanel from './panels/InspectionPanel';
+import WaveFieldPanel from './panels/WaveFieldPanel';
+import EmiPanel from './panels/EmiPanel';
+import FormulaPanel from './panels/FormulaPanel';
+import AboutPanel from './panels/AboutPanel';
+import ConnectPanel from './panels/ConnectPanel';
 
 export default function WorkDashboard() {
   const phase = useScene((s) => s.phase);
@@ -43,10 +42,8 @@ export default function WorkDashboard() {
       }}
     >
       {visible && <WorkBackdrop />}
+      {visible && <RecruiterLinks />}
 
-      {/* Each panel renders absolute and switches visibility based on phase.
-          MiraPanel covers the whole post-flash band (C07..C09) AND W01_MIRA
-          so the user lands on MIRA the moment the white flash clears. */}
       <PanelHost
         phase={phase}
         which={['C07_TRANSITION', 'C08_EMERGE', 'C09_PROJECT', 'W01_MIRA']}
@@ -63,33 +60,60 @@ export default function WorkDashboard() {
   );
 }
 
-function PanelHost({ phase, which, children }: {
-  phase: string; which: string | string[]; children: React.ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const active = Array.isArray(which) ? which.includes(phase) : phase === which;
+function RecruiterLinks(): React.JSX.Element {
+  return (
+    <nav
+      aria-label="Recruiter links"
+      style={{
+        display: 'flex',
+        gap: '0.75rem',
+        position: 'fixed',
+        right: 'clamp(1rem, 2.4vw, 2rem)',
+        top: 'clamp(1rem, 2.4vw, 2rem)',
+        zIndex: 30,
+      }}
+    >
+      {panelCopy.W09_CONNECT.links.map((link) => {
+        const external = link.href.startsWith('http');
+        return (
+          <a
+            href={link.href}
+            key={link.label}
+            rel={external ? 'noopener noreferrer' : undefined}
+            style={{
+              border: '1px solid rgba(240, 228, 210, 0.2)',
+              borderRadius: 4,
+              color: 'rgba(240, 228, 210, 0.78)',
+              fontFamily: 'var(--font-composer), ui-monospace, monospace',
+              fontSize: 10,
+              letterSpacing: '0.16em',
+              padding: '0.55rem 0.7rem',
+              textDecoration: 'none',
+            }}
+            target={external ? '_blank' : undefined}
+          >
+            {link.label}
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
 
-  useEffect(() => {
-    if (!ref.current) return;
-    if (active) {
-      gsap.fromTo(
-        ref.current,
-        { opacity: 0, y: 24 },
-        { opacity: 1, y: 0, duration: 0.9, ease: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-      );
-    } else {
-      gsap.to(ref.current, { opacity: 0, y: 24, duration: 0.4, ease: 'cubic-bezier(0.4, 0, 1, 1)' });
-    }
-  }, [active]);
+function PanelHost({ phase, which, children }: {
+  phase: ScenePhase;
+  which: ScenePhase | readonly ScenePhase[];
+  children: React.ReactNode;
+}): React.JSX.Element | null {
+  const active = Array.isArray(which) ? which.includes(phase) : phase === which;
+  if (!active) return null;
 
   return (
     <div
-      ref={ref}
       style={{
         position: 'absolute',
         inset: 0,
-        opacity: 0,
-        pointerEvents: active ? 'auto' : 'none',
+        pointerEvents: 'auto',
       }}
     >
       {children}

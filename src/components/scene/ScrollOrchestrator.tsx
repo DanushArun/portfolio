@@ -10,6 +10,12 @@ import { progressToPhase } from '@/lib/journey-map';
 
 gsap.registerPlugin(ScrollTrigger);
 
+declare global {
+  interface Window {
+    __setJourneyProgress?: (progress: number) => void;
+  }
+}
+
 export default function ScrollOrchestrator() {
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -31,7 +37,7 @@ export default function ScrollOrchestrator() {
 
     // Test handle: bypasses Lenis/GSAP so Playwright can drive scene state directly.
     if (process.env.NODE_ENV !== 'production') {
-      (window as any).__setJourneyProgress = (p: number) => {
+      window.__setJourneyProgress = (p: number) => {
         const snap = progressToPhase(p);
         useScene.getState().setProgress(
           p,
@@ -65,7 +71,7 @@ export default function ScrollOrchestrator() {
       trigger.kill();
       gsap.ticker.remove(lenisRaf);
       lenis.destroy();
-      delete (window as any).__setJourneyProgress;
+      delete window.__setJourneyProgress;
     };
   }, []);
 

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useScene } from '@/lib/scene-state';
 
 // --- THEMATIC SYMBOLS ---
 

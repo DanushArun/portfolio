@@ -1,4 +1,4 @@
-export const WORLD_SCALE = 2.6;
+export const WORLD_SCALE = 2.6; // Reverted for extreme packed density
 
 export type Rng = () => number;
 
@@ -75,6 +75,7 @@ export interface PSet {
   isCore: Float32Array;
   isLoop: Float32Array;
   densityLevel: Float32Array;
+  warpParams: Float32Array; // [offset, scale, thickness]
 }
 
 export function makePSet(n: number): PSet {
@@ -84,6 +85,7 @@ export function makePSet(n: number): PSet {
     isCore: new Float32Array(n),
     isLoop: new Float32Array(n),
     densityLevel: new Float32Array(n),
+    warpParams: new Float32Array(n * 3),
   };
 }
 
@@ -94,6 +96,7 @@ export function slicePSet(s: PSet, count: number): PSet {
     isCore: s.isCore.slice(0, count),
     isLoop: s.isLoop.slice(0, count),
     densityLevel: s.densityLevel.slice(0, count),
+    warpParams: s.warpParams.slice(0, count * 3),
   };
 }
 
@@ -108,6 +111,7 @@ export function mergePSets(sets: PSet[]): PSet {
     out.isCore.set(s.isCore, off1);
     out.isLoop.set(s.isLoop, off1);
     out.densityLevel.set(s.densityLevel, off1);
+    out.warpParams.set(s.warpParams, off3);
     off3 += n * 3; off1 += n;
   }
   return out;

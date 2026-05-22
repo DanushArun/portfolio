@@ -15,7 +15,8 @@ const coreVert = /* glsl */ `
   uniform vec3  uHue0; uniform vec3  uHue1; uniform vec3  uHue2;
   uniform vec3  uHue3; uniform vec3  uHue4;
   uniform float uActive;
-  varying vec2 vUv; varying vec3 vHue; varying float vIsActive;
+  uniform float uHover;
+  varying vec2 vUv; varying vec3 vHue; varying float vIsActive; varying float vIsHover;
 
   void main() {
     vec3 origin; float s;
@@ -25,10 +26,12 @@ const coreVert = /* glsl */ `
     else if (aIndex < 3.5) { origin=uPos3; s=uSize3; vHue=uHue3; }
     else                   { origin=uPos4; s=uSize4; vHue=uHue4; }
     vIsActive = abs(aIndex - uActive) < 0.5 ? 1.0 : 0.0;
+    vIsHover  = abs(aIndex - uHover)  < 0.5 ? 1.0 : 0.0;
     vUv = uv;
+    float hoverScale = mix(1.0, 1.35, vIsHover);
     vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
     vec3 up    = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-    vec3 world = origin + right*position.x*s + up*position.y*s;
+    vec3 world = origin + right*position.x*s*hoverScale + up*position.y*s*hoverScale;
     gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
   }
 `;
@@ -37,7 +40,7 @@ const coreFrag = /* glsl */ `
   precision highp float;
   uniform float uReveal;
   uniform float uTime;
-  varying vec2 vUv; varying vec3 vHue; varying float vIsActive;
+  varying vec2 vUv; varying vec3 vHue; varying float vIsActive; varying float vIsHover;
 
   void main() {
     vec2 p = vUv - vec2(0.5);
@@ -56,10 +59,10 @@ const coreFrag = /* glsl */ `
     // Core goes extremely bright white, then falls off to the hue color.
     vec3 col = mix(vHue, vec3(1.0, 0.98, 0.90), core);
     float boost = mix(1.0, 1.0 + pulse * 0.4, vIsActive);
+    float hoverGlow = mix(1.0, 1.5, vIsHover);
     
-    // Intensity needs to be high enough to hit the 0.90 bloom threshold, but not blowout the screen
-    float intensity = (core * 2.2 + inner * 0.8 + halo * 0.2) * boost * uReveal;
-    float alpha = (inner * 0.7 + halo * 0.3) * (0.6 + vIsActive * 0.4) * uReveal;
+    float intensity = (core * 2.2 + inner * 0.8 + halo * 0.2) * boost * uReveal * hoverGlow;
+    float alpha = (inner * 0.7 + halo * 0.3) * (0.6 + vIsActive * 0.4 + vIsHover * 0.3) * uReveal;
     
     gl_FragColor = vec4(col * intensity, alpha);
   }
@@ -68,12 +71,14 @@ const coreFrag = /* glsl */ `
 export interface CoreBillboardsProps {
   reveal: number;
   activeLang: MiraLang;
+  hoverLang: MiraLang | null;
   density: Record<MiraLang, number>;
 }
 
 const LANG_INDEX: Record<string, number> = { EN: 0, HI: 1, TA: 2, KN: 3, TE: 4 };
+const HOVER_DEFAULT = -1;
 
-export function CoreBillboards({ reveal, activeLang, density }: CoreBillboardsProps) {
+export function CoreBillboards({ reveal, activeLang, hoverLang, density }: CoreBillboardsProps) {
   const { geometry, material } = useMemo(() => {
     const QUAD = 5;
     const positions = new Float32Array(QUAD * 4 * 3);
@@ -110,6 +115,7 @@ export function CoreBillboards({ reveal, activeLang, density }: CoreBillboardsPr
         uTime:   { value: 0 },
         uScale:  { value: 1 },
         uActive: { value: 0 },
+        uHover:  { value: HOVER_DEFAULT },
         uPos0: { value: new THREE.Vector3(...KNOTS_W[0].pos) },
         uPos1: { value: new THREE.Vector3(...KNOTS_W[1].pos) },
         uPos2: { value: new THREE.Vector3(...KNOTS_W[2].pos) },
@@ -136,6 +142,7 @@ export function CoreBillboards({ reveal, activeLang, density }: CoreBillboardsPr
   useFrame((state) => {
     material.uniforms.uTime.value = state.clock.elapsedTime;
     material.uniforms.uActive.value = LANG_INDEX[activeLang];
+    material.uniforms.uHover.value = hoverLang !== null ? LANG_INDEX[hoverLang] : HOVER_DEFAULT;
     material.uniforms.uReveal.value = reveal;
     material.uniforms.uSize0.value = 0.45*KNOTS_W[0].scale*(0.92+density[KNOTS_W[0].lang]*0.55);
     material.uniforms.uSize1.value = 0.45*KNOTS_W[1].scale*(0.92+density[KNOTS_W[1].lang]*0.55);

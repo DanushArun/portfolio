@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, useRef, useEffect, useState } from 'react';
+/* eslint-disable react-hooks/immutability */
+
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useMiraState, KNOT_TABLE, ingestForLang, advanceCycle } from '@/lib/mira-state';
@@ -169,103 +171,120 @@ const RENDER_FRAG = /* glsl */ `
   }
 `;
 
-export default function MiraPlume({ reveal }: { reveal: number }) {
+type ComputeScene = Readonly<{
+  camera: THREE.OrthographicCamera;
+  geometry: THREE.PlaneGeometry;
+  scene: THREE.Scene;
+}>;
+
+type PlumeResources = {
+  computeMaterial: THREE.ShaderMaterial;
+  computeScene: ComputeScene;
+  geometry: THREE.BufferGeometry;
+  readTarget: THREE.WebGLRenderTarget;
+  renderMaterial: THREE.ShaderMaterial;
+  writeTarget: THREE.WebGLRenderTarget;
+};
+
+function createTargets(size: number): [THREE.WebGLRenderTarget, THREE.WebGLRenderTarget] {
+  const readTarget = new THREE.WebGLRenderTarget(size, size, {
+    type: THREE.FloatType,
+    format: THREE.RGBAFormat,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+  });
+  return [readTarget, readTarget.clone()];
+}
+
+function createMaterials(pixelRatio: number): {
+  computeMaterial: THREE.ShaderMaterial;
+  renderMaterial: THREE.ShaderMaterial;
+} {
+  const computeMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      uTexture: { value: null },
+      uTime: { value: 0 },
+      uDelta: { value: 0 },
+      uKnotPos: { value: new THREE.Vector3() },
+      uFrame: { value: 0 },
+    },
+    vertexShader: COMPUTE_VERT,
+    fragmentShader: COMPUTE_FRAG,
+  });
+
+  const renderMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      uTexture: { value: null },
+      uPointSize: { value: pixelRatio * 12.0 },
+      uKnotColor: { value: new THREE.Color() },
+    },
+    vertexShader: RENDER_VERT,
+    fragmentShader: RENDER_FRAG,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  return { computeMaterial, renderMaterial };
+}
+
+function createGeometry(size: number): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(size * size * 3);
+  const uvs = new Float32Array(size * size * 2);
+  for (let i = 0; i < size * size; i++) {
+    uvs[i * 2] = (i % size) / size;
+    uvs[i * 2 + 1] = Math.floor(i / size) / size;
+  }
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  return geometry;
+}
+
+function createComputeScene(material: THREE.ShaderMaterial): ComputeScene {
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const geometry = new THREE.PlaneGeometry(2, 2);
+  scene.add(new THREE.Mesh(geometry, material));
+  return { camera, geometry, scene };
+}
+
+function createResources(size: number, pixelRatio: number): PlumeResources {
+  const [readTarget, writeTarget] = createTargets(size);
+  const { computeMaterial, renderMaterial } = createMaterials(pixelRatio);
+  return {
+    computeMaterial,
+    computeScene: createComputeScene(computeMaterial),
+    geometry: createGeometry(size),
+    readTarget,
+    renderMaterial,
+    writeTarget,
+  };
+}
+
+function disposeResources(resources: PlumeResources): void {
+  resources.readTarget.dispose();
+  resources.writeTarget.dispose();
+  resources.computeMaterial.dispose();
+  resources.renderMaterial.dispose();
+  resources.geometry.dispose();
+  resources.computeScene.geometry.dispose();
+}
+
+export default function MiraPlume({ reveal }: { reveal: number }): React.JSX.Element | null {
   const { gl } = useThree();
   const activeLang = useMiraState((s) => s.activeLang);
   const cycleStartMs = useMiraState((s) => s.cycleStartMs);
   const ingestedRef = useRef(false);
-
-  const size = 64; // 4096 particles
-  
-  const [isReady, setIsReady] = useState(false);
-  const computeMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
-  const renderMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
-  const geometryRef = useRef<THREE.BufferGeometry | null>(null);
-  const readRef = useRef<THREE.WebGLRenderTarget | null>(null);
-  const writeRef = useRef<THREE.WebGLRenderTarget | null>(null);
-
-  useEffect(() => {
-    const rt1 = new THREE.WebGLRenderTarget(size, size, {
-      type: THREE.FloatType,
-      format: THREE.RGBAFormat,
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
-    });
-    const rt2 = rt1.clone();
-
-    const cMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTexture: { value: null },
-        uTime: { value: 0 },
-        uDelta: { value: 0 },
-        uKnotPos: { value: new THREE.Vector3() },
-        uFrame: { value: 0 },
-      },
-      vertexShader: COMPUTE_VERT,
-      fragmentShader: COMPUTE_FRAG,
-    });
-
-    const rMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTexture: { value: null },
-        uPointSize: { value: gl.getPixelRatio() * 12.0 },
-        uKnotColor: { value: new THREE.Color() },
-      },
-      vertexShader: RENDER_VERT,
-      fragmentShader: RENDER_FRAG,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
-    const g = new THREE.BufferGeometry();
-    const positions = new Float32Array(size * size * 3);
-    const uvs = new Float32Array(size * size * 2);
-    for (let i = 0; i < size * size; i++) {
-      uvs[i * 2] = (i % size) / size;
-      uvs[i * 2 + 1] = Math.floor(i / size) / size;
-    }
-    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-
-    computeMaterialRef.current = cMat;
-    renderMaterialRef.current = rMat;
-    geometryRef.current = g;
-    readRef.current = rt1;
-    writeRef.current = rt2;
-
-    setIsReady(true);
-
-    return () => {
-      rt1.dispose();
-      rt2.dispose();
-      cMat.dispose();
-      rMat.dispose();
-      g.dispose();
-    };
-  }, [gl]);
-
-  const computeScene = useMemo(() => {
-    // eslint-disable-next-line react-hooks/refs
-    if (!isReady || !computeMaterialRef.current) return null;
-    const s = new THREE.Scene();
-    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    // eslint-disable-next-line react-hooks/refs
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), computeMaterialRef.current);
-    s.add(mesh);
-    return { s, cam };
-  }, [isReady]);
-
   const frameRef = useRef(0);
+  const resources = useMemo(() => createResources(64, gl.getPixelRatio()), [gl]);
+
+  useEffect(() => () => disposeResources(resources), [resources]);
 
   useFrame((state, delta) => {
-    const cMat = computeMaterialRef.current;
-    const rMat = renderMaterialRef.current;
-    if (!cMat || !rMat || !computeScene || !readRef.current || !writeRef.current || reveal < 0.85) return;
+    if (reveal < 0.85) return;
 
-    // 1. Cycle & Ingestion logic
     const sinceCycleStart = performance.now() - cycleStartMs;
-    
     if (sinceCycleStart >= 3000 && !ingestedRef.current) {
       ingestedRef.current = true;
       ingestForLang(activeLang);
@@ -274,39 +293,38 @@ export default function MiraPlume({ reveal }: { reveal: number }) {
       ingestedRef.current = false;
     }
 
-    // 2. GPGPU Compute
-    const knot = KNOT_TABLE.find(k => k.lang === activeLang)!;
-    cMat.uniforms.uTexture.value = readRef.current.texture;
-    cMat.uniforms.uTime.value = state.clock.elapsedTime;
-    cMat.uniforms.uDelta.value = Math.min(delta, 0.1);
-    cMat.uniforms.uKnotPos.value.set(
+    const knot = KNOT_TABLE.find((item) => item.lang === activeLang);
+    if (!knot) return;
+
+    resources.computeMaterial.uniforms.uTexture.value = resources.readTarget.texture;
+    resources.computeMaterial.uniforms.uTime.value = state.clock.elapsedTime;
+    resources.computeMaterial.uniforms.uDelta.value = Math.min(delta, 0.1);
+    resources.computeMaterial.uniforms.uKnotPos.value.set(
       knot.position[0] * WORLD_SCALE,
       knot.position[1] * WORLD_SCALE,
       knot.position[2] * WORLD_SCALE
     );
-    cMat.uniforms.uFrame.value = frameRef.current;
+    resources.computeMaterial.uniforms.uFrame.value = frameRef.current;
 
-    gl.setRenderTarget(writeRef.current);
-    gl.render(computeScene.s, computeScene.cam);
+    gl.setRenderTarget(resources.writeTarget);
+    gl.render(resources.computeScene.scene, resources.computeScene.camera);
     gl.setRenderTarget(null);
 
-    // Swap
-    const tmp = readRef.current;
-    readRef.current = writeRef.current;
-    writeRef.current = tmp;
+    const tmp = resources.readTarget;
+    resources.readTarget = resources.writeTarget;
+    resources.writeTarget = tmp;
 
-    // 3. Render setup
-    rMat.uniforms.uTexture.value = readRef.current.texture;
-    rMat.uniforms.uKnotColor.value.set(knot.hue);
+    resources.renderMaterial.uniforms.uTexture.value = resources.readTarget.texture;
+    resources.renderMaterial.uniforms.uKnotColor.value.set(knot.hue);
     frameRef.current++;
   });
 
-  if (!isReady || reveal < 0.85 || !geometryRef.current || !renderMaterialRef.current) return null;
+  if (reveal < 0.85) return null;
 
   return (
     <points
-      geometry={geometryRef.current}
-      material={renderMaterialRef.current}
+      geometry={resources.geometry}
+      material={resources.renderMaterial}
       frustumCulled={false}
     />
   );

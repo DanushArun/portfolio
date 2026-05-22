@@ -1,6 +1,6 @@
 // Job 003.5 — BH camera continuity regression.
 //
-// Asserts the viewer FALLS INTO the dark center across C03 → C05.
+// Asserts the viewer FALLS INTO the dark center across C03 → C04.
 // Prior bug: the R3F Canvas mounted at C05_WARP with an idle camera at
 // (0,0,30) while the BH canvas was at (0,0,-2). The crossfade read as
 // the camera retreating outward — the founder saw the BH "shrink".
@@ -25,9 +25,8 @@ declare global {
   }
 }
 
-// p=0.16 mid-C03 STRETCH, p=0.22 C03/C04 boundary, p=0.30 mid-C05 WARP.
-// All three fall inside the imperative BH canvas after the fix.
-const SAMPLES = [0.16, 0.22, 0.30];
+// p=0.16 mid-C03 STRETCH, p=0.22 C03/C04 boundary, p=0.26 mid-C04 HORIZON.
+const SAMPLES = [0.16, 0.22, 0.26];
 const SETTLE_MS = 800;
 
 async function readCam(page: import('@playwright/test').Page, p: number): Promise<Vec3> {
@@ -43,7 +42,7 @@ async function readCam(page: import('@playwright/test').Page, p: number): Promis
   return pos as Vec3;
 }
 
-test('BH camera falls INTO the void across C03→C05 (no retreat)', async ({ page }) => {
+test('BH camera falls INTO the void across C03→C04 (no retreat)', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('canvas', { timeout: 30_000 });
   await page.waitForTimeout(1500);

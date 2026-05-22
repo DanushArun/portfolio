@@ -6,11 +6,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-import { detectQualityProfile, useMiraState } from '@/lib/mira-state';
+import { detectQualityProfile, useMiraState, setHoverLang, setActiveLang } from '@/lib/mira-state';
 import { generateHubs } from './mira/generate-hubs';
 import { generateTendrils } from './mira/generate-tendrils';
 import { generateLemniscate } from './mira/generate-lemniscate';
-import { mergePSets, WORLD_SCALE, type PSet } from './mira/buffers';
+import { mergePSets, WORLD_SCALE } from './mira/buffers';
 import { KNOTS_W, type Quality } from './mira/knot-config';
 import { vert, frag } from './mira/shader.glsl';
 import { KnotLabels } from './mira/KnotLabels';
@@ -24,6 +24,7 @@ interface GeneratedBuffers {
   isCores: Float32Array;
   isLoops: Float32Array;
   densityLevels: Float32Array;
+  warpParams: Float32Array;
   count: number;
 }
 
@@ -45,6 +46,7 @@ function generate(quality: Quality): GeneratedBuffers {
     isCores:       merged.isCore,
     isLoops:       merged.isLoop,
     densityLevels: merged.densityLevel,
+    warpParams:    merged.warpParams,
     count: merged.isCore.length,
   };
   CACHE.set(quality, out);
@@ -87,6 +89,7 @@ function buildReadyState(buf: GeneratedBuffers, pixelRatio: number): ReadyState 
   g.setAttribute('aIsCore',       new THREE.BufferAttribute(buf.isCores,       1));
   g.setAttribute('aIsLoop',       new THREE.BufferAttribute(buf.isLoops,       1));
   g.setAttribute('aDensityLevel', new THREE.BufferAttribute(buf.densityLevels, 1));
+  g.setAttribute('aWarpParams',   new THREE.BufferAttribute(buf.warpParams,    3));
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 6 * WORLD_SCALE);
 
   const m = new THREE.ShaderMaterial({
@@ -105,12 +108,32 @@ function buildReadyState(buf: GeneratedBuffers, pixelRatio: number): ReadyState 
   return { geometry: g, material: m };
 }
 
+function KnotInteractors() {
+  return (
+    <>
+      {KNOTS_W.map((k) => (
+        <mesh
+          key={k.lang}
+          position={[k.pos[0], k.pos[1], k.pos[2]]}
+          onPointerOver={(e) => { e.stopPropagation(); setHoverLang(k.lang); }}
+          onPointerOut={() => setHoverLang(null)}
+          onClick={(e) => { e.stopPropagation(); setActiveLang(k.lang); }}
+        >
+          <sphereGeometry args={[0.9, 12, 12]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
 export default function MiraSupercluster(
   { reveal }: MiraSuperclusterProps,
 ): React.ReactElement | null {
   const pointsRef = useRef<THREE.Points>(null);
   const revealRef = useRef<number>(-1);
   const activeLang = useMiraState((s) => s.activeLang);
+  const hoverLang = useMiraState((s) => s.hoverLang);
   const density = useMiraState((s) => s.density);
 
   const quality = useMemo<Quality>(() => {
@@ -164,8 +187,9 @@ export default function MiraSupercluster(
         material={ready.material}
         frustumCulled={false}
       />
-      <CoreBillboards reveal={reveal} activeLang={activeLang} density={density} />
+      <CoreBillboards reveal={reveal} activeLang={activeLang} hoverLang={hoverLang} density={density} />
       <KnotLabels reveal={reveal} />
+      {reveal >= 0.85 && <KnotInteractors />}
     </group>
   );
 }

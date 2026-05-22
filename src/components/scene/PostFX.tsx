@@ -51,20 +51,20 @@ export default function PostFX() {
   );
 
   useFrame(() => {
-    const phase  = useScene.getState().phase;
+    const phase = useScene.getState().phase;
     const cosmic = useScene.getState().cosmicProgress;
-    const local  = useScene.getState().localProgress;
+    const local = useScene.getState().localProgress;
     const isMira = phase === 'W01_MIRA';
 
     // Phase-aware bloom uniform mutation.
     if (isMira) {
-      bloomEffect.luminanceMaterial.threshold  = 0.90;
-      bloomEffect.luminanceMaterial.smoothing  = 0.20;
-      bloomEffect.intensity                    = 2.00;
+      bloomEffect.luminanceMaterial.threshold = 0.97;
+      bloomEffect.luminanceMaterial.smoothing = 0.01;
+      bloomEffect.intensity = 0.20; // Keeps bloom pinned to core centers only, space stays pitch black
     } else {
-      bloomEffect.luminanceMaterial.threshold  = 0.60;
-      bloomEffect.luminanceMaterial.smoothing  = 0.9;
-      bloomEffect.intensity                    = 0.40;
+      bloomEffect.luminanceMaterial.threshold = 0.60;
+      bloomEffect.luminanceMaterial.smoothing = 0.9;
+      bloomEffect.intensity = 0.40;
     }
 
     // Phase-aware scene background.

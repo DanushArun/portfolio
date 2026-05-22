@@ -35,6 +35,7 @@ const INITIAL_DENSITY: Density = {
 
 interface MiraState {
   activeLang: MiraLang;
+  hoverLang: MiraLang | null;
   density: Density;
   cycleIndex: number;
   cycleStartMs: number;
@@ -46,6 +47,7 @@ function nowMs(): number {
 
 export const useMiraState = create<MiraState>(() => ({
   activeLang: 'EN',
+  hoverLang: null,
   density: { ...INITIAL_DENSITY },
   cycleIndex: 0,
   cycleStartMs: nowMs(),
@@ -60,6 +62,20 @@ export function advanceCycle(): void {
       cycleStartMs: nowMs(),
     };
   });
+}
+
+export function setHoverLang(lang: MiraLang | null): void {
+  useMiraState.setState({ hoverLang: lang });
+}
+
+export function setActiveLang(lang: MiraLang): void {
+  const idx = CYCLE_ORDER.indexOf(lang);
+  useMiraState.setState({
+    activeLang: lang,
+    cycleIndex: idx,
+    cycleStartMs: nowMs(),
+  });
+  ingestForLang(lang);
 }
 
 const DENSITY_STEP = 0.020;

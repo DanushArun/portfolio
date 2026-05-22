@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
@@ -8,6 +8,11 @@ import { palette } from '@/lib/design-tokens';
 
 const FRAGMENT_COUNT = 800;
 const RING_PARTICLE_COUNT = 5000;
+const tmpPos = new THREE.Vector3();
+const tmpEul = new THREE.Euler();
+const tmpQuat = new THREE.Quaternion();
+const tmpScale = new THREE.Vector3();
+const tmpMatrix = new THREE.Matrix4();
 
 export default function TransitionConvergence() {
   const local = useScene((s) => s.localProgress);
@@ -70,7 +75,6 @@ export default function TransitionConvergence() {
         y = z * 0.4;
         z = tmp - z * 0.1;
       } else if (ringIdx === 2) {
-        const tmp = y;
         y = -x * 0.3;
         x = x * 0.9;
       }

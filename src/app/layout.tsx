@@ -2,11 +2,17 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { composerMono, dopSerif, directorMonoFull } from '@/lib/fonts';
 import { ReducedMotionProvider } from '@/lib/motion/ReducedMotionProvider';
-import CustomCursor from '@/components/cursor/CustomCursor';
 
 export const metadata: Metadata = {
-  title: 'Danush Arun',
-  description: 'The Astronaut Who Went Through',
+  title: 'Danush Arun | AI Systems Engineer',
+  description:
+    'Production AI systems, real-time voice agents, call analytics and AI research.',
+  openGraph: {
+    title: 'Danush Arun | AI Systems Engineer',
+    description:
+      'Portfolio of production AI systems at DriveX and research-led engineering work.',
+    type: 'website',
+  },
 };
 
 export const viewport: Viewport = {
@@ -29,7 +35,6 @@ export default function RootLayout({
       <body>
         <ReducedMotionProvider>
           {children}
-          <CustomCursor />
         </ReducedMotionProvider>
       </body>
     </html>

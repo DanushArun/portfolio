@@ -1,11 +1,10 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useRef, useMemo, useState } from 'react';
+import { extend, useFrame, type ReactThreeFiber } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useScene } from '@/lib/scene-state';
 import { shaderMaterial } from '@react-three/drei';
-import { extend } from '@react-three/fiber';
 
 // --- CUSTOM SHADERS FOR PROCEDURAL SUN ---
 const SunMaterial = shaderMaterial(
@@ -114,6 +113,17 @@ const SunMaterial = shaderMaterial(
 
 extend({ SunMaterial });
 
+type SunMaterialHandle = THREE.ShaderMaterial & {
+  uTime: number;
+  uIntensity: number;
+};
+
+declare module '@react-three/fiber' {
+  interface ThreeElements {
+    sunMaterial: ReactThreeFiber.ThreeElement<typeof SunMaterial>;
+  }
+}
+
 // --- ACCRETION DISK PARTICLES ---
 function AccretionDisk({ color, radius }: { color: string, radius: number }) {
   const count = 3000;
@@ -179,8 +189,8 @@ export default function EmergeSystem() {
   const phase = useScene((s) => s.phase);
   const localProgress = useScene((s) => s.localProgress);
   
-  const mat1Ref = useRef<any>(null);
-  const mat2Ref = useRef<any>(null);
+  const mat1Ref = useRef<SunMaterialHandle>(null);
+  const mat2Ref = useRef<SunMaterialHandle>(null);
 
   useFrame((state) => {
     if (mat1Ref.current) mat1Ref.current.uTime = state.clock.elapsedTime;
@@ -211,7 +221,6 @@ export default function EmergeSystem() {
       <group position={[-5, 0, 0]}>
         <mesh>
           <sphereGeometry args={[2, 64, 64]} />
-          {/* @ts-ignore */}
           <sunMaterial ref={mat1Ref} uColorMain={new THREE.Color('#44aaff')} uColorAccent={new THREE.Color('#ffffff')} transparent />
         </mesh>
         <AccretionDisk color="#88ccff" radius={2.2} />
@@ -221,7 +230,6 @@ export default function EmergeSystem() {
       <group position={[5, 0, 0]}>
         <mesh>
           <sphereGeometry args={[1.5, 64, 64]} />
-          {/* @ts-ignore */}
           <sunMaterial ref={mat2Ref} uColorMain={new THREE.Color('#ff6600')} uColorAccent={new THREE.Color('#ffcc00')} transparent />
         </mesh>
         <AccretionDisk color="#ffaa44" radius={1.7} />

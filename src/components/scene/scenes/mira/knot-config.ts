@@ -29,13 +29,13 @@ export type Quality = 'high' | 'low';
 
 export const PARTICLE_BUDGET = {
   high: {
-    EN: 100000,
-    HI: 100000,
-    TA: 80000,
-    KN: 80000,
-    TE: 80000,
-    HILoop: 100000,
-    Tendrils: 1500000, // 1.5 Million particles for massive density
+    EN: 40000,
+    HI: 40000,
+    TA: 30000,
+    KN: 30000,
+    TE: 30000,
+    HILoop: 40000,
+    Tendrils: 1200000, // 1.2M is the safe ceiling for CPU buffer generation
   },
   low: {
     EN: 15000,

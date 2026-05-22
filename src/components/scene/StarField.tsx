@@ -43,7 +43,7 @@ export default function StarField() {
       depthWrite:      false,
     });
     return { geo: g, mat: m };
-  }, []);
+  });
 
   useEffect(() => () => {
     geo.dispose();

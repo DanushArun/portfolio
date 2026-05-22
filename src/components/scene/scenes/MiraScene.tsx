@@ -29,7 +29,7 @@ function computeReveal(phase: string, local: number): number {
     return ((local - 0.45) / 0.55) * 0.40;
   }
   if (phase === 'C08_EMERGE')  return 0.40 + Math.min(1, local) * 0.40;
-  if (phase === 'C09_PROJECT') return 0.80 + Math.min(1, local) * 0.15;
+  if (phase === 'C09_PROJECT') return 0.80 + Math.min(1, local) * 0.20; // Smooth 0.8 to 1.0
   if (phase === 'W01_MIRA')    return 1.0;
   return 0;
 }

@@ -5,8 +5,6 @@ import { usePathname } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import { useScene, isCosmic, isBlackHoleCanvas, isR3FCanvas } from '@/lib/scene-state';
 import dynamic from 'next/dynamic';
-import { useAudio } from '@/hooks/useAudio';
-import AudioToggle from '@/components/ui/AudioToggle';
 
 import ScrollOrchestrator from './ScrollOrchestrator';
 import BlackHoleMount from './BlackHoleMount';
@@ -20,7 +18,7 @@ const StarField             = dynamic(() => import('./StarField'),              
 
 import HUD from '@/components/hud/HUD';
 import VoidPrologue from './VoidPrologue';
-import GravityCursor from './GravityCursor';
+
 import { useKeyboardNavigation } from '@/lib/scene-state/keyboard-adapter';
 import WorkDashboard from '@/components/work/WorkDashboard';
 
@@ -28,21 +26,24 @@ export default function SceneManager() {
   const phase           = useScene((s) => s.phase);
   const veil            = useScene((s) => s.veil);
   const cosmicProgress  = useScene((s) => s.cosmicProgress);
+  const local           = useScene((s) => s.localProgress);
   const pathname        = usePathname();
-
-  if (pathname !== '/') return null;
+  const isHome          = pathname === '/';
 
   useEffect(() => {
+    if (!isHome) return;
     const { beginJourney, phase: p } = useScene.getState();
     if (p === 'C01_ORBIT') beginJourney();
-  }, []);
+  }, [isHome]);
 
   useEffect(() => {
+    if (!isHome) return;
     if (isCosmic(phase)) useScene.setState({ veil: 0 });
-  }, [phase]);
+  }, [isHome, phase]);
 
-  useAudio();
   useKeyboardNavigation();
+
+  if (!isHome) return null;
 
   const showBH    = isBlackHoleCanvas(phase);
   // R3F canvas covers C05+ — WarpScene renders during C05_WARP and C06_ANOMALY.
@@ -53,8 +54,6 @@ export default function SceneManager() {
   const bhAlpha   = showBH ? 1 : 0;
 
   // ── Journey Remapping ──────────────────────────────────────────────────────
-  const local = useScene((s) => s.localProgress);
-
   // ── Fall-in darkness ───────────────────────────────────────────────────────
   // Pure screen-space black overlay that ramps in during C04 (the user is
   // being engulfed by the singularity — the BH renderer alone can't deliver
@@ -195,7 +194,6 @@ export default function SceneManager() {
       <ScrollOrchestrator />
       <WorkDashboard />
       <HUD />
-      <GravityCursor />
       <VoidPrologue />
       <div
         aria-hidden
@@ -206,7 +204,6 @@ export default function SceneManager() {
           zIndex: -1,
         }}
       />
-      <AudioToggle />
     </>
   );
 }

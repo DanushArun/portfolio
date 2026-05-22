@@ -1,7 +1,5 @@
 'use client';
 
-import * as THREE from 'three';
-
 export default function BlueprintGrid() {
   return (
     <group>

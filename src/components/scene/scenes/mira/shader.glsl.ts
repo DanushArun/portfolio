@@ -3,6 +3,7 @@ export const vert = /* glsl */ `
   attribute float aIsCore;
   attribute float aIsLoop;
   attribute float aDensityLevel;
+  attribute vec3 aWarpParams; // [offset, scale, thickness]
 
   uniform float uTime;
   uniform float uPixelRatio;
@@ -11,59 +12,72 @@ export const vert = /* glsl */ `
   varying vec3 vColor;
   varying float vAlphaMultiplier;
 
-  // Ultra-cheap trigonometric drift to replace expensive 3D simplex noise
-  // This prevents the system from frying while allowing 400,000+ particles
-  vec3 cheapDrift(vec3 p, float t) {
-      float x = sin(p.y * 0.5 + t) * cos(p.z * 0.3 + t * 0.8);
-      float y = cos(p.x * 0.5 + t * 0.9) * sin(p.z * 0.3 + t * 1.1);
-      float z = sin(p.x * 0.3 + t * 1.2) * cos(p.y * 0.5 + t * 0.7);
-      return vec3(x, y, z);
+  // Extremely fast GPU-side fractal noise for tearing the neural web
+  // We use this to replace the CPU-based fbm3/fbmVec3
+  float fastNoise(vec3 p) {
+    return sin(p.x * 0.5 + p.y * 1.2 + p.z * 0.8) * cos(p.y * 0.4 - p.z * 1.5 + p.x * 0.9);
+  }
+
+  vec3 fbmWarpGPU(vec3 p, float offset) {
+    vec3 p1 = p * 0.2 + vec3(offset);
+    vec3 p2 = p * 0.8 + vec3(offset * 2.0);
+    vec3 p3 = p * 2.5;
+
+    float n1 = fastNoise(p1);
+    float n2 = fastNoise(p2 + vec3(n1));
+    float n3 = fastNoise(p3);
+
+    return vec3(n1 * 1.0 + n2 * 0.4 + n3 * 0.1);
   }
 
   void main() {
     vec3 pos = position;
     
-    // Smooth, cheap gravitational drift
-    vec3 drift = cheapDrift(pos, uTime * 0.1) * 0.08 + cheapDrift(pos * 2.0, uTime * 0.2) * 0.02;
-    
-    vec4 mv = modelViewMatrix * vec4(pos + drift, 1.0);
+    // Fractal Tearing (Intelligence Topology) - Now on the GPU!
+    // aWarpParams.x = offset, aWarpParams.y = chaosScale
+    bool isCore = aIsCore > 0.5;
+    bool isLoop = aIsLoop > 0.5;
+
+    if (!isCore) {
+      // Apply the same 'bulge' logic (0 at nodes, max in middle) as before
+      // We calculate a pseudo-bulge based on position or we can just apply it generally.
+      // For simplicity and crispness, we apply a static fractal warp.
+      vec3 warp = fbmWarpGPU(pos, aWarpParams.x);
+      pos += warp * aWarpParams.y;
+    }
+
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mv;
     float depth = -mv.z;
     
-    bool isCore = aIsCore > 0.5;
-    bool isFossilized = aDensityLevel < 0.0;
     float effectiveDensity = max(0.0, aDensityLevel);
     
+    vec3 deepVoidColor = vec3(0.05, 0.1, 1.0);
+    vec3 hotCoreColor = vec3(1.0, 0.95, 0.8);
+    
     vec3 col = aColor;
+    
     if (isCore) {
-      col = mix(col, vec3(1.0, 0.95, 0.8), 0.4);
+      col = mix(col, hotCoreColor, 0.8);
+    } else {
+      col = mix(deepVoidColor, col, effectiveDensity);
+      col += aColor * effectiveDensity * 0.5;
     }
     
-    float intensity = 0.5 + pow(effectiveDensity, 2.0) * 1.5;
-    if (isCore) {
-      intensity += 1.5; 
-    }
-    if (aIsLoop > 0.5) {
-      intensity += 0.5 + sin(uTime * 0.5 + pos.x) * 0.3; 
-    }
-    if (isFossilized) {
-      intensity *= 0.1;
-    }
+    float intensity = 0.5 + effectiveDensity * 2.0;
+    if (isCore) intensity += 1.5;
     
-    vColor = min(col * intensity, vec3(4.0));
+    vColor = min(col * intensity, vec3(5.0));
     
-    // Very fine particles to allow massive counts
-    float baseSize = 1.0 + effectiveDensity * 2.0;
-    if (isCore) baseSize += 2.0;
-    if (isFossilized) baseSize *= 0.5;
+    // Density restored: particles are tiny but dense.
+    float baseSize = 0.8;
+    if (isCore) baseSize = 1.6;
     
     float sizePx = baseSize * uPixelRatio * (40.0 / max(0.5, depth));
-    gl_PointSize = clamp(sizePx * uReveal, 0.5, 8.0);
+    gl_PointSize = clamp(sizePx * uReveal, 0.5, 3.0);
     
-    // Sharp falloff into pure black
-    float depthFalloff = smoothstep(2.0, 25.0, depth);
+    float depthFalloff = smoothstep(1.0, 30.0, depth);
     vAlphaMultiplier = mix(1.0, 0.0, depthFalloff);
-    if (isFossilized) vAlphaMultiplier *= 0.3;
   }
 `;
 
@@ -74,12 +88,14 @@ export const frag = /* glsl */ `
   varying float vAlphaMultiplier;
 
   void main() {
+    // Ultra-optimized fragment shader.
+    // Avoid length() and pow(). Use dot product (squared distance) instead.
     vec2 c = gl_PointCoord - vec2(0.5);
-    float d = length(c) * 2.0;
-    if (d > 1.0) discard;
+    float dSq = dot(c, c) * 4.0; // 0 at center, 1 at edges
+    if (dSq > 1.0) discard;
     
-    // Sharp, microscopic point of light for filaments
-    float alpha = pow(1.0 - d, 2.0) * 0.6;
+    // Simple linear falloff using squared distance is incredibly cheap
+    float alpha = (1.0 - dSq) * 0.8;
     
     gl_FragColor = vec4(vColor * uReveal * alpha * vAlphaMultiplier, alpha * uReveal * vAlphaMultiplier);
   }

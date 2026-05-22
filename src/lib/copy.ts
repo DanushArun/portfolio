@@ -91,7 +91,7 @@ export const panelCopy = {
     links: [
       { label: 'LINKEDIN', icon: 'linkedin', href: 'https://linkedin.com/in/danush-arun-5aa762267' },
       { label: 'GITHUB', icon: 'github', href: 'https://github.com/DanushArun' },
-      { label: 'EMAIL', icon: 'mail', href: 'mailto:procx@partner.drivex.in' },
+      { label: 'EMAIL', icon: 'mail', href: 'mailto:danusharun999@gmail.com' },
     ],
   },
 } as const;

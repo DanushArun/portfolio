@@ -60,12 +60,7 @@ body {
   font-weight: 400;
   line-height: 1.35;
   overflow-x: hidden;
-  cursor: none;
   min-height: 100svh;
-}
-
-@media (pointer: coarse) {
-  body { cursor: auto; }
 }
 
 /* Typography utility classes — names of the three voices. */
@@ -94,11 +89,6 @@ button {
   color: inherit;
   background: none;
   font: inherit;
-  cursor: none;
-}
-
-@media (pointer: coarse) {
-  a, button { cursor: auto; }
 }
 
 img,
