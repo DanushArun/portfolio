@@ -61,7 +61,7 @@ const coreFrag = /* glsl */ `
     float boost = mix(1.0, 1.0 + pulse * 0.4, vIsActive);
     float hoverGlow = mix(1.0, 1.5, vIsHover);
     
-    float intensity = (core * 2.2 + inner * 0.8 + halo * 0.2) * boost * uReveal * hoverGlow;
+    float intensity = (core * 1.65 + inner * 0.54 + halo * 0.12) * boost * uReveal * hoverGlow;
     float alpha = (inner * 0.7 + halo * 0.3) * (0.6 + vIsActive * 0.4 + vIsHover * 0.3) * uReveal;
     
     gl_FragColor = vec4(col * intensity, alpha);
@@ -121,11 +121,11 @@ export function CoreBillboards({ reveal, activeLang, hoverLang, density }: CoreB
         uPos2: { value: new THREE.Vector3(...KNOTS_W[2].pos) },
         uPos3: { value: new THREE.Vector3(...KNOTS_W[3].pos) },
         uPos4: { value: new THREE.Vector3(...KNOTS_W[4].pos) },
-        uSize0: { value: 0.30 * KNOTS_W[0].scale },
-        uSize1: { value: 0.30 * KNOTS_W[1].scale },
-        uSize2: { value: 0.30 * KNOTS_W[2].scale },
-        uSize3: { value: 0.30 * KNOTS_W[3].scale },
-        uSize4: { value: 0.30 * KNOTS_W[4].scale },
+        uSize0: { value: 0.22 * KNOTS_W[0].scale },
+        uSize1: { value: 0.22 * KNOTS_W[1].scale },
+        uSize2: { value: 0.22 * KNOTS_W[2].scale },
+        uSize3: { value: 0.22 * KNOTS_W[3].scale },
+        uSize4: { value: 0.22 * KNOTS_W[4].scale },
         uHue0: { value: hueColors[0] }, uHue1: { value: hueColors[1] },
         uHue2: { value: hueColors[2] }, uHue3: { value: hueColors[3] },
         uHue4: { value: hueColors[4] },
@@ -144,12 +144,17 @@ export function CoreBillboards({ reveal, activeLang, hoverLang, density }: CoreB
     material.uniforms.uActive.value = LANG_INDEX[activeLang];
     material.uniforms.uHover.value = hoverLang !== null ? LANG_INDEX[hoverLang] : HOVER_DEFAULT;
     material.uniforms.uReveal.value = reveal;
-    material.uniforms.uSize0.value = 0.45*KNOTS_W[0].scale*(0.92+density[KNOTS_W[0].lang]*0.55);
-    material.uniforms.uSize1.value = 0.45*KNOTS_W[1].scale*(0.92+density[KNOTS_W[1].lang]*0.55);
-    material.uniforms.uSize2.value = 0.45*KNOTS_W[2].scale*(0.92+density[KNOTS_W[2].lang]*0.55);
-    material.uniforms.uSize3.value = 0.45*KNOTS_W[3].scale*(0.92+density[KNOTS_W[3].lang]*0.55);
-    material.uniforms.uSize4.value = 0.45*KNOTS_W[4].scale*(0.92+density[KNOTS_W[4].lang]*0.55);
+    material.uniforms.uSize0.value = coreSize(0, density);
+    material.uniforms.uSize1.value = coreSize(1, density);
+    material.uniforms.uSize2.value = coreSize(2, density);
+    material.uniforms.uSize3.value = coreSize(3, density);
+    material.uniforms.uSize4.value = coreSize(4, density);
   });
 
   return <mesh geometry={geometry} material={material} frustumCulled={false} />;
+}
+
+function coreSize(index: number, density: Record<MiraLang, number>): number {
+  const knot = KNOTS_W[index];
+  return 0.30 * knot.scale * (0.90 + density[knot.lang] * 0.42);
 }

@@ -34,8 +34,8 @@ export const PARTICLE_BUDGET = {
     TA: 30000,
     KN: 30000,
     TE: 30000,
-    HILoop: 40000,
-    Tendrils: 1200000, // 1.2M is the safe ceiling for CPU buffer generation
+    HILoop: 90000,
+    Tendrils: 1800000,
   },
   low: {
     EN: 15000,
@@ -43,8 +43,7 @@ export const PARTICLE_BUDGET = {
     TA: 12000,
     KN: 12000,
     TE: 12000,
-    HILoop: 15000,
-    Tendrils: 150000,
+    HILoop: 30000,
+    Tendrils: 260000,
   }
 };
-

@@ -16,16 +16,21 @@ import FormulaPanel from './panels/FormulaPanel';
 import AboutPanel from './panels/AboutPanel';
 import ConnectPanel from './panels/ConnectPanel';
 
+const MIRA_PHASES: readonly ScenePhase[] = [
+  'C07_TRANSITION',
+  'C08_EMERGE',
+  'C09_PROJECT',
+  'W01_MIRA',
+];
+
 export default function WorkDashboard() {
   const phase = useScene((s) => s.phase);
   // MIRA now appears directly after the warp's white flash (C07 onwards),
   // not at W01. The intermediate phases (C07_TRANSITION, C08_EMERGE,
   // C09_PROJECT) all render the MiraPanel — see the array on its PanelHost
   // below. Backdrop / pointer events also need to be live for those phases.
-  const visible = isWork(phase)
-    || phase === 'C07_TRANSITION'
-    || phase === 'C08_EMERGE'
-    || phase === 'C09_PROJECT';
+  const visible = isWork(phase) || MIRA_PHASES.includes(phase);
+  const miraVisible = MIRA_PHASES.includes(phase);
 
   return (
     <div
@@ -42,11 +47,12 @@ export default function WorkDashboard() {
       }}
     >
       {visible && <WorkBackdrop />}
-      {visible && <RecruiterLinks />}
+      {visible && !miraVisible && <RecruiterLinks />}
 
       <PanelHost
+        interactive={false}
         phase={phase}
-        which={['C07_TRANSITION', 'C08_EMERGE', 'C09_PROJECT', 'W01_MIRA']}
+        which={MIRA_PHASES}
       ><MiraPanel /></PanelHost>
       <PanelHost phase={phase} which="W02_AIDEN"><AidenPanel /></PanelHost>
       <PanelHost phase={phase} which="W03_VANGUARD"><VanguardPanel /></PanelHost>
@@ -100,10 +106,11 @@ function RecruiterLinks(): React.JSX.Element {
   );
 }
 
-function PanelHost({ phase, which, children }: {
+function PanelHost({ phase, which, children, interactive = true }: {
   phase: ScenePhase;
   which: ScenePhase | readonly ScenePhase[];
   children: React.ReactNode;
+  interactive?: boolean;
 }): React.JSX.Element | null {
   const active = Array.isArray(which) ? which.includes(phase) : phase === which;
   if (!active) return null;
@@ -113,7 +120,7 @@ function PanelHost({ phase, which, children }: {
       style={{
         position: 'absolute',
         inset: 0,
-        pointerEvents: 'auto',
+        pointerEvents: interactive ? 'auto' : 'none',
       }}
     >
       {children}
