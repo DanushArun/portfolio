@@ -42,7 +42,11 @@ const COMPUTE_FRAG = /* glsl */ `
     vec3 x2=x0-i2+C.yyy;
     vec3 x3=x0-D.yyy;
     i=mod289_3(i);
-    vec4 p=permute4(permute4(permute4(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+    vec4 p=permute4(
+      permute4(
+        permute4(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.)
+      )+i.x+vec4(0.,i1.x,i2.x,1.)
+    );
     float n_=.142857142857;
     vec3 ns=n_*D.wyz-D.xzx;
     vec4 j=p-49.*floor(p*ns.z*ns.z);
@@ -167,7 +171,7 @@ const RENDER_FRAG = /* glsl */ `
     float r = length(gl_PointCoord - 0.5);
     if (r > 0.5) discard;
     float alpha = (0.5 - r) * 2.0;
-    gl_FragColor = vec4(vColor, alpha * 0.8);
+    gl_FragColor = vec4(vColor, alpha * 0.04);
   }
 `;
 
@@ -215,7 +219,7 @@ function createMaterials(pixelRatio: number): {
   const renderMaterial = new THREE.ShaderMaterial({
     uniforms: {
       uTexture: { value: null },
-      uPointSize: { value: pixelRatio * 12.0 },
+      uPointSize: { value: pixelRatio * 2.2 },
       uKnotColor: { value: new THREE.Color() },
     },
     vertexShader: RENDER_VERT,
@@ -319,7 +323,7 @@ export default function MiraPlume({ reveal }: { reveal: number }): React.JSX.Ele
     frameRef.current++;
   });
 
-  if (reveal < 0.85) return null;
+  if (reveal < 0.85 || frameRef.current < 2) return null;
 
   return (
     <points
