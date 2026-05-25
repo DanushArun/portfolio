@@ -1,105 +1,96 @@
 export const vert = /* glsl */ `
   attribute vec3 aColor;
-  attribute float aIsCore;
-  attribute float aIsLoop;
   attribute float aDensityLevel;
+  attribute float aIsCore;
+  attribute float aIsHalo;
+  attribute float aLangIndex;
   attribute vec3 aWarpParams;
 
-  uniform float uTime;
+  uniform float uActive;
+  uniform float uDensity0;
+  uniform float uDensity1;
+  uniform float uDensity2;
+  uniform float uDensity3;
+  uniform float uDensity4;
+  uniform float uHover;
+  uniform float uMotion;
   uniform float uPixelRatio;
   uniform float uReveal;
+  uniform float uTime;
 
   varying vec3 vColor;
-  varying float vAlphaMultiplier;
+  varying float vAlpha;
   varying float vCore;
-  varying float vLoop;
+  varying float vHalo;
 
-  float fastNoise(vec3 p) {
-    return sin(p.x * 0.5 + p.y * 1.2 + p.z * 0.8)
-      * cos(p.y * 0.4 - p.z * 1.5 + p.x * 0.9);
+  float langDensity(float idx) {
+    if (idx < 0.5) return uDensity0;
+    if (idx < 1.5) return uDensity1;
+    if (idx < 2.5) return uDensity2;
+    if (idx < 3.5) return uDensity3;
+    return uDensity4;
   }
 
-  vec3 fbmWarpGPU(vec3 p, float offset) {
-    vec3 p1 = p * 0.22 + vec3(offset);
-    vec3 p2 = p * 0.92 + vec3(offset * 2.0);
-    vec3 p3 = p * 2.1;
-
-    float n1 = fastNoise(p1);
-    float n2 = fastNoise(p2 + vec3(n1));
-    float n3 = fastNoise(p3);
-
-    return vec3(n1 * 0.72 + n2 * 0.28 + n3 * 0.08);
+  float isSelected(float idx, float target) {
+    return step(0.0, target) * (1.0 - step(0.5, abs(idx - target)));
   }
 
   void main() {
     vec3 pos = position;
-    bool isCore = aIsCore > 0.5;
-    bool isLoop = aIsLoop > 0.5;
-    vCore = isCore ? 1.0 : 0.0;
-    vLoop = isLoop ? 1.0 : 0.0;
+    float selected = isSelected(aLangIndex, uActive);
+    float hover = isSelected(aLangIndex, uHover);
+    float density = langDensity(max(0.0, aLangIndex));
+    float spine = aWarpParams.z;
 
-    if (!isCore) {
-      float warpScale = isLoop ? aWarpParams.y * 0.34 : aWarpParams.y;
-      pos += fbmWarpGPU(pos, aWarpParams.x + uTime * 0.018) * warpScale;
-    }
+    float drift = sin(uTime * 0.22 + aWarpParams.x) * aWarpParams.y * uMotion;
+    pos.xy += vec2(drift, -drift * 0.62);
 
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mv;
 
-    float depth = -mv.z;
-    float density = max(0.0, aDensityLevel);
-    vec3 deepBlue = vec3(0.045, 0.16, 0.95);
-    vec3 ionViolet = vec3(0.42, 0.18, 1.0);
-    vec3 hotCore = vec3(1.0, 0.94, 0.76);
-    vec3 loopGold = vec3(1.0, 0.62, 0.28);
-    vec3 col = aColor;
+    float depth = max(1.0, -mv.z);
+    float core = step(0.5, aIsCore);
+    float halo = step(0.5, aIsHalo);
+    float activeBoost = 1.0 + selected * 0.56 + hover * 0.28;
+    float densityBoost = 0.62 + density * 0.82;
 
-    if (isCore) {
-      col = mix(col, hotCore, 0.82);
-    } else if (isLoop) {
-      col = mix(loopGold, hotCore, 0.20);
-    } else {
-      col = mix(mix(deepBlue, ionViolet, density), col, density * 0.78);
-    }
+    vec3 hot = vec3(1.0, 0.96, 0.82);
+    vec3 cool = mix(aColor, vec3(0.16, 0.54, 1.0), halo * 0.24);
+    vColor = mix(cool, hot, core * 0.58) * activeBoost * densityBoost;
 
-    float twinkle = 0.88 + 0.12 * sin(uTime * 1.3 + aWarpParams.x);
-    float intensity = 0.42 + density * 1.90;
-    if (isCore) intensity += 2.2;
-    if (isLoop) intensity += 0.36;
+    float baseSize = mix(0.92 + spine * 0.38, 1.9, core);
+    baseSize = mix(baseSize, 0.82, halo);
+    float size = baseSize * uPixelRatio * (36.0 / depth) * (0.72 + density * 0.48);
+    gl_PointSize = clamp(size * uReveal, 0.42, core > 0.5 ? 3.4 : 1.9);
 
-    vColor = min(col * intensity * twinkle, vec3(5.0));
-
-    float baseSize = 0.48;
-    if (isCore) baseSize = 1.54;
-    if (isLoop) baseSize = 0.74;
-
-    float sizePx = baseSize * uPixelRatio * (40.0 / max(0.5, depth));
-    gl_PointSize = clamp(sizePx * uReveal, 0.24, 2.6);
-
-    float depthFalloff = smoothstep(1.0, 30.0, depth);
-    vAlphaMultiplier = mix(1.0, 0.0, depthFalloff);
+    float baseAlpha = 0.48 + aDensityLevel * 0.42;
+    baseAlpha = mix(baseAlpha, 0.18 + density * 0.18, halo);
+    baseAlpha = mix(baseAlpha, 0.72, core);
+    vAlpha = baseAlpha * activeBoost * uReveal;
+    vCore = core;
+    vHalo = halo;
   }
 `;
 
 export const frag = /* glsl */ `
   precision highp float;
-  uniform float uReveal;
+
   varying vec3 vColor;
-  varying float vAlphaMultiplier;
+  varying float vAlpha;
   varying float vCore;
-  varying float vLoop;
+  varying float vHalo;
 
   void main() {
-    vec2 c = gl_PointCoord - vec2(0.5);
-    float dSq = dot(c, c) * 4.0;
-    if (dSq > 1.0) discard;
+    vec2 centered = gl_PointCoord - vec2(0.5);
+    float dist = dot(centered, centered) * 4.0;
+    if (dist > 1.0) discard;
 
-    float pointAlpha = 0.42;
-    pointAlpha = mix(pointAlpha, 0.56, vLoop);
-    pointAlpha = mix(pointAlpha, 0.88, vCore);
-    float alpha = (1.0 - dSq) * pointAlpha;
-    float finalAlpha = alpha * uReveal * vAlphaMultiplier;
+    float soft = pow(1.0 - dist, 1.9);
+    float coreHot = pow(1.0 - dist, 9.0) * vCore;
+    float haloSoft = pow(1.0 - dist, 1.15) * vHalo;
+    float alpha = (soft + coreHot * 0.48 + haloSoft * 0.25) * vAlpha;
+    vec3 color = vColor * (0.62 + soft * 0.82 + coreHot * 1.4);
 
-    gl_FragColor = vec4(vColor * uReveal * alpha * vAlphaMultiplier, finalAlpha);
+    gl_FragColor = vec4(color * (0.46 + alpha * 0.92), alpha);
   }
 `;

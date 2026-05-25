@@ -2,78 +2,32 @@
 
 /* eslint-disable react-hooks/immutability */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-import { detectQualityProfile, useMiraState, setHoverLang, setActiveLang } from '@/lib/mira-state';
+import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
+import {
+  detectQualityProfile,
+  setActiveLang,
+  setHoverLang,
+  useMiraState,
+  type MiraLang,
+} from '@/lib/mira-state';
+import { WORLD_SCALE, mergePSets, type PSet } from './mira/buffers';
+import { CoreBillboards } from './mira/CoreBillboards';
+import { generateHalos } from './mira/generate-dust';
 import { generateHubs } from './mira/generate-hubs';
 import { generateTendrils } from './mira/generate-tendrils';
-import { generateLemniscate } from './mira/generate-lemniscate';
-import { mergePSets, WORLD_SCALE } from './mira/buffers';
-import { KNOTS_W, type Quality } from './mira/knot-config';
-import { vert, frag } from './mira/shader.glsl';
+import { KNOTS_W, LANG_INDEX, type Quality } from './mira/knot-config';
 import { KnotLabels } from './mira/KnotLabels';
-import { CoreBillboards } from './mira/CoreBillboards';
+import { frag, vert } from './mira/shader.glsl';
 
-// ─── Module-level generation cache ───────────────────────────────────────
-
-interface GeneratedBuffers {
-  positions: Float32Array;
-  colors: Float32Array;
-  isCores: Float32Array;
-  isLoops: Float32Array;
-  densityLevels: Float32Array;
-  warpParams: Float32Array;
+interface GeneratedBuffers extends PSet {
   count: number;
 }
 
-const CACHE = new Map<Quality, GeneratedBuffers>();
-
-function generate(quality: Quality): GeneratedBuffers {
-  const hit = CACHE.get(quality);
-  if (hit) return hit;
-
-  const hubs = generateHubs(quality);
-  const tendrils = generateTendrils(quality);
-  const lemniscate = generateLemniscate(quality);
-
-  const merged = mergePSets([hubs, tendrils, lemniscate]);
-
-  const out: GeneratedBuffers = {
-    positions:     merged.pos,
-    colors:        merged.color,
-    isCores:       merged.isCore,
-    isLoops:       merged.isLoop,
-    densityLevels: merged.densityLevel,
-    warpParams:    merged.warpParams,
-    count: merged.isCore.length,
-  };
-  CACHE.set(quality, out);
-  return out;
-}
-
-// ─── Idle scheduling ─────────────────────────────────────────────────────
-
-type IdleHandle = number;
-
-function scheduleIdle(cb: () => void): IdleHandle {
-  const w = window as unknown as {
-    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-  };
-  if (typeof w.requestIdleCallback === 'function') {
-    return w.requestIdleCallback(cb, { timeout: 600 });
-  }
-  return window.setTimeout(cb, 0);
-}
-
-function cancelIdle(handle: IdleHandle): void {
-  const w = window as unknown as { cancelIdleCallback?: (h: number) => void };
-  if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(handle);
-  else window.clearTimeout(handle);
-}
-
-export interface MiraSuperclusterProps {
+interface MiraSuperclusterProps {
   reveal: number;
 }
 
@@ -82,21 +36,44 @@ interface ReadyState {
   material: THREE.ShaderMaterial;
 }
 
-function buildReadyState(buf: GeneratedBuffers, pixelRatio: number): ReadyState {
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position',      new THREE.BufferAttribute(buf.positions,     3));
-  g.setAttribute('aColor',        new THREE.BufferAttribute(buf.colors,        3));
-  g.setAttribute('aIsCore',       new THREE.BufferAttribute(buf.isCores,       1));
-  g.setAttribute('aIsLoop',       new THREE.BufferAttribute(buf.isLoops,       1));
-  g.setAttribute('aDensityLevel', new THREE.BufferAttribute(buf.densityLevels, 1));
-  g.setAttribute('aWarpParams',   new THREE.BufferAttribute(buf.warpParams,    3));
-  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 6 * WORLD_SCALE);
+const CACHE = new Map<Quality, GeneratedBuffers>();
 
-  const m = new THREE.ShaderMaterial({
+function generate(quality: Quality): GeneratedBuffers {
+  const hit = CACHE.get(quality);
+  if (hit) return hit;
+  const merged = mergePSets([generateTendrils(quality), generateHalos(quality), generateHubs(quality)]);
+  const out = { ...merged, count: merged.densityLevel.length };
+  CACHE.set(quality, out);
+  return out;
+}
+
+function buildGeometry(buf: GeneratedBuffers): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(buf.pos, 3));
+  geometry.setAttribute('aColor', new THREE.BufferAttribute(buf.color, 3));
+  geometry.setAttribute('aDensityLevel', new THREE.BufferAttribute(buf.densityLevel, 1));
+  geometry.setAttribute('aIsCore', new THREE.BufferAttribute(buf.isCore, 1));
+  geometry.setAttribute('aIsHalo', new THREE.BufferAttribute(buf.isHalo, 1));
+  geometry.setAttribute('aLangIndex', new THREE.BufferAttribute(buf.langIndex, 1));
+  geometry.setAttribute('aWarpParams', new THREE.BufferAttribute(buf.warpParams, 3));
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 7 * WORLD_SCALE);
+  return geometry;
+}
+
+function buildMaterial(pixelRatio: number): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
     uniforms: {
-      uTime:         { value: 0 },
-      uPixelRatio:   { value: pixelRatio },
-      uReveal:       { value: 0 },
+      uActive: { value: 0 },
+      uDensity0: { value: 0.2 },
+      uDensity1: { value: 0.2 },
+      uDensity2: { value: 0.2 },
+      uDensity3: { value: 0.2 },
+      uDensity4: { value: 0.2 },
+      uHover: { value: -1 },
+      uMotion: { value: 1 },
+      uPixelRatio: { value: pixelRatio },
+      uReveal: { value: 0 },
+      uTime: { value: 0 },
     },
     vertexShader: vert,
     fragmentShader: frag,
@@ -104,66 +81,66 @@ function buildReadyState(buf: GeneratedBuffers, pixelRatio: number): ReadyState 
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
-
-  return { geometry: g, material: m };
 }
 
-function KnotInteractors() {
+function buildReadyState(buf: GeneratedBuffers, pixelRatio: number): ReadyState {
+  return {
+    geometry: buildGeometry(buf),
+    material: buildMaterial(pixelRatio),
+  };
+}
+
+function useQuality(): Quality {
+  return useMemo(() => {
+    if (typeof window === 'undefined') return 'high';
+    return detectQualityProfile({ width: window.innerWidth, search: window.location.search });
+  }, []);
+}
+
+function usePixelRatio(): number {
+  return useMemo(() => {
+    if (typeof window === 'undefined') return 1;
+    return Math.min(window.devicePixelRatio || 1, 1.5);
+  }, []);
+}
+
+function langUniform(lang: MiraLang | null): number {
+  return lang === null ? -1 : LANG_INDEX[lang];
+}
+
+function KnotInteractors(): React.ReactElement {
   return (
     <>
-      {KNOTS_W.map((k) => (
+      {KNOTS_W.map((knot) => (
         <mesh
-          key={k.lang}
-          position={[k.pos[0], k.pos[1], k.pos[2]]}
-          onPointerOver={(e) => { e.stopPropagation(); setHoverLang(k.lang); }}
+          key={knot.lang}
+          onClick={(event) => { event.stopPropagation(); setActiveLang(knot.lang); }}
           onPointerOut={() => setHoverLang(null)}
-          onClick={(e) => { e.stopPropagation(); setActiveLang(k.lang); }}
+          onPointerOver={(event) => { event.stopPropagation(); setHoverLang(knot.lang); }}
+          position={[knot.pos[0], knot.pos[1], knot.pos[2]]}
         >
-          <sphereGeometry args={[0.9, 12, 12]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          <sphereGeometry args={[0.72 * knot.scale, 10, 10]} />
+          <meshBasicMaterial depthWrite={false} opacity={0} transparent />
         </mesh>
       ))}
     </>
   );
 }
 
-export default function MiraSupercluster(
-  { reveal }: MiraSuperclusterProps,
-): React.ReactElement | null {
-  const pointsRef = useRef<THREE.Points>(null);
-  const revealRef = useRef<number>(-1);
-  const activeLang = useMiraState((s) => s.activeLang);
-  const hoverLang = useMiraState((s) => s.hoverLang);
-  const density = useMiraState((s) => s.density);
-
-  const quality = useMemo<Quality>(() => {
-    if (typeof window === 'undefined') return 'high';
-    return detectQualityProfile({ width: window.innerWidth, search: window.location.search });
-  }, []);
-
-  const pixelRatio = useMemo(() => {
-    if (typeof window === 'undefined') return 1;
-    return Math.min(window.devicePixelRatio || 1, 1.75);
-  }, []);
-
-  const [ready, setReady] = useState<ReadyState | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const buf = CACHE.get(quality);
-    if (!buf) return null;
-    return buildReadyState(buf, pixelRatio);
-  });
+export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): React.ReactElement | null {
+  const reducedMotion = useReducedMotion();
+  const activeLang = useMiraState((state) => state.activeLang);
+  const hoverLang = useMiraState((state) => state.hoverLang);
+  const density = useMiraState((state) => state.density);
+  const quality = useQuality();
+  const pixelRatio = usePixelRatio();
+  const revealRef = useRef(-1);
+  const ready = useMemo(
+    () => buildReadyState(generate(quality), pixelRatio),
+    [quality, pixelRatio],
+  );
 
   useEffect(() => {
-    if (ready) return;
-    const handle = scheduleIdle(() => {
-      const buf = generate(quality);
-      setReady(buildReadyState(buf, pixelRatio));
-    });
-    return () => cancelIdle(handle);
-  }, [ready, quality, pixelRatio]);
-
-  useEffect(() => {
-    if (!ready) return;
     return () => {
       ready.geometry.dispose();
       ready.material.dispose();
@@ -171,22 +148,25 @@ export default function MiraSupercluster(
   }, [ready]);
 
   useFrame((state) => {
-    if (!ready) return;
-    ready.material.uniforms.uTime.value = state.clock.elapsedTime;
+    ready.material.uniforms.uActive.value = langUniform(activeLang);
+    ready.material.uniforms.uHover.value = langUniform(hoverLang);
+    ready.material.uniforms.uMotion.value = reducedMotion ? 0 : 1;
+    ready.material.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime;
+    ready.material.uniforms.uDensity0.value = density.EN;
+    ready.material.uniforms.uDensity1.value = density.HI;
+    ready.material.uniforms.uDensity2.value = density.TA;
+    ready.material.uniforms.uDensity3.value = density.KN;
+    ready.material.uniforms.uDensity4.value = density.TE;
     if (revealRef.current === reveal) return;
     revealRef.current = reveal;
     ready.material.uniforms.uReveal.value = reveal;
   });
 
-  if (!ready || reveal < 0.18) return null;
+  if (reveal < 0.18) return null;
+
   return (
     <group>
-      <points
-        ref={pointsRef}
-        geometry={ready.geometry}
-        material={ready.material}
-        frustumCulled={false}
-      />
+      <points geometry={ready.geometry} material={ready.material} frustumCulled={false} />
       <CoreBillboards reveal={reveal} activeLang={activeLang} hoverLang={hoverLang} density={density} />
       <KnotLabels reveal={reveal} />
       {reveal >= 0.85 && <KnotInteractors />}

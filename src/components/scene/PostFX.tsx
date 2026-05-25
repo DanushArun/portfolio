@@ -11,7 +11,7 @@
  * conditional JSX.
  *
  * Bloom per-phase tuning:
- *   W01_MIRA — bright particle bloom while preserving the black starfield.
+ *   W01_MIRA — restrained knot bloom while preserving pitch-black space.
  *   all other — threshold 0.60, smoothing 0.9,  intensity 0.40 (general bloom)
  *
  * Chromatic aberration: ramps on C05_WARP + C06_ANOMALY only.
@@ -58,9 +58,9 @@ export default function PostFX() {
 
     // Phase-aware bloom uniform mutation.
     if (isMira) {
-      bloomEffect.luminanceMaterial.threshold = 0.80;
-      bloomEffect.luminanceMaterial.smoothing = 0.08;
-      bloomEffect.intensity = 0.52;
+      bloomEffect.luminanceMaterial.threshold = 0.985;
+      bloomEffect.luminanceMaterial.smoothing = 0.01;
+      bloomEffect.intensity = 0.045;
     } else {
       bloomEffect.luminanceMaterial.threshold = 0.60;
       bloomEffect.luminanceMaterial.smoothing = 0.9;

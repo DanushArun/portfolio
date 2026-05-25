@@ -1,23 +1,35 @@
 import { KNOT_TABLE, type MiraLang } from '@/lib/mira-state';
-import { WORLD_SCALE } from './buffers';
+import { WORLD_SCALE, hexToRgb, type Vec3 } from './buffers';
 
 export interface KnotW {
-  lang: MiraLang;
-  pos: readonly [number, number, number];
-  scale: number;
+  readonly hue: Vec3;
+  readonly lang: MiraLang;
+  readonly pos: Vec3;
+  readonly scale: number;
 }
 
-export const KNOTS_W: ReadonlyArray<KnotW> = KNOT_TABLE.map((k) => ({
-  lang: k.lang,
+export type Quality = 'high' | 'low';
+
+export const LANG_INDEX: Readonly<Record<MiraLang, number>> = {
+  EN: 0,
+  HI: 1,
+  TA: 2,
+  KN: 3,
+  TE: 4,
+};
+
+export const KNOTS_W: readonly KnotW[] = KNOT_TABLE.map((knot) => ({
+  hue: hexToRgb(knot.hue),
+  lang: knot.lang,
   pos: [
-    k.position[0] * WORLD_SCALE,
-    k.position[1] * WORLD_SCALE,
-    k.position[2] * WORLD_SCALE,
-  ] as const,
-  scale: k.relativeScale,
+    knot.position[0] * WORLD_SCALE,
+    knot.position[1] * WORLD_SCALE,
+    knot.position[2] * WORLD_SCALE,
+  ],
+  scale: knot.relativeScale,
 }));
 
-export const NATIVE_SCRIPT: Record<MiraLang, string> = {
+export const NATIVE_SCRIPT: Readonly<Record<MiraLang, string>> = {
   EN: 'ENGLISH',
   HI: 'हिंदी',
   TA: 'தமிழ்',
@@ -25,25 +37,21 @@ export const NATIVE_SCRIPT: Record<MiraLang, string> = {
   TE: 'తెలుగు',
 };
 
-export type Quality = 'high' | 'low';
-
 export const PARTICLE_BUDGET = {
   high: {
-    EN: 40000,
-    HI: 40000,
-    TA: 30000,
-    KN: 30000,
-    TE: 30000,
-    HILoop: 90000,
-    Tendrils: 1800000,
+    web: 235_000,
+    hubs: 24_000,
+    halos: 10_000,
+    plume: 8_192,
   },
   low: {
-    EN: 15000,
-    HI: 15000,
-    TA: 12000,
-    KN: 12000,
-    TE: 12000,
-    HILoop: 30000,
-    Tendrils: 260000,
-  }
-};
+    web: 26_000,
+    hubs: 5_000,
+    halos: 2_000,
+    plume: 0,
+  },
+} as const satisfies Record<Quality, Record<'web' | 'hubs' | 'halos' | 'plume', number>>;
+
+export function getKnot(lang: MiraLang): KnotW {
+  return KNOTS_W[LANG_INDEX[lang]];
+}

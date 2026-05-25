@@ -17,12 +17,14 @@ const LANG_ORDER: readonly MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE'];
 
 export default function MiraPanel(): React.JSX.Element {
   const activeLang = useMiraState((s) => s.activeLang);
+  const density = useMiraState((s) => s.density);
 
   return (
     <section className={styles.root} aria-label="MIRA Virgo Linguistic Supercluster">
       <Metadata />
       <TitleBlock />
       <LanguageLegend activeLang={activeLang} />
+      <SignalTicker activeLang={activeLang} density={density[activeLang]} />
       <CalloutStack />
       <InteractionRail />
     </section>
@@ -86,6 +88,23 @@ function LanguageLegend({ activeLang }: { activeLang: MiraLang }): React.JSX.Ele
           <span className={styles.legendName}>{panelCopy.W01_MIRA.languages[langIndex(knot.lang)]}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+function SignalTicker(
+  { activeLang, density }: { activeLang: MiraLang; density: number },
+): React.JSX.Element {
+  const knot = KNOT_TABLE.find((item) => item.lang === activeLang) ?? KNOT_TABLE[0];
+  const lang = panelCopy.W01_MIRA.languages[langIndex(activeLang)];
+
+  return (
+    <div className={styles.signal} style={{ '--mira-color': knot.hue } as CSSProperties}>
+      <span className={styles.signalStatus}>LIVE · {activeLang} · 482ms</span>
+      <span className={styles.signalLang}>{lang}</span>
+      <span className={styles.signalDensity}>
+        TRAINING SIGNAL · +2.0% / CALL · DENSITY {density.toFixed(2)}
+      </span>
     </div>
   );
 }

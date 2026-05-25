@@ -1,86 +1,76 @@
-import { KNOT_TABLE } from '@/lib/mira-state';
-import { gauss, makePSet, mergePSets, mulberry32, type PSet, type Rng } from './buffers';
-import { KNOTS_W, PARTICLE_BUDGET, type KnotW, type Quality } from './knot-config';
+import {
+  gauss,
+  makePSet,
+  mixVec,
+  mulberry32,
+  type PSet,
+  type Rng,
+  type Vec3,
+} from './buffers';
+import { KNOTS_W, LANG_INDEX, PARTICLE_BUDGET, type KnotW, type Quality } from './knot-config';
 
-type Vec3 = readonly [number, number, number];
+const HOT_CORE: Vec3 = [1.0, 0.96, 0.82];
 
-interface HubRay {
-  readonly dir: Vec3;
-  readonly length: number;
-  readonly noise: number;
-  readonly width: number;
+function coreColor(knot: KnotW, rng: Rng): Vec3 {
+  return mixVec(knot.hue, HOT_CORE, 0.74 + rng() * 0.22);
 }
 
-function hexToRgb(hex: string): Vec3 {
-  return [
-    parseInt(hex.slice(1, 3), 16) / 255,
-    parseInt(hex.slice(3, 5), 16) / 255,
-    parseInt(hex.slice(5, 7), 16) / 255,
-  ];
+function rayDirection(rng: Rng): Vec3 {
+  const angle = rng() * Math.PI * 2;
+  const z = gauss(rng) * 0.10;
+  return [Math.cos(angle), Math.sin(angle), z];
 }
 
-function hueFor(knot: KnotW): Vec3 {
-  return hexToRgb(KNOT_TABLE.find((spec) => spec.lang === knot.lang)?.hue ?? '#ffffff');
-}
-
-function makeRay(rng: Rng, knot: KnotW): HubRay {
-  const theta = rng() * Math.PI * 2;
-  const z = (rng() - 0.5) * 0.22;
-  const planar = Math.sqrt(Math.max(0, 1 - z * z));
-
-  return {
-    dir: [Math.cos(theta) * planar, Math.sin(theta) * planar, z],
-    length: (0.55 + Math.abs(gauss(rng)) * 1.18) * knot.scale,
-    noise: rng() * 1000,
-    width: 0.012 + Math.abs(gauss(rng)) * 0.028,
-  };
-}
-
-function writeCore(out: PSet, index: number, knot: KnotW, rng: Rng, rgb: Vec3): void {
-  const idx = index * 3;
+function writeCore(out: PSet, index: number, knot: KnotW, rng: Rng): void {
+  const ptr = index * 3;
+  const angle = rng() * Math.PI * 2;
   const radius = Math.abs(gauss(rng)) * 0.055 * knot.scale;
-  const theta = rng() * Math.PI * 2;
 
-  out.pos[idx] = knot.pos[0] + Math.cos(theta) * radius;
-  out.pos[idx + 1] = knot.pos[1] + Math.sin(theta) * radius;
-  out.pos[idx + 2] = knot.pos[2] + (rng() - 0.5) * radius;
-  out.color.set(rgb, idx);
+  out.pos[ptr] = knot.pos[0] + Math.cos(angle) * radius;
+  out.pos[ptr + 1] = knot.pos[1] + Math.sin(angle) * radius;
+  out.pos[ptr + 2] = knot.pos[2] + gauss(rng) * radius * 0.32;
+  out.color.set(coreColor(knot, rng), ptr);
+  out.densityLevel[index] = 1.0;
   out.isCore[index] = 1;
-  out.densityLevel[index] = 1.7;
+  out.langIndex[index] = LANG_INDEX[knot.lang];
 }
 
-function writeRay(out: PSet, index: number, knot: KnotW, rng: Rng, rgb: Vec3, ray: HubRay): void {
-  const idx = index * 3;
-  const travel = Math.pow(rng(), 1.34) * ray.length;
-  const scatter = Math.abs(gauss(rng)) * ray.width * (0.8 + travel);
-  const spin = rng() * Math.PI * 2;
+function writeRay(out: PSet, index: number, knot: KnotW, rng: Rng): void {
+  const ptr = index * 3;
+  const dir = rayDirection(rng);
+  const travel = Math.pow(rng(), 1.8) * (0.38 + knot.scale * 0.62);
+  const scatter = Math.abs(gauss(rng)) * 0.026 * (1 + travel);
 
-  out.pos[idx] = knot.pos[0] + ray.dir[0] * travel + Math.cos(spin) * scatter;
-  out.pos[idx + 1] = knot.pos[1] + ray.dir[1] * travel + Math.sin(spin) * scatter;
-  out.pos[idx + 2] = knot.pos[2] + ray.dir[2] * travel + (rng() - 0.5) * scatter;
-  out.color.set(rgb, idx);
-  out.densityLevel[index] = Math.max(0.18, 1 - travel / (ray.length + 0.001));
-  out.warpParams[idx] = ray.noise;
-  out.warpParams[idx + 1] = 0.018 + travel * 0.012;
+  out.pos[ptr] = knot.pos[0] + dir[0] * travel + gauss(rng) * scatter;
+  out.pos[ptr + 1] = knot.pos[1] + dir[1] * travel + gauss(rng) * scatter;
+  out.pos[ptr + 2] = knot.pos[2] + dir[2] * travel + gauss(rng) * scatter;
+  out.color.set(mixVec(knot.hue, HOT_CORE, Math.max(0, 1 - travel)), ptr);
+  out.densityLevel[index] = 0.38 + Math.max(0, 1 - travel) * 0.62;
+  out.langIndex[index] = LANG_INDEX[knot.lang];
+  out.warpParams[ptr] = rng() * 1000;
+  out.warpParams[ptr + 1] = 0.006 + travel * 0.016;
 }
 
-function generateHub(knot: KnotW, quality: Quality, index: number): PSet {
-  const count = PARTICLE_BUDGET[quality][knot.lang];
-  const out = makePSet(count);
-  const rng = mulberry32(0x1000 + index * 43);
-  const rgb = hueFor(knot);
-  const rays = Array.from({ length: Math.max(96, Math.floor(count / 120)) }, () => (
-    makeRay(rng, knot)
-  ));
-
+function writeHub(out: PSet, start: number, count: number, knot: KnotW, rng: Rng): void {
   for (let i = 0; i < count; i++) {
-    if (rng() < 0.28) writeCore(out, i, knot, rng, rgb);
-    else writeRay(out, i, knot, rng, rgb, rays[i % rays.length]);
+    const index = start + i;
+    if (rng() < 0.42) writeCore(out, index, knot, rng);
+    else writeRay(out, index, knot, rng);
   }
-
-  return out;
 }
 
 export function generateHubs(quality: Quality): PSet {
-  return mergePSets(KNOTS_W.map((knot, index) => generateHub(knot, quality, index)));
+  const count = PARTICLE_BUDGET[quality].hubs;
+  const out = makePSet(count);
+  const rng = mulberry32(0xA11CE);
+  let start = 0;
+
+  KNOTS_W.forEach((knot, index) => {
+    const last = index === KNOTS_W.length - 1;
+    const share = last ? count - start : Math.floor(count / KNOTS_W.length);
+    writeHub(out, start, share, knot, rng);
+    start += share;
+  });
+
+  return out;
 }

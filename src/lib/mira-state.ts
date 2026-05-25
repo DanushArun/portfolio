@@ -64,6 +64,18 @@ export function advanceCycle(): void {
   });
 }
 
+export function restartCycleClock(): void {
+  useMiraState.setState({ cycleStartMs: nowMs() });
+}
+
+export function holdCycleAtEnglish(): void {
+  useMiraState.setState({
+    activeLang: 'EN',
+    cycleIndex: 0,
+    cycleStartMs: nowMs(),
+  });
+}
+
 export function setHoverLang(lang: MiraLang | null): void {
   useMiraState.setState({ hoverLang: lang });
 }
@@ -93,6 +105,7 @@ export function ingestForLang(lang: MiraLang): void {
 export function resetMiraStateForTest(): void {
   useMiraState.setState({
     activeLang: 'EN',
+    hoverLang: null,
     density: { ...INITIAL_DENSITY },
     cycleIndex: 0,
     cycleStartMs: nowMs(),

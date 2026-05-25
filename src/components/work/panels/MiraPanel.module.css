@@ -111,6 +111,7 @@
 .legendRow:hover {
   color: rgba(250, 239, 220, 0.96);
   outline: none;
+  text-shadow: 0 0 18px var(--mira-color);
 }
 
 .legendDot {
@@ -129,6 +130,48 @@
 
 .legendName {
   opacity: 0.62;
+}
+
+.legendRow[aria-pressed="true"] .legendName,
+.legendRow:focus-visible .legendName,
+.legendRow:hover .legendName {
+  opacity: 1;
+}
+
+.signal {
+  border-left: 1px solid color-mix(in srgb, var(--mira-color), transparent 28%);
+  bottom: clamp(2.4rem, 5.4vh, 4rem);
+  color: rgba(240, 228, 210, 0.78);
+  display: grid;
+  font-family: var(--font-composer), ui-monospace, SFMono-Regular, Menlo, monospace;
+  gap: 0.42rem;
+  letter-spacing: 0.18em;
+  padding-left: 1rem;
+  position: absolute;
+  right: clamp(1.2rem, 3vw, 3rem);
+  text-transform: uppercase;
+  width: min(22rem, 31vw);
+}
+
+.signalStatus {
+  color: var(--mira-color);
+  font-size: clamp(0.56rem, 0.68vw, 0.7rem);
+  text-shadow: 0 0 16px var(--mira-color);
+}
+
+.signalLang {
+  color: rgba(250, 239, 220, 0.96);
+  font-family: var(--font-dop), Georgia, Cambria, "Times New Roman", serif;
+  font-size: clamp(1.1rem, 1.55vw, 1.75rem);
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.signalDensity {
+  color: rgba(240, 228, 210, 0.52);
+  font-size: clamp(0.46rem, 0.54vw, 0.58rem);
+  line-height: 1.6;
 }
 
 .callouts {
@@ -247,7 +290,15 @@
   }
 
   .legend {
+    bottom: 6.6rem;
     width: 17rem;
+  }
+
+  .signal {
+    bottom: 1.4rem;
+    left: clamp(1.55rem, 4.6vw, 5rem);
+    right: auto;
+    width: min(17rem, 82vw);
   }
 
   .callouts {

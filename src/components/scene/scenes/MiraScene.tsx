@@ -1,42 +1,61 @@
 'use client';
 
-/**
- * MiraScene — Phase 0 stub.
- *
- * The previous shader-sphere and broken supercluster were deleted per founder
- * directive ("clear out the old mira code first. then start"). This file
- * keeps the reveal envelope verbatim from the spec, exposes the debug
- * surface, and renders nothing. Phase A will compose `<MiraSupercluster />`.
- *
- * Reveal envelope (preserved verbatim from .coo/jobs/004-...md AC7)
- * ─────────────────────────────────────────────────────────────────
- *   C07_TRANSITION local 0.00 → 0.45  : reveal = 0          (under flash)
- *   C07_TRANSITION local 0.45 → 1.00  : reveal = 0   → 0.40 (flash fading)
- *   C08_EMERGE     local 0.00 → 1.00  : reveal = 0.40 → 0.80
- *   C09_PROJECT    local 0.00 → 1.00  : reveal = 0.80 → 0.95
- *   W01_MIRA       local 0.00 → 1.00  : reveal = 1.00       (fully alive)
- */
-
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
 import { useScene } from '@/lib/scene-state';
-import { exposeMiraDebug } from '@/lib/mira-state';
-import MiraSupercluster from './MiraSupercluster';
+import {
+  advanceCycle,
+  exposeMiraDebug,
+  holdCycleAtEnglish,
+  ingestForLang,
+  restartCycleClock,
+  useMiraState,
+} from '@/lib/mira-state';
 import MiraPlume from './MiraPlume';
+import MiraSupercluster from './MiraSupercluster';
 
 function computeReveal(phase: string, local: number): number {
   if (phase === 'C07_TRANSITION') {
     if (local < 0.45) return 0;
     return ((local - 0.45) / 0.55) * 0.40;
   }
-  if (phase === 'C08_EMERGE')  return 0.40 + Math.min(1, local) * 0.40;
-  if (phase === 'C09_PROJECT') return 0.80 + Math.min(1, local) * 0.20; // Smooth 0.8 to 1.0
-  if (phase === 'W01_MIRA')    return 1.0;
+  if (phase === 'C08_EMERGE') return 0.40 + Math.min(1, local) * 0.40;
+  if (phase === 'C09_PROJECT') return 0.80 + Math.min(1, local) * 0.20;
+  if (phase === 'W01_MIRA') return 1.0;
   return 0;
 }
 
-export default function MiraScene() {
-  const phase = useScene((s) => s.phase);
-  const local = useScene((s) => s.localProgress);
+function MiraCycleController({ reveal }: { reveal: number }): null {
+  const reducedMotion = useReducedMotion();
+  const armedRef = useRef(false);
+
+  useEffect(() => {
+    if (reducedMotion) holdCycleAtEnglish();
+  }, [reducedMotion]);
+
+  useFrame(() => {
+    if (reveal < 0.85 || reducedMotion) {
+      armedRef.current = false;
+      return;
+    }
+    if (!armedRef.current) {
+      restartCycleClock();
+      armedRef.current = true;
+      return;
+    }
+    const state = useMiraState.getState();
+    if (performance.now() - state.cycleStartMs < 3000) return;
+    ingestForLang(state.activeLang);
+    advanceCycle();
+  });
+
+  return null;
+}
+
+export default function MiraScene(): React.ReactElement {
+  const phase = useScene((state) => state.phase);
+  const local = useScene((state) => state.localProgress);
   const reveal = computeReveal(phase, local);
 
   useEffect(() => {
@@ -44,13 +63,14 @@ export default function MiraScene() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as unknown as { __miraReveal?: number }).__miraReveal = reveal;
-    }
+    if (typeof window === 'undefined') return;
+    (window as unknown as { __miraReveal?: number }).__miraReveal = reveal;
   }, [reveal]);
 
   return (
     <group>
+      <color attach="background" args={['#000000']} />
+      <MiraCycleController reveal={reveal} />
       {reveal >= 0.20 && <MiraSupercluster reveal={reveal} />}
       {reveal >= 0.85 && <MiraPlume reveal={reveal} />}
     </group>
