@@ -39,15 +39,15 @@ export const NATIVE_SCRIPT: Readonly<Record<MiraLang, string>> = {
 
 export const PARTICLE_BUDGET = {
   high: {
-    web: 235_000,
-    hubs: 24_000,
-    halos: 10_000,
+    web: 1_150_000,
+    hubs: 48_000,
+    halos: 34_000,
     plume: 8_192,
   },
   low: {
-    web: 26_000,
-    hubs: 5_000,
-    halos: 2_000,
+    web: 48_000,
+    hubs: 8_000,
+    halos: 4_000,
     plume: 0,
   },
 } as const satisfies Record<Quality, Record<'web' | 'hubs' | 'halos' | 'plume', number>>;

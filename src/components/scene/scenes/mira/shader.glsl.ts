@@ -58,14 +58,14 @@ export const vert = /* glsl */ `
     vec3 cool = mix(aColor, vec3(0.16, 0.54, 1.0), halo * 0.24);
     vColor = mix(cool, hot, core * 0.58) * activeBoost * densityBoost;
 
-    float baseSize = mix(0.92 + spine * 0.38, 1.9, core);
-    baseSize = mix(baseSize, 0.82, halo);
+    float baseSize = mix(0.46 + spine * 0.16, 1.45, core);
+    baseSize = mix(baseSize, 0.56, halo);
     float size = baseSize * uPixelRatio * (36.0 / depth) * (0.72 + density * 0.48);
-    gl_PointSize = clamp(size * uReveal, 0.42, core > 0.5 ? 3.4 : 1.9);
+    gl_PointSize = clamp(size * uReveal, 0.24, core > 0.5 ? 2.7 : 1.18);
 
-    float baseAlpha = 0.48 + aDensityLevel * 0.42;
-    baseAlpha = mix(baseAlpha, 0.18 + density * 0.18, halo);
-    baseAlpha = mix(baseAlpha, 0.72, core);
+    float baseAlpha = 0.18 + aDensityLevel * 0.26;
+    baseAlpha = mix(baseAlpha, 0.12 + density * 0.12, halo);
+    baseAlpha = mix(baseAlpha, 0.64, core);
     vAlpha = baseAlpha * activeBoost * uReveal;
     vCore = core;
     vHalo = halo;
@@ -88,9 +88,9 @@ export const frag = /* glsl */ `
     float soft = pow(1.0 - dist, 1.9);
     float coreHot = pow(1.0 - dist, 9.0) * vCore;
     float haloSoft = pow(1.0 - dist, 1.15) * vHalo;
-    float alpha = (soft + coreHot * 0.48 + haloSoft * 0.25) * vAlpha;
-    vec3 color = vColor * (0.62 + soft * 0.82 + coreHot * 1.4);
+    float alpha = (soft + coreHot * 0.46 + haloSoft * 0.18) * vAlpha;
+    vec3 color = vColor * (0.50 + soft * 0.62 + coreHot * 1.25);
 
-    gl_FragColor = vec4(color * (0.46 + alpha * 0.92), alpha);
+    gl_FragColor = vec4(color * (0.38 + alpha * 0.74), alpha);
   }
 `;
