@@ -2,60 +2,104 @@
 
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+
 import { MIRA_CAMERA } from '@/lib/mira-canonical';
-import { useScene } from '@/lib/scene-state';
+import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
+import { useMiraState } from '@/lib/mira-state';
+import { useScene, type ScenePhase } from '@/lib/scene-state';
+import { getMiraCameraStop, type MiraCameraStop } from '@/lib/mira-world';
 
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 const MIRA_POS = new THREE.Vector3(...MIRA_CAMERA.position);
 const DEFAULT_POS = new THREE.Vector3(0, 2, 30);
 const TEMP_ORBIT = new THREE.Vector3();
+const TEMP_POS = new THREE.Vector3();
+const TEMP_LOOK = new THREE.Vector3();
+
+function setFov(camera: THREE.PerspectiveCamera, fov: number): void {
+  camera.fov = fov;
+}
+
+function applyWarpCamera(camera: THREE.PerspectiveCamera): void {
+  camera.position.set(0, 0, 5);
+  camera.lookAt(ORIGIN);
+  setFov(camera, 100);
+}
+
+function applyEmergenceCamera(camera: THREE.PerspectiveCamera, time: number): void {
+  const angle = time * 0.06;
+  camera.position.set(Math.cos(angle) * 13, 1.4, Math.sin(angle) * 13);
+  camera.lookAt(ORIGIN);
+  setFov(camera, 45);
+}
+
+function applyProjectCamera(camera: THREE.PerspectiveCamera, time: number, local: number): void {
+  const angle = time * 0.06;
+  TEMP_ORBIT.set(Math.cos(angle) * 13, 1.4, Math.sin(angle) * 13);
+  camera.position.lerpVectors(TEMP_ORBIT, MIRA_POS, local);
+  camera.lookAt(ORIGIN);
+  setFov(camera, 45 + (MIRA_CAMERA.fov - 45) * local);
+}
+
+function applyMiraCamera(
+  camera: THREE.PerspectiveCamera,
+  stop: MiraCameraStop,
+  reducedMotion: boolean,
+): void {
+  TEMP_POS.set(...stop.position);
+  TEMP_LOOK.set(...stop.lookAt);
+  camera.position.lerp(TEMP_POS, reducedMotion ? 1 : 0.085);
+  camera.lookAt(TEMP_LOOK);
+  camera.fov += (stop.fov - camera.fov) * (reducedMotion ? 1 : 0.08);
+}
+
+function applyDefaultCamera(camera: THREE.PerspectiveCamera): void {
+  camera.position.lerp(DEFAULT_POS, 0.1);
+  camera.lookAt(ORIGIN);
+  setFov(camera, 50);
+}
+
+function applyPhaseCamera(config: {
+  camera: THREE.PerspectiveCamera;
+  local: number;
+  phase: ScenePhase;
+  reducedMotion: boolean;
+  time: number;
+}): void {
+  if (config.phase === 'C05_WARP' || config.phase === 'C06_ANOMALY') {
+    applyWarpCamera(config.camera);
+    return;
+  }
+  if (config.phase === 'C07_TRANSITION' || config.phase === 'C08_EMERGE') {
+    applyEmergenceCamera(config.camera, config.time);
+    return;
+  }
+  if (config.phase === 'C09_PROJECT') {
+    applyProjectCamera(config.camera, config.time, config.local);
+    return;
+  }
+  if (config.phase === 'W01_MIRA') {
+    const stop = getMiraCameraStop(useMiraState.getState().focusId);
+    applyMiraCamera(config.camera, stop, config.reducedMotion);
+    return;
+  }
+  applyDefaultCamera(config.camera);
+}
 
 export default function CameraRig(): null {
+  const reducedMotion = useReducedMotion();
+
   useFrame((state) => {
-    const pcam = state.camera as THREE.PerspectiveCamera;
-    const p = useScene.getState().phase;
-    const local = useScene.getState().localProgress;
-    const t = state.clock.elapsedTime;
-
-    switch (p) {
-      case 'C05_WARP':
-      case 'C06_ANOMALY': {
-        pcam.position.set(0, 0, 5);
-        pcam.lookAt(ORIGIN);
-
-        pcam.fov = 100;
-        break;
-      }
-      case 'C07_TRANSITION':
-      case 'C08_EMERGE': {
-        const a = t * 0.06;
-        const r = 13;
-        pcam.position.set(Math.cos(a) * r, 1.4, Math.sin(a) * r);
-        pcam.lookAt(ORIGIN);
-        pcam.fov = 45;
-        break;
-      }
-      case 'C09_PROJECT': {
-        const a = t * 0.06;
-        TEMP_ORBIT.set(Math.cos(a) * 13, 1.4, Math.sin(a) * 13);
-        pcam.position.lerpVectors(TEMP_ORBIT, MIRA_POS, local);
-        pcam.lookAt(ORIGIN);
-        pcam.fov = 45 + (MIRA_CAMERA.fov - 45) * local;
-        break;
-      }
-      case 'W01_MIRA': {
-        pcam.position.copy(MIRA_POS);
-        pcam.lookAt(ORIGIN);
-        pcam.fov = MIRA_CAMERA.fov;
-        break;
-      }
-      default: {
-        pcam.position.lerp(DEFAULT_POS, 0.1);
-        pcam.lookAt(ORIGIN);
-        pcam.fov = 50;
-      }
-    }
-    pcam.updateProjectionMatrix();
+    const scene = useScene.getState();
+    const camera = state.camera as THREE.PerspectiveCamera;
+    applyPhaseCamera({
+      camera,
+      local: scene.localProgress,
+      phase: scene.phase,
+      reducedMotion,
+      time: state.clock.elapsedTime,
+    });
+    camera.updateProjectionMatrix();
   });
 
   return null;

@@ -11,11 +11,15 @@ import {
   detectQualityProfile,
   setActiveLang,
   setHoverLang,
+  setMiraFocus,
   useMiraState,
   type MiraLang,
 } from '@/lib/mira-state';
 import { WORLD_SCALE, mergePSets, type PSet } from './mira/buffers';
 import { CoreBillboards } from './mira/CoreBillboards';
+import { MiraSignalRibbons } from './mira/MiraSignalRibbons';
+import { MiraTendrilLines } from './mira/MiraTendrilLines';
+import { MiraWorldObjects } from './mira/MiraWorldObjects';
 import { generateHalos } from './mira/generate-dust';
 import { generateHubs } from './mira/generate-hubs';
 import { generateTendrils } from './mira/generate-tendrils';
@@ -113,7 +117,11 @@ function KnotInteractors(): React.ReactElement {
       {KNOTS_W.map((knot) => (
         <mesh
           key={knot.lang}
-          onClick={(event) => { event.stopPropagation(); setActiveLang(knot.lang); }}
+          onClick={(event) => {
+            event.stopPropagation();
+            setActiveLang(knot.lang);
+            setMiraFocus(knot.lang);
+          }}
           onPointerOut={() => setHoverLang(null)}
           onPointerOver={(event) => { event.stopPropagation(); setHoverLang(knot.lang); }}
           position={[knot.pos[0], knot.pos[1], knot.pos[2]]}
@@ -165,7 +173,10 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
 
   return (
     <group>
+      <MiraTendrilLines reveal={reveal} />
       <points geometry={ready.geometry} material={ready.material} frustumCulled={false} />
+      <MiraSignalRibbons reveal={reveal} />
+      <MiraWorldObjects reveal={reveal} />
       <CoreBillboards reveal={reveal} activeLang={activeLang} hoverLang={hoverLang} density={density} />
       {reveal >= 0.85 && <KnotInteractors />}
     </group>

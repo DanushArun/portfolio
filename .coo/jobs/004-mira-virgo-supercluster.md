@@ -115,7 +115,14 @@ Why this is a metaphor and where it bends honestly: the real Mira agent does not
 
 ## Dispatches
 
-_pending — deep-researcher dispatches first; 3d-graphics-engineer waits on refs._
+### 2026-05-26 — MIRA supercluster travel pass
+
+Implemented a first W01-only cutaway travel pass directly inside the supercluster:
+overview hides internal modules and preserves intrigue through hot accretion zones;
+keyboard focus moves the camera into graph stops; internal structures render only during
+travel as particle mist, rings, and signal ribbons rather than separate overlay boxes.
+Verification: focused Vitest suite passed, production build passed, Playwright screenshots
+captured at `/private/tmp/mira-overview-not-toy.png` and `/private/tmp/mira-focus-2.png`.
 
 ## Decisions
 

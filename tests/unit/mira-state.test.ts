@@ -9,6 +9,8 @@ import {
   ingestForLang,
   detectQualityProfile,
   exposeMiraDebug,
+  stepMiraFocus,
+  setMiraFocus,
 } from '@/lib/mira-state';
 
 beforeEach(() => resetMiraStateForTest());
@@ -94,6 +96,27 @@ describe('mira density accretion', () => {
     expect(d.TA).toBe(0.20);
     expect(d.KN).toBe(0.20);
     expect(d.TE).toBe(0.20);
+  });
+});
+
+describe('mira cutaway navigation', () => {
+  it('starts at the supercluster overview camera stop', () => {
+    expect(useMiraState.getState().focusId).toBe('OVERVIEW');
+  });
+
+  it('steps from overview into the English language core', () => {
+    stepMiraFocus(1);
+    expect(useMiraState.getState().focusId).toBe('EN');
+  });
+
+  it('wraps backward from overview to the Telugu language core', () => {
+    stepMiraFocus(-1);
+    expect(useMiraState.getState().focusId).toBe('TE');
+  });
+
+  it('sets focus directly for clicked celestial modules', () => {
+    setMiraFocus('ROUTER');
+    expect(useMiraState.getState().focusId).toBe('ROUTER');
   });
 });
 

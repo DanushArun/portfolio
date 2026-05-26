@@ -5,6 +5,16 @@
 import { create } from 'zustand';
 
 export type MiraLang = 'EN' | 'HI' | 'TA' | 'KN' | 'TE';
+export type MiraFocusId =
+  | 'OVERVIEW'
+  | MiraLang
+  | 'ASR'
+  | 'ROUTER'
+  | 'MEMORY'
+  | 'TOOLS'
+  | 'CRM'
+  | 'WHATSAPP'
+  | 'LEARNING';
 
 export interface KnotSpec {
   readonly lang: MiraLang;
@@ -26,6 +36,21 @@ export const KNOT_TABLE: readonly KnotSpec[] = [
 ] as const;
 
 const CYCLE_ORDER: readonly MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE'];
+export const MIRA_FOCUS_ORDER: readonly MiraFocusId[] = [
+  'OVERVIEW',
+  'EN',
+  'ASR',
+  'ROUTER',
+  'MEMORY',
+  'TOOLS',
+  'CRM',
+  'WHATSAPP',
+  'LEARNING',
+  'HI',
+  'TA',
+  'KN',
+  'TE',
+];
 
 type Density = Record<MiraLang, number>;
 
@@ -36,6 +61,7 @@ const INITIAL_DENSITY: Density = {
 interface MiraState {
   activeLang: MiraLang;
   hoverLang: MiraLang | null;
+  focusId: MiraFocusId;
   density: Density;
   cycleIndex: number;
   cycleStartMs: number;
@@ -48,6 +74,7 @@ function nowMs(): number {
 export const useMiraState = create<MiraState>(() => ({
   activeLang: 'EN',
   hoverLang: null,
+  focusId: 'OVERVIEW',
   density: { ...INITIAL_DENSITY },
   cycleIndex: 0,
   cycleStartMs: nowMs(),
@@ -84,10 +111,23 @@ export function setActiveLang(lang: MiraLang): void {
   const idx = CYCLE_ORDER.indexOf(lang);
   useMiraState.setState({
     activeLang: lang,
+    focusId: lang,
     cycleIndex: idx,
     cycleStartMs: nowMs(),
   });
   ingestForLang(lang);
+}
+
+export function setMiraFocus(focusId: MiraFocusId): void {
+  useMiraState.setState({ focusId });
+}
+
+export function stepMiraFocus(direction: -1 | 1): void {
+  const state = useMiraState.getState();
+  const current = MIRA_FOCUS_ORDER.indexOf(state.focusId);
+  const index = current === -1 ? 0 : current;
+  const next = (index + direction + MIRA_FOCUS_ORDER.length) % MIRA_FOCUS_ORDER.length;
+  useMiraState.setState({ focusId: MIRA_FOCUS_ORDER[next] });
 }
 
 const DENSITY_STEP = 0.020;
@@ -106,6 +146,7 @@ export function resetMiraStateForTest(): void {
   useMiraState.setState({
     activeLang: 'EN',
     hoverLang: null,
+    focusId: 'OVERVIEW',
     density: { ...INITIAL_DENSITY },
     cycleIndex: 0,
     cycleStartMs: nowMs(),

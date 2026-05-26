@@ -8,16 +8,20 @@
 import { useEffect } from 'react';
 import { useScene, ALL_PHASES } from '@/lib/scene-state';
 import { progressToPhase, phaseToProgress } from '@/lib/journey-map';
+import { stepMiraFocus } from '@/lib/mira-state';
 
 export type KeyAction =
   | 'phase-next' | 'phase-prev' | 'phase-first' | 'phase-last'
-  | 'local-forward' | 'local-back' | 'pause-toggle' | null;
+  | 'local-forward' | 'local-back' | 'focus-next' | 'focus-prev'
+  | 'pause-toggle' | null;
 
 const KEY_MAP: Record<string, KeyAction> = {
   PageDown: 'phase-next',
   PageUp: 'phase-prev',
   Home: 'phase-first',
   End: 'phase-last',
+  ArrowRight: 'focus-next',
+  ArrowLeft: 'focus-prev',
   ArrowDown: 'local-forward',
   ArrowUp: 'local-back',
   ' ': 'pause-toggle',
@@ -56,8 +60,23 @@ export function resolveKeyAction(key: string): KeyAction {
   return KEY_MAP[key] ?? null;
 }
 
+function dispatchMiraFocusAction(action: KeyAction): boolean {
+  const phase = useScene.getState().phase;
+  if (phase !== 'W01_MIRA') return false;
+  if (action === 'focus-next' || action === 'local-forward') {
+    stepMiraFocus(1);
+    return true;
+  }
+  if (action === 'focus-prev' || action === 'local-back') {
+    stepMiraFocus(-1);
+    return true;
+  }
+  return false;
+}
+
 export function dispatchKeyAction(action: KeyAction): void {
   if (!action) return;
+  if (dispatchMiraFocusAction(action)) return;
   const state = useScene.getState();
   if (action === 'phase-next') {
     const idx = ALL_PHASES.indexOf(state.phase);

@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resolveKeyAction, dispatchKeyAction } from '@/lib/scene-state/keyboard-adapter';
 import { useScene, ALL_PHASES } from '@/lib/scene-state';
+import { resetMiraStateForTest, useMiraState } from '@/lib/mira-state';
 
 function resetSceneToOrbit(): void {
   useScene.setState({
@@ -15,6 +16,7 @@ function resetSceneToOrbit(): void {
 }
 
 beforeEach(resetSceneToOrbit);
+beforeEach(resetMiraStateForTest);
 
 describe('resolveKeyAction', () => {
   it('maps PageDown → phase-next', () => {
@@ -33,6 +35,11 @@ describe('resolveKeyAction', () => {
   it('maps ArrowDown / ArrowUp → local progress', () => {
     expect(resolveKeyAction('ArrowDown')).toBe('local-forward');
     expect(resolveKeyAction('ArrowUp')).toBe('local-back');
+  });
+
+  it('maps ArrowRight / ArrowLeft → MIRA focus navigation', () => {
+    expect(resolveKeyAction('ArrowRight')).toBe('focus-next');
+    expect(resolveKeyAction('ArrowLeft')).toBe('focus-prev');
   });
 
   it('maps Space → pause-toggle', () => {
@@ -65,5 +72,11 @@ describe('dispatchKeyAction', () => {
     dispatchKeyAction('local-forward');
     expect(useScene.getState().localProgress).toBeGreaterThan(0.32);
     expect(useScene.getState().localProgress).toBeLessThanOrEqual(0.34);
+  });
+
+  it('moves MIRA focus instead of scrolling when W01 is active', () => {
+    useScene.setState({ phase: 'W01_MIRA', localProgress: 0.5 });
+    dispatchKeyAction('focus-next');
+    expect(useMiraState.getState().focusId).toBe('EN');
   });
 });

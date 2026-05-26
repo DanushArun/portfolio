@@ -234,6 +234,27 @@ function makeGoldCurves(rng: Rng): Curve[] {
   return [...arcs, ...bridges, ...makeMesh('gold', rng)];
 }
 
+export interface TendrilCurves {
+  readonly blue: readonly Curve[];
+  readonly gold: readonly Curve[];
+  readonly violet: readonly Curve[];
+}
+
+const CURVE_CACHE: { value: TendrilCurves | null } = { value: null };
+
+export function getTendrilCurves(): TendrilCurves {
+  if (CURVE_CACHE.value) return CURVE_CACHE.value;
+  const rng = mulberry32(0xC05C1C);
+  const blue = makeBlueCurves(rng);
+  const curves = {
+    blue,
+    violet: makeVioletCurves(blue, rng),
+    gold: makeGoldCurves(rng),
+  };
+  CURVE_CACHE.value = curves;
+  return curves;
+}
+
 function writeParticle(out: PSet, index: number, curve: Curve, rng: Rng): void {
   const t = sampleT(rng);
   const body = Math.sin(Math.PI * t);
@@ -272,13 +293,8 @@ function layerFor(index: number, count: number): Layer {
 export function generateTendrils(quality: Quality): PSet {
   const count = PARTICLE_BUDGET[quality].web;
   const out = makePSet(count);
-  const rng = mulberry32(0xC05C1C);
-  const blue = makeBlueCurves(rng);
-  const curves: Record<Layer, Curve[]> = {
-    blue,
-    violet: makeVioletCurves(blue, rng),
-    gold: makeGoldCurves(rng),
-  };
+  const rng = mulberry32(0x7E2D11);
+  const curves = getTendrilCurves();
 
   for (let i = 0; i < count; i++) {
     const layer = layerFor(i, count);
