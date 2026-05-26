@@ -14,8 +14,8 @@ describe('MIRA neural supercluster visual contract', () => {
 
     expect(Object.keys(high).sort()).toEqual(['halos', 'hubs', 'plume', 'web']);
     expect(Object.keys(low).sort()).toEqual(['halos', 'hubs', 'plume', 'web']);
-    expect(high.web).toBe(1_150_000);
-    expect(totalParticles(high)).toBeLessThanOrEqual(1_250_000);
+    expect(high.web).toBe(1_500_000);
+    expect(totalParticles(high)).toBeLessThanOrEqual(1_610_000);
     expect(low.web).toBe(48_000);
     expect(totalParticles(low)).toBeLessThanOrEqual(62_000);
   });

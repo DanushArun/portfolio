@@ -31,9 +31,9 @@ export const KNOTS_W: readonly KnotW[] = KNOT_TABLE.map((knot) => ({
 
 export const PARTICLE_BUDGET = {
   high: {
-    web: 1_150_000,
-    hubs: 48_000,
-    halos: 34_000,
+    web: 1_500_000,
+    hubs: 56_000,
+    halos: 40_000,
     plume: 8_192,
   },
   low: {

@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -40,6 +40,8 @@ interface ReadyState {
 }
 
 const CACHE = new Map<Quality, GeneratedBuffers>();
+const BUFFER_PROMISES = new Map<Quality, Promise<GeneratedBuffers>>();
+let nextWorkerRequestId = 0;
 
 function generate(quality: Quality): GeneratedBuffers {
   const hit = CACHE.get(quality);
@@ -48,6 +50,46 @@ function generate(quality: Quality): GeneratedBuffers {
   const out = { ...merged, count: merged.densityLevel.length };
   CACHE.set(quality, out);
   return out;
+}
+
+function loadGeneratedBuffers(quality: Quality): Promise<GeneratedBuffers> {
+  const hit = CACHE.get(quality);
+  if (hit) return Promise.resolve(hit);
+  const pending = BUFFER_PROMISES.get(quality);
+  if (pending) return pending;
+  const promise = loadGeneratedBuffersInWorker(quality).catch(() => generate(quality));
+  BUFFER_PROMISES.set(quality, promise);
+  promise.finally(() => BUFFER_PROMISES.delete(quality));
+  return promise;
+}
+
+function loadGeneratedBuffersInWorker(quality: Quality): Promise<GeneratedBuffers> {
+  if (typeof Worker === 'undefined') return Promise.reject(new Error('Workers unavailable'));
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./mira/mira-buffer.worker.ts', import.meta.url), {
+      type: 'module',
+    });
+    const id = nextWorkerRequestId++;
+    worker.onmessage = ({ data }: MessageEvent<{
+      id: number;
+      payload?: GeneratedBuffers;
+      error?: string;
+    }>) => {
+      if (data.id !== id) return;
+      worker.terminate();
+      if (!data.payload) {
+        reject(new Error(data.error ?? 'MIRA worker returned no buffers'));
+        return;
+      }
+      CACHE.set(quality, data.payload);
+      resolve(data.payload);
+    };
+    worker.onerror = (event) => {
+      worker.terminate();
+      reject(new Error(event.message));
+    };
+    worker.postMessage({ id, quality });
+  });
 }
 
 function buildGeometry(buf: GeneratedBuffers): THREE.BufferGeometry {
@@ -142,19 +184,32 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
   const quality = useQuality();
   const pixelRatio = usePixelRatio();
   const revealRef = useRef(-1);
+  const [buffers, setBuffers] = useState<GeneratedBuffers | null>(() => CACHE.get(quality) ?? null);
   const ready = useMemo(
-    () => buildReadyState(generate(quality), pixelRatio),
-    [quality, pixelRatio],
+    () => (buffers ? buildReadyState(buffers, pixelRatio) : null),
+    [buffers, pixelRatio],
   );
 
   useEffect(() => {
+    let cancelled = false;
+    setBuffers(CACHE.get(quality) ?? null);
+    loadGeneratedBuffers(quality).then((next) => {
+      if (!cancelled) setBuffers(next);
+    });
     return () => {
-      ready.geometry.dispose();
-      ready.material.dispose();
+      cancelled = true;
+    };
+  }, [quality]);
+
+  useEffect(() => {
+    return () => {
+      ready?.geometry.dispose();
+      ready?.material.dispose();
     };
   }, [ready]);
 
   useFrame((state) => {
+    if (!ready) return;
     ready.material.uniforms.uActive.value = langUniform(activeLang);
     ready.material.uniforms.uHover.value = langUniform(hoverLang);
     ready.material.uniforms.uMotion.value = reducedMotion ? 0 : 1;
@@ -174,7 +229,7 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
   return (
     <group>
       <MiraTendrilLines reveal={reveal} />
-      <points geometry={ready.geometry} material={ready.material} frustumCulled={false} />
+      {ready && <points geometry={ready.geometry} material={ready.material} frustumCulled={false} />}
       <MiraSignalRibbons reveal={reveal} />
       <MiraWorldObjects reveal={reveal} />
       <CoreBillboards reveal={reveal} activeLang={activeLang} hoverLang={hoverLang} density={density} />
