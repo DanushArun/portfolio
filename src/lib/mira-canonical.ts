@@ -5,12 +5,6 @@ export interface MiraCameraSpec {
   readonly fov: number;
 }
 
-export interface MiraCallout {
-  readonly label: string;
-  readonly detail: string;
-  readonly placement: 'upper' | 'middle' | 'lower';
-}
-
 export interface MiraTendrilEdge {
   readonly from: MiraLang;
   readonly to: MiraLang;
@@ -23,34 +17,6 @@ export const MIRA_CAMERA = {
   position: [0, 0, 16.2],
   fov: 46,
 } as const satisfies MiraCameraSpec;
-
-export const MIRA_LABEL_OFFSETS: Readonly<Record<MiraLang, readonly [number, number, number]>> = {
-  EN: [0.42, 0.58, 0.04],
-  HI: [-0.46, 0.56, 0.04],
-  TA: [-0.34, 0.56, 0.04],
-  KN: [0.46, 0.50, 0.04],
-  TE: [0.02, 0.58, 0.04],
-};
-
-export const MIRA_CALLOUTS: readonly MiraCallout[] = [
-  {
-    label: 'VOICE DATA OUTBOUND',
-    detail: 'REAL-TIME',
-    placement: 'upper',
-  },
-  {
-    label: 'TRAINING SIGNAL RETURN',
-    detail: 'LEARNING - ACCRETING - EVOLVING',
-    placement: 'middle',
-  },
-  {
-    label: 'ACCRETION',
-    detail: 'MODEL STRENGTH GROWS',
-    placement: 'lower',
-  },
-];
-
-export const MIRA_RAIL: readonly string[] = ['ROTATE', 'HOVER', 'PROBE', 'ACTIVATE'];
 
 export const MIRA_TENDRIL_EDGES: readonly MiraTendrilEdge[] = [
   { from: 'EN', to: 'HI', weight: 1.24, bow: [0.10, 1.02, -0.24], strands: 8 },

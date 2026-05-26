@@ -20,7 +20,6 @@ import { generateHalos } from './mira/generate-dust';
 import { generateHubs } from './mira/generate-hubs';
 import { generateTendrils } from './mira/generate-tendrils';
 import { KNOTS_W, LANG_INDEX, type Quality } from './mira/knot-config';
-import { KnotLabels } from './mira/KnotLabels';
 import { frag, vert } from './mira/shader.glsl';
 
 interface GeneratedBuffers extends PSet {
@@ -168,7 +167,6 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
     <group>
       <points geometry={ready.geometry} material={ready.material} frustumCulled={false} />
       <CoreBillboards reveal={reveal} activeLang={activeLang} hoverLang={hoverLang} density={density} />
-      <KnotLabels reveal={reveal} />
       {reveal >= 0.85 && <KnotInteractors />}
     </group>
   );

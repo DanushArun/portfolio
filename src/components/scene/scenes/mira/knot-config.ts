@@ -29,14 +29,6 @@ export const KNOTS_W: readonly KnotW[] = KNOT_TABLE.map((knot) => ({
   scale: knot.relativeScale,
 }));
 
-export const NATIVE_SCRIPT: Readonly<Record<MiraLang, string>> = {
-  EN: 'ENGLISH',
-  HI: 'हिंदी',
-  TA: 'தமிழ்',
-  KN: 'ಕನ್ನಡ',
-  TE: 'తెలుగు',
-};
-
 export const PARTICLE_BUDGET = {
   high: {
     web: 1_150_000,
