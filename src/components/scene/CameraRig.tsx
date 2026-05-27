@@ -4,6 +4,11 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import { MIRA_CAMERA } from '@/lib/mira-canonical';
+import {
+  computeMiraGameProgress,
+  getMiraGameCamera,
+  getMiraGameProgressForFocus,
+} from '@/lib/mira-game-route';
 import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
 import { useMiraState } from '@/lib/mira-state';
 import { useScene, type ScenePhase } from '@/lib/scene-state';
@@ -15,6 +20,8 @@ const DEFAULT_POS = new THREE.Vector3(0, 2, 30);
 const TEMP_ORBIT = new THREE.Vector3();
 const TEMP_POS = new THREE.Vector3();
 const TEMP_LOOK = new THREE.Vector3();
+const TEMP_STOP_POS = new THREE.Vector3();
+const TEMP_STOP_LOOK = new THREE.Vector3();
 
 function setFov(camera: THREE.PerspectiveCamera, fov: number): void {
   camera.fov = fov;
@@ -43,14 +50,28 @@ function applyProjectCamera(camera: THREE.PerspectiveCamera, time: number, local
 
 function applyMiraCamera(
   camera: THREE.PerspectiveCamera,
+  gameProgress: number,
   stop: MiraCameraStop,
   reducedMotion: boolean,
 ): void {
-  TEMP_POS.set(...stop.position);
-  TEMP_LOOK.set(...stop.lookAt);
+  const gameCamera = getMiraGameCamera(gameProgress);
+  TEMP_STOP_POS.set(...stop.position);
+  TEMP_STOP_LOOK.set(...stop.lookAt);
+  TEMP_POS.copy(gameCamera.position).lerp(TEMP_STOP_POS, 0.22);
+  TEMP_LOOK.copy(gameCamera.lookAt).lerp(TEMP_STOP_LOOK, 0.18);
   camera.position.lerp(TEMP_POS, reducedMotion ? 1 : 0.085);
   camera.lookAt(TEMP_LOOK);
-  camera.fov += (stop.fov - camera.fov) * (reducedMotion ? 1 : 0.08);
+  const fov = gameCamera.fov + (stop.fov - gameCamera.fov) * 0.18;
+  camera.fov += (fov - camera.fov) * (reducedMotion ? 1 : 0.08);
+}
+
+function applyMiraOverviewCamera(
+  camera: THREE.PerspectiveCamera,
+  reducedMotion: boolean,
+): void {
+  camera.position.lerp(MIRA_POS, reducedMotion ? 1 : 0.085);
+  camera.lookAt(ORIGIN);
+  camera.fov += (MIRA_CAMERA.fov - camera.fov) * (reducedMotion ? 1 : 0.08);
 }
 
 function applyDefaultCamera(camera: THREE.PerspectiveCamera): void {
@@ -79,8 +100,15 @@ function applyPhaseCamera(config: {
     return;
   }
   if (config.phase === 'W01_MIRA') {
-    const stop = getMiraCameraStop(useMiraState.getState().focusId);
-    applyMiraCamera(config.camera, stop, config.reducedMotion);
+    const miraState = useMiraState.getState();
+    if (miraState.focusId === 'OVERVIEW') {
+      applyMiraOverviewCamera(config.camera, config.reducedMotion);
+      return;
+    }
+    const stop = getMiraCameraStop(miraState.focusId);
+    const focusProgress = getMiraGameProgressForFocus(miraState.focusId);
+    const gameProgress = focusProgress ?? computeMiraGameProgress(config.phase, config.local, 1);
+    applyMiraCamera(config.camera, gameProgress, stop, config.reducedMotion);
     return;
   }
   applyDefaultCamera(config.camera);

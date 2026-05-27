@@ -9,24 +9,67 @@
 }
 
 .titleBlock {
-  bottom: clamp(2.6rem, 6.5vh, 4.8rem);
-  left: clamp(1.5rem, 4.6vw, 5rem);
+  bottom: clamp(1.9rem, 4.8vh, 3.4rem);
+  left: clamp(1.2rem, 3.6vw, 4rem);
   max-width: min(28rem, 31vw);
   position: absolute;
 }
 
 .title {
-  color: rgba(250, 239, 220, 0.96);
+  color: rgba(250, 239, 220, 0.54);
   font-family: var(--font-dop), Georgia, Cambria, "Times New Roman", serif;
-  font-size: clamp(4.2rem, 6.2vw, 7.7rem);
+  font-size: clamp(3.3rem, 4.7vw, 5.9rem);
   font-style: italic;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 0.82;
   margin: 0;
   text-shadow:
-    0 0 24px rgba(255, 232, 190, 0.16),
-    0 1px 0 rgba(255, 255, 255, 0.22);
+    0 0 18px rgba(255, 232, 190, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.labels {
+  font-family: var(--font-composer), ui-monospace, monospace;
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.label {
+  color: rgba(255, 218, 126, 0.84);
+  font-size: clamp(1rem, 1.6vw, 1.55rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  position: absolute;
+  text-shadow:
+    0 0 16px rgba(255, 166, 54, 0.56),
+    0 0 2px rgba(0, 0, 0, 0.96);
+}
+
+.en {
+  left: 34.5%;
+  top: 23.5%;
+}
+
+.hi {
+  left: 60.5%;
+  top: 33%;
+}
+
+.ta {
+  left: 32%;
+  top: 57%;
+}
+
+.kn {
+  left: 68.5%;
+  top: 58.5%;
+}
+
+.te {
+  left: 49.5%;
+  top: 70%;
 }
 
 @media (max-width: 760px) {

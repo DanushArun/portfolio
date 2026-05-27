@@ -14,8 +14,8 @@ export interface MiraTendrilEdge {
 }
 
 export const MIRA_CAMERA = {
-  position: [0, 0, 16.2],
-  fov: 46,
+  position: [0, 0, 14.4],
+  fov: 44,
 } as const satisfies MiraCameraSpec;
 
 export const MIRA_TENDRIL_EDGES: readonly MiraTendrilEdge[] = [

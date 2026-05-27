@@ -11,15 +11,13 @@ import {
   detectQualityProfile,
   setActiveLang,
   setHoverLang,
-  setMiraFocus,
   useMiraState,
   type MiraLang,
 } from '@/lib/mira-state';
 import { WORLD_SCALE, mergePSets, type PSet } from './mira/buffers';
 import { CoreBillboards } from './mira/CoreBillboards';
-import { MiraSignalRibbons } from './mira/MiraSignalRibbons';
+import { MiraNebulaField } from './mira/MiraNebulaField';
 import { MiraTendrilLines } from './mira/MiraTendrilLines';
-import { MiraWorldObjects } from './mira/MiraWorldObjects';
 import { generateHalos } from './mira/generate-dust';
 import { generateHubs } from './mira/generate-hubs';
 import { generateTendrils } from './mira/generate-tendrils';
@@ -39,6 +37,15 @@ interface ReadyState {
   material: THREE.ShaderMaterial;
 }
 
+interface UniformInput {
+  activeLang: MiraLang;
+  density: Record<MiraLang, number>;
+  hoverLang: MiraLang | null;
+  ready: ReadyState | null;
+  reducedMotion: boolean;
+  reveal: number;
+}
+
 const CACHE = new Map<Quality, GeneratedBuffers>();
 const BUFFER_PROMISES = new Map<Quality, Promise<GeneratedBuffers>>();
 let nextWorkerRequestId = 0;
@@ -46,7 +53,11 @@ let nextWorkerRequestId = 0;
 function generate(quality: Quality): GeneratedBuffers {
   const hit = CACHE.get(quality);
   if (hit) return hit;
-  const merged = mergePSets([generateTendrils(quality), generateHalos(quality), generateHubs(quality)]);
+  const merged = mergePSets([
+    generateTendrils(quality),
+    generateHalos(quality),
+    generateHubs(quality),
+  ]);
   const out = { ...merged, count: merged.densityLevel.length };
   CACHE.set(quality, out);
   return out;
@@ -162,10 +173,12 @@ function KnotInteractors(): React.ReactElement {
           onClick={(event) => {
             event.stopPropagation();
             setActiveLang(knot.lang);
-            setMiraFocus(knot.lang);
           }}
           onPointerOut={() => setHoverLang(null)}
-          onPointerOver={(event) => { event.stopPropagation(); setHoverLang(knot.lang); }}
+          onPointerOver={(event) => {
+            event.stopPropagation();
+            setHoverLang(knot.lang);
+          }}
           position={[knot.pos[0], knot.pos[1], knot.pos[2]]}
         >
           <sphereGeometry args={[0.72 * knot.scale, 10, 10]} />
@@ -176,14 +189,7 @@ function KnotInteractors(): React.ReactElement {
   );
 }
 
-export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): React.ReactElement | null {
-  const reducedMotion = useReducedMotion();
-  const activeLang = useMiraState((state) => state.activeLang);
-  const hoverLang = useMiraState((state) => state.hoverLang);
-  const density = useMiraState((state) => state.density);
-  const quality = useQuality();
-  const pixelRatio = usePixelRatio();
-  const revealRef = useRef(-1);
+function useReadyState(quality: Quality, pixelRatio: number): ReadyState | null {
   const [buffers, setBuffers] = useState<GeneratedBuffers | null>(() => CACHE.get(quality) ?? null);
   const ready = useMemo(
     () => (buffers ? buildReadyState(buffers, pixelRatio) : null),
@@ -192,7 +198,6 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
 
   useEffect(() => {
     let cancelled = false;
-    setBuffers(CACHE.get(quality) ?? null);
     loadGeneratedBuffers(quality).then((next) => {
       if (!cancelled) setBuffers(next);
     });
@@ -201,38 +206,66 @@ export default function MiraSupercluster({ reveal }: MiraSuperclusterProps): Rea
     };
   }, [quality]);
 
-  useEffect(() => {
-    return () => {
-      ready?.geometry.dispose();
-      ready?.material.dispose();
-    };
+  useEffect(() => () => {
+    ready?.geometry.dispose();
+    ready?.material.dispose();
   }, [ready]);
 
+  return ready;
+}
+
+function useClusterUniforms(input: UniformInput): void {
+  const revealRef = useRef(-1);
+
   useFrame((state) => {
-    if (!ready) return;
-    ready.material.uniforms.uActive.value = langUniform(activeLang);
-    ready.material.uniforms.uHover.value = langUniform(hoverLang);
-    ready.material.uniforms.uMotion.value = reducedMotion ? 0 : 1;
-    ready.material.uniforms.uTime.value = reducedMotion ? 0 : state.clock.elapsedTime;
-    ready.material.uniforms.uDensity0.value = density.EN;
-    ready.material.uniforms.uDensity1.value = density.HI;
-    ready.material.uniforms.uDensity2.value = density.TA;
-    ready.material.uniforms.uDensity3.value = density.KN;
-    ready.material.uniforms.uDensity4.value = density.TE;
-    if (revealRef.current === reveal) return;
-    revealRef.current = reveal;
-    ready.material.uniforms.uReveal.value = reveal;
+    if (!input.ready) return;
+    input.ready.material.uniforms.uActive.value = langUniform(input.activeLang);
+    input.ready.material.uniforms.uHover.value = langUniform(input.hoverLang);
+    input.ready.material.uniforms.uMotion.value = input.reducedMotion ? 0 : 1;
+    input.ready.material.uniforms.uTime.value = input.reducedMotion ? 0 : state.clock.elapsedTime;
+    input.ready.material.uniforms.uDensity0.value = input.density.EN;
+    input.ready.material.uniforms.uDensity1.value = input.density.HI;
+    input.ready.material.uniforms.uDensity2.value = input.density.TA;
+    input.ready.material.uniforms.uDensity3.value = input.density.KN;
+    input.ready.material.uniforms.uDensity4.value = input.density.TE;
+    if (revealRef.current === input.reveal) return;
+    revealRef.current = input.reveal;
+    input.ready.material.uniforms.uReveal.value = input.reveal;
   });
+}
+
+export default function MiraSupercluster(
+  { reveal }: MiraSuperclusterProps,
+): React.ReactElement | null {
+  const reducedMotion = useReducedMotion();
+  const activeLang = useMiraState((state) => state.activeLang);
+  const hoverLang = useMiraState((state) => state.hoverLang);
+  const density = useMiraState((state) => state.density);
+  const quality = useQuality();
+  const pixelRatio = usePixelRatio();
+  const ready = useReadyState(quality, pixelRatio);
+
+  useClusterUniforms({ activeLang, density, hoverLang, ready, reducedMotion, reveal });
 
   if (reveal < 0.18) return null;
 
   return (
     <group>
+      <MiraNebulaField quality={quality} reveal={reveal} />
       <MiraTendrilLines reveal={reveal} />
-      {ready && <points geometry={ready.geometry} material={ready.material} frustumCulled={false} />}
-      <MiraSignalRibbons reveal={reveal} />
-      <MiraWorldObjects reveal={reveal} />
-      <CoreBillboards reveal={reveal} activeLang={activeLang} hoverLang={hoverLang} density={density} />
+      {ready && (
+        <points
+          geometry={ready.geometry}
+          material={ready.material}
+          frustumCulled={false}
+        />
+      )}
+      <CoreBillboards
+        reveal={reveal}
+        activeLang={activeLang}
+        hoverLang={hoverLang}
+        density={density}
+      />
       {reveal >= 0.85 && <KnotInteractors />}
     </group>
   );

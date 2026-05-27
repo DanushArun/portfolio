@@ -11,6 +11,7 @@ import {
   exposeMiraDebug,
   stepMiraFocus,
   setMiraFocus,
+  MIRA_FOCUS_ORDER,
 } from '@/lib/mira-state';
 
 beforeEach(() => resetMiraStateForTest());
@@ -100,6 +101,10 @@ describe('mira density accretion', () => {
 });
 
 describe('mira cutaway navigation', () => {
+  it('limits keyboard navigation to the five supercluster cores', () => {
+    expect(MIRA_FOCUS_ORDER).toEqual(['OVERVIEW', 'EN', 'HI', 'TA', 'KN', 'TE']);
+  });
+
   it('starts at the supercluster overview camera stop', () => {
     expect(useMiraState.getState().focusId).toBe('OVERVIEW');
   });
@@ -114,9 +119,14 @@ describe('mira cutaway navigation', () => {
     expect(useMiraState.getState().focusId).toBe('TE');
   });
 
-  it('sets focus directly for clicked celestial modules', () => {
-    setMiraFocus('ROUTER');
-    expect(useMiraState.getState().focusId).toBe('ROUTER');
+  it('sets focus directly for clicked language cores', () => {
+    setMiraFocus('TA');
+    expect(useMiraState.getState().focusId).toBe('TA');
+  });
+
+  it('activates the language core when it receives focus', () => {
+    setMiraFocus('KN');
+    expect(useMiraState.getState().activeLang).toBe('KN');
   });
 });
 

@@ -2,19 +2,19 @@ import { mixVec, type Rng, type Vec3 } from './buffers';
 import { getKnot } from './knot-config';
 import { type Curve, type Layer } from './tendril-geometry';
 
-const COOL_A: Vec3 = [0.01, 0.04, 0.24];
-const COOL_B: Vec3 = [0.02, 0.12, 0.45];
-const BLUE_PATCH_A: Vec3 = [0.02, 0.22, 0.74];
-const BLUE_PATCH_B: Vec3 = [0.05, 0.38, 0.92];
-const GOLD_A: Vec3 = [1.00, 0.37, 0.10];
-const GOLD_B: Vec3 = [1.00, 0.78, 0.34];
-const RED_INFECTION_A: Vec3 = [0.70, 0.01, 0.03];
-const RED_INFECTION_B: Vec3 = [1.00, 0.04, 0.08];
-const VIOLET_A: Vec3 = [0.08, 0.01, 0.28];
-const VIOLET_B: Vec3 = [0.24, 0.02, 0.42];
+const COOL_A: Vec3 = [0.005, 0.035, 0.26];
+const COOL_B: Vec3 = [0.01, 0.13, 0.54];
+const BLUE_PATCH_A: Vec3 = [0.015, 0.20, 0.78];
+const BLUE_PATCH_B: Vec3 = [0.08, 0.34, 0.86];
+const GOLD_A: Vec3 = [0.92, 0.34, 0.10];
+const GOLD_B: Vec3 = [1.00, 0.66, 0.28];
+const RED_INFECTION_A: Vec3 = [0.56, 0.08, 0.54];
+const RED_INFECTION_B: Vec3 = [0.80, 0.18, 0.72];
+const VIOLET_A: Vec3 = [0.10, 0.04, 0.44];
+const VIOLET_B: Vec3 = [0.24, 0.10, 0.68];
 
-export const BLUE_PATCH_CHANCE = 0.12;
-export const RED_INFECTION_CHANCE = 0.24;
+export const BLUE_PATCH_CHANCE = 0.20;
+export const RED_INFECTION_CHANCE = 0.04;
 
 export function webColor(curve: Curve, t: number, rng: Rng): Vec3 {
   if (curve.layer === 'gold') return goldColor(curve, t, rng);
@@ -23,15 +23,15 @@ export function webColor(curve: Curve, t: number, rng: Rng): Vec3 {
 }
 
 export function spreadFor(layer: Layer): number {
-  if (layer === 'gold') return 0.34;
-  if (layer === 'violet') return 0.48;
-  return 0.92;
+  if (layer === 'gold') return 0.46;
+  if (layer === 'violet') return 0.62;
+  return 1.08;
 }
 
 export function densityFor(curve: Curve, body: number): number {
-  if (curve.layer === 'gold') return 0.30 + body * 0.30 + curve.energy * 0.10;
-  if (curve.layer === 'violet') return 0.11 + body * 0.24 + curve.energy * 0.06;
-  return 0.05 + body * 0.20 + curve.energy * 0.04;
+  if (curve.layer === 'gold') return 0.30 + body * 0.24 + curve.energy * 0.08;
+  if (curve.layer === 'violet') return 0.13 + body * 0.20 + curve.energy * 0.05;
+  return 0.09 + body * 0.18 + curve.energy * 0.04;
 }
 
 function blueColor(curve: Curve, t: number, rng: Rng): Vec3 {

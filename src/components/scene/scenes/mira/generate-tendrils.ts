@@ -1,10 +1,8 @@
-import { MIRA_TENDRIL_EDGES } from '@/lib/mira-canonical';
 import { gauss, makePSet, mixVec, mulberry32, type PSet, type Rng, type Vec3 } from './buffers';
 import {
   KNOTS_W,
   LANG_INDEX,
   PARTICLE_BUDGET,
-  getKnot,
   type Quality,
 } from './knot-config';
 import { densityFor, spreadFor, webColor } from './tendril-appearance';
@@ -22,17 +20,23 @@ import {
   type Curve,
   type Layer,
 } from './tendril-geometry';
+import {
+  HI_LOOP_SEGMENTS,
+  PRIMARY_CORRIDORS,
+  TERMINAL_BRANCHES,
+  getTopologyHub,
+} from './supercluster-topology';
 
 function makeMain(edgeIndex: number, layer: Layer, rng: Rng): Curve {
-  const edge = MIRA_TENDRIL_EDGES[edgeIndex % MIRA_TENDRIL_EDGES.length];
-  const from = getKnot(edge.from);
-  const to = getKnot(edge.to);
+  const edge = PRIMARY_CORRIDORS[edgeIndex % PRIMARY_CORRIDORS.length];
+  const from = getTopologyHub(edge.from);
+  const to = getTopologyHub(edge.to);
   const bowAmount = layer === 'gold' ? 0.92 + rng() * 0.44 : 0.52 + rng() * 0.82;
-  const [c1, c2] = controls(from.pos, to.pos, scale(edge.bow, bowAmount), rng);
+  const [c1, c2] = controls(from.position, to.position, scale(edge.bow, bowAmount), rng);
   const energy = edge.weight + (layer === 'gold' ? 0.26 : 0);
   return makeCurve({
-    a: from.pos,
-    b: to.pos,
+    a: from.position,
+    b: to.position,
     c1,
     c2,
     energy,
@@ -49,18 +53,28 @@ function branchLength(layer: Layer, rng: Rng): number {
 }
 
 function makeBranch(index: number, layer: Layer, rng: Rng): Curve {
-  const knot = KNOTS_W[index % KNOTS_W.length];
-  const angle = rng() * TAU;
-  const length = branchLength(layer, rng);
+  const branch = TERMINAL_BRANCHES[index % TERMINAL_BRANCHES.length];
+  const knot = getTopologyHub(branch.from);
+  const angle = branch.angle + gauss(rng) * 0.10;
+  const length = branch.length * branchLength(layer, rng) * 0.48;
   const end: Vec3 = [
-    knot.pos[0] + Math.cos(angle) * length,
-    knot.pos[1] + Math.sin(angle) * length * (0.70 + rng() * 0.22),
-    knot.pos[2] + gauss(rng) * 0.58,
+    knot.position[0] + Math.cos(angle) * length,
+    knot.position[1] + Math.sin(angle) * length * (0.72 + rng() * 0.18),
+    knot.position[2] + gauss(rng) * 0.38,
   ];
-  const bow: Vec3 = [gauss(rng) * 1.1, gauss(rng) * 1.1, gauss(rng) * 0.18];
-  const [c1, c2] = controls(knot.pos, end, bow, rng);
+  const bow: Vec3 = [Math.cos(angle) * branch.split, Math.sin(angle) * branch.split, 0.12];
+  const [c1, c2] = controls(knot.position, end, bow, rng);
   const energy = layer === 'gold' ? 0.92 + rng() * 0.42 : 0.42 + rng() * 0.46;
-  return makeCurve({ a: knot.pos, b: end, c1, c2, energy, lang: knot.lang, layer, rng });
+  return makeCurve({
+    a: knot.position,
+    b: end,
+    c1,
+    c2,
+    energy,
+    lang: knot.lang,
+    layer,
+    rng,
+  });
 }
 
 function satelliteRadius(layer: Layer, rng: Rng): number {
@@ -83,13 +97,13 @@ function makeSatellite(id: number, knotIndex: number, layer: Layer, rng: Rng): A
 }
 
 function makeCorridorAnchor(id: number, layer: Layer, rng: Rng): Anchor {
-  const edge = MIRA_TENDRIL_EDGES[Math.floor(rng() * MIRA_TENDRIL_EDGES.length)];
-  const from = getKnot(edge.from);
-  const to = getKnot(edge.to);
+  const edge = PRIMARY_CORRIDORS[Math.floor(rng() * PRIMARY_CORRIDORS.length)];
+  const from = getTopologyHub(edge.from);
+  const to = getTopologyHub(edge.to);
   const t = 0.04 + rng() * 0.92;
   const bow = scale(edge.bow, Math.sin(Math.PI * t) * (0.40 + rng() * 0.90));
   const jitter = layer === 'violet' ? 0.46 : 0.72;
-  const pos = add(mixVec(from.pos, to.pos, t), [
+  const pos = add(mixVec(from.position, to.position, t), [
     bow[0] + gauss(rng) * jitter,
     bow[1] + gauss(rng) * jitter,
     bow[2] + gauss(rng) * 0.26,
@@ -101,7 +115,14 @@ function makeFieldAnchor(id: number, layer: Layer, rng: Rng): Anchor {
   if (rng() < TENDRIL_CONFIG[layer].corridorBias) {
     return makeCorridorAnchor(id, layer, rng);
   }
-  const pos: Vec3 = [-6.4 + rng() * 12.8, -4.35 + rng() * 8.70, gauss(rng) * 0.84];
+  const branch = TERMINAL_BRANCHES[Math.floor(rng() * TERMINAL_BRANCHES.length)];
+  const hub = getTopologyHub(branch.from);
+  const radius = branch.length * (0.38 + rng() * 0.86);
+  const pos: Vec3 = [
+    hub.position[0] + Math.cos(branch.angle) * radius + gauss(rng) * 0.78,
+    hub.position[1] + Math.sin(branch.angle) * radius + gauss(rng) * 0.62,
+    hub.position[2] + gauss(rng) * 0.68,
+  ];
   return { id, lang: nearestLang(pos), pos };
 }
 
@@ -157,7 +178,7 @@ function makeMesh(layer: Layer, rng: Rng): Curve[] {
 }
 
 function makeBlueCurves(rng: Rng): Curve[] {
-  const main = MIRA_TENDRIL_EDGES.map((_, index) => makeMain(index, 'blue', rng));
+  const main = PRIMARY_CORRIDORS.map((_, index) => makeMain(index, 'blue', rng));
   const branches = Array.from({ length: TENDRIL_CONFIG.blue.branchCount }, (_, index) => (
     makeBranch(index, 'blue', rng)
   ));
@@ -206,32 +227,63 @@ function makeVioletCurves(blue: readonly Curve[], rng: Rng): Curve[] {
   });
 }
 
-function arcPoint(center: Vec3, radius: number, angle: number, rng: Rng): Vec3 {
-  return [
-    center[0] + Math.cos(angle) * radius * (1.18 + rng() * 0.20),
-    center[1] + Math.sin(angle) * radius * (0.82 + rng() * 0.18),
-    center[2] + gauss(rng) * 0.12,
+function makeHubSpoke(index: number, rng: Rng): Curve {
+  const knot = KNOTS_W[index % KNOTS_W.length];
+  const angle = (index * 2.399963) + gauss(rng) * 0.18;
+  const length = (0.36 + rng() * 1.48) * knot.scale;
+  const end: Vec3 = [
+    knot.pos[0] + Math.cos(angle) * length,
+    knot.pos[1] + Math.sin(angle) * length * (0.72 + rng() * 0.18),
+    knot.pos[2] + gauss(rng) * 0.24,
   ];
+  const bow: Vec3 = [gauss(rng) * 0.18, gauss(rng) * 0.18, gauss(rng) * 0.05];
+  const [c1, c2] = controls(knot.pos, end, bow, rng);
+  return makeCurve({
+    a: knot.pos,
+    b: end,
+    c1,
+    c2,
+    energy: 1.32,
+    lang: knot.lang,
+    layer: 'gold',
+    rng,
+  });
 }
 
-function makeNodeArc(index: number, rng: Rng): Curve {
-  const knot = KNOTS_W[index % KNOTS_W.length];
-  const hiScale = knot.lang === 'HI' ? 1.78 : 1;
-  const radius = (0.18 + rng() * 0.74) * hiScale;
-  const start = rng() * TAU;
-  const sweep = (0.55 + rng() * 1.75) * (rng() < 0.5 ? -1 : 1);
-  const a = arcPoint(knot.pos, radius, start, rng);
-  const b = arcPoint(knot.pos, radius, start + sweep, rng);
-  const c1 = arcPoint(knot.pos, radius * (1.10 + rng() * 0.32), start + sweep * 0.34, rng);
-  const c2 = arcPoint(knot.pos, radius * (1.10 + rng() * 0.32), start + sweep * 0.68, rng);
-  const energy = 1.04 + rng() * 0.58;
-  return makeCurve({ a, b, c1, c2, energy, lang: knot.lang, layer: 'gold', rng });
+function makeHiLoop(index: number, rng: Rng): Curve {
+  const segment = HI_LOOP_SEGMENTS[index % HI_LOOP_SEGMENTS.length];
+  const strand = Math.floor(index / HI_LOOP_SEGMENTS.length);
+  const offset = (strand - 3.5) * 0.045;
+  const a = offsetLoopPoint(segment.a, offset, rng);
+  const b = offsetLoopPoint(segment.b, offset, rng);
+  const [c1, c2] = controls(a, b, segment.bow, rng);
+  return makeCurve({
+    a,
+    b,
+    c1,
+    c2,
+    energy: segment.weight,
+    lang: segment.from,
+    layer: 'gold',
+    rng,
+  });
+}
+
+function offsetLoopPoint(point: Vec3, offset: number, rng: Rng): Vec3 {
+  return [
+    point[0] + offset + gauss(rng) * 0.025,
+    point[1] - offset * 0.46 + gauss(rng) * 0.025,
+    point[2] + gauss(rng) * 0.025,
+  ];
 }
 
 function makeGoldCurves(rng: Rng): Curve[] {
   const bridges = Array.from({ length: 5 }, (_, index) => makeMain(index, 'gold', rng));
-  const arcs = Array.from({ length: 520 }, (_, index) => makeNodeArc(index, rng));
-  return [...arcs, ...bridges, ...makeMesh('gold', rng)];
+  const loop = Array.from({ length: HI_LOOP_SEGMENTS.length * 8 }, (_, index) => (
+    makeHiLoop(index, rng)
+  ));
+  const spokes = Array.from({ length: 360 }, (_, index) => makeHubSpoke(index, rng));
+  return [...spokes, ...loop, ...bridges, ...makeMesh('gold', rng)];
 }
 
 export interface TendrilCurves {

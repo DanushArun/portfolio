@@ -124,6 +124,26 @@ travel as particle mist, rings, and signal ribbons rather than separate overlay 
 Verification: focused Vitest suite passed, production build passed, Playwright screenshots
 captured at `/private/tmp/mira-overview-not-toy.png` and `/private/tmp/mira-focus-2.png`.
 
+### 2026-05-26 — MIRA astronaut checkpoint correction
+
+Removed the visible route cage, third-person probe, oversized VAD/ASR props, and module
+focus order. The camera now uses an invisible spline through the five hot supercluster
+cores (`EN → HI → TA → KN → TE`), and keyboard/click focus is limited to those five
+checkpoint cores. Each checkpoint renders as an embedded particle mechanism rather than
+a detached UI object: audio wave, activity gate, transcript lattice, router spokes, and
+learning accretion spiral.
+
+Verification:
+- Focused Vitest suite passed (`3` files, `29` tests):
+  ```bash
+  npm run test -- tests/unit/mira-state.test.ts tests/unit/mira-game-route.test.ts \
+    tests/unit/mira-world.test.ts
+  ```
+- `npm run typecheck` passed.
+- `npm run lint` passed with one existing warning in `src/lib/blackHole/index.ts`.
+- Playwright screenshots captured: `/private/tmp/mira-astronaut-overview-v2.png` and
+  `/private/tmp/mira-astronaut-focus-en-v2.png`.
+
 ## Decisions
 
 ### 2026-05-13 — Concept locked: Virgo Supercluster (not Mira Ceti, not stellar engine)

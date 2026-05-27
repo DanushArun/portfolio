@@ -23,29 +23,20 @@ export interface KnotSpec {
   readonly hue: string;
 }
 
-// Positions adapted from the canonical spec frame (±45) by dividing by 22.5
-// into the existing ±2 KNOT_TABLE coordinate system. Hues are exact spec hexes
-// so EN/HI/TA/KN/TE read as warm-orange / gold / violet / magenta / cyan
-// against the cool filament web.
+// Positions adapt the canonical spec frame into the scene coordinate system.
+// The five cores stay in the same warm family so they read as one supercluster.
 export const KNOT_TABLE: readonly KnotSpec[] = [
-  { lang: 'EN', position: [-2.00,  1.42,  0.53], relativeScale: 1.40, hue: '#FF9933' },
+  { lang: 'EN', position: [-2.00,  1.42,  0.53], relativeScale: 1.40, hue: '#FFD36A' },
   { lang: 'HI', position: [ 1.69,  1.11, -0.67], relativeScale: 1.15, hue: '#FFB84D' },
-  { lang: 'TA', position: [-1.69, -0.53,  0.36], relativeScale: 1.20, hue: '#B266FF' },
-  { lang: 'KN', position: [ 1.87, -0.98, -0.22], relativeScale: 1.10, hue: '#E680FF' },
-  { lang: 'TE', position: [ 0.22, -1.69,  0.80], relativeScale: 1.00, hue: '#3399FF' },
+  { lang: 'TA', position: [-1.69, -0.53,  0.36], relativeScale: 1.20, hue: '#FFE08A' },
+  { lang: 'KN', position: [ 1.87, -0.98, -0.22], relativeScale: 1.10, hue: '#FFCD65' },
+  { lang: 'TE', position: [ 0.22, -1.69,  0.80], relativeScale: 1.00, hue: '#FFB55C' },
 ] as const;
 
 const CYCLE_ORDER: readonly MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE'];
 export const MIRA_FOCUS_ORDER: readonly MiraFocusId[] = [
   'OVERVIEW',
   'EN',
-  'ASR',
-  'ROUTER',
-  'MEMORY',
-  'TOOLS',
-  'CRM',
-  'WHATSAPP',
-  'LEARNING',
   'HI',
   'TA',
   'KN',
@@ -69,6 +60,10 @@ interface MiraState {
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : 0;
+}
+
+function isMiraLang(focusId: MiraFocusId): focusId is MiraLang {
+  return CYCLE_ORDER.includes(focusId as MiraLang);
 }
 
 export const useMiraState = create<MiraState>(() => ({
@@ -119,7 +114,16 @@ export function setActiveLang(lang: MiraLang): void {
 }
 
 export function setMiraFocus(focusId: MiraFocusId): void {
-  useMiraState.setState({ focusId });
+  if (!isMiraLang(focusId)) {
+    useMiraState.setState({ focusId });
+    return;
+  }
+  useMiraState.setState({
+    activeLang: focusId,
+    cycleIndex: CYCLE_ORDER.indexOf(focusId),
+    cycleStartMs: nowMs(),
+    focusId,
+  });
 }
 
 export function stepMiraFocus(direction: -1 | 1): void {
@@ -127,7 +131,7 @@ export function stepMiraFocus(direction: -1 | 1): void {
   const current = MIRA_FOCUS_ORDER.indexOf(state.focusId);
   const index = current === -1 ? 0 : current;
   const next = (index + direction + MIRA_FOCUS_ORDER.length) % MIRA_FOCUS_ORDER.length;
-  useMiraState.setState({ focusId: MIRA_FOCUS_ORDER[next] });
+  setMiraFocus(MIRA_FOCUS_ORDER[next]);
 }
 
 const DENSITY_STEP = 0.020;

@@ -12,11 +12,11 @@ export interface TendrilLineSet {
 
 export const TENDRIL_LINE_CONFIG = {
   high: {
-    segments: 6,
+    segments: 18,
     stride: 1,
   },
   low: {
-    segments: 4,
+    segments: 10,
     stride: 5,
   },
 } as const satisfies Record<Quality, { segments: number; stride: number }>;
