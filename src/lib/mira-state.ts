@@ -5,16 +5,22 @@
 import { create } from 'zustand';
 
 export type MiraLang = 'EN' | 'HI' | 'TA' | 'KN' | 'TE';
+export const MIRA_RECRUITER_JOURNEY = [
+  'SHIPPED',
+  'LATENCY',
+  'LANGUAGES',
+  'VOICE_INTAKE',
+  'ORCHESTRATION',
+  'POST_CALL',
+  'OPS_AUTOMATION',
+  'PRODUCTION',
+] as const;
+
+export type MiraWorkRegionId = typeof MIRA_RECRUITER_JOURNEY[number];
 export type MiraFocusId =
   | 'OVERVIEW'
-  | MiraLang
-  | 'ASR'
-  | 'ROUTER'
-  | 'MEMORY'
-  | 'TOOLS'
-  | 'CRM'
-  | 'WHATSAPP'
-  | 'LEARNING';
+  | MiraWorkRegionId;
+export type MiraGameStatus = 'playing' | 'complete';
 
 export interface KnotSpec {
   readonly lang: MiraLang;
@@ -36,43 +42,65 @@ export const KNOT_TABLE: readonly KnotSpec[] = [
 const CYCLE_ORDER: readonly MiraLang[] = ['EN', 'HI', 'TA', 'KN', 'TE'];
 export const MIRA_FOCUS_ORDER: readonly MiraFocusId[] = [
   'OVERVIEW',
-  'EN',
-  'HI',
-  'TA',
-  'KN',
-  'TE',
+  ...MIRA_RECRUITER_JOURNEY,
 ];
 
 type Density = Record<MiraLang, number>;
+export interface MiraCatalogueSnapshot {
+  readonly completedRegions: readonly MiraWorkRegionId[];
+  readonly focusId: MiraFocusId;
+  readonly gameStatus: MiraGameStatus;
+  readonly routeProgress: number;
+}
 
 const INITIAL_DENSITY: Density = {
   EN: 0.20, HI: 0.20, TA: 0.20, KN: 0.20, TE: 0.20,
 };
+const MIRA_CATALOGUE_INTRO_PROGRESS = 0.08;
+const MIRA_PRELUDE_PHASES = new Set(['C07_TRANSITION', 'C08_EMERGE', 'C09_PROJECT']);
 
 interface MiraState {
   activeLang: MiraLang;
+  completedRegions: MiraWorkRegionId[];
+  gameStatus: MiraGameStatus;
   hoverLang: MiraLang | null;
+  hoverRegion: MiraWorkRegionId | null;
   focusId: MiraFocusId;
+  tourComplete: boolean;
   density: Density;
   cycleIndex: number;
   cycleStartMs: number;
+  userExploring: boolean;
 }
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : 0;
 }
 
-function isMiraLang(focusId: MiraFocusId): focusId is MiraLang {
-  return CYCLE_ORDER.includes(focusId as MiraLang);
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function sameRegions(
+  left: readonly MiraWorkRegionId[],
+  right: readonly MiraWorkRegionId[],
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((region, index) => region === right[index]);
 }
 
 export const useMiraState = create<MiraState>(() => ({
   activeLang: 'EN',
+  completedRegions: [],
+  gameStatus: 'playing',
   hoverLang: null,
+  hoverRegion: null,
   focusId: 'OVERVIEW',
+  tourComplete: false,
   density: { ...INITIAL_DENSITY },
   cycleIndex: 0,
   cycleStartMs: nowMs(),
+  userExploring: false,
 }));
 
 export function advanceCycle(): void {
@@ -102,27 +130,126 @@ export function setHoverLang(lang: MiraLang | null): void {
   useMiraState.setState({ hoverLang: lang });
 }
 
+export function setHoverRegion(region: MiraWorkRegionId | null): void {
+  useMiraState.setState({ hoverRegion: region });
+}
+
 export function setActiveLang(lang: MiraLang): void {
   const idx = CYCLE_ORDER.indexOf(lang);
   useMiraState.setState({
     activeLang: lang,
-    focusId: lang,
+    focusId: 'LANGUAGES',
     cycleIndex: idx,
     cycleStartMs: nowMs(),
+    userExploring: true,
   });
   ingestForLang(lang);
 }
 
 export function setMiraFocus(focusId: MiraFocusId): void {
-  if (!isMiraLang(focusId)) {
-    useMiraState.setState({ focusId });
+  useMiraState.setState({
+    focusId,
+    userExploring: true,
+  });
+}
+
+export function getMiraCatalogueRouteProgress(progress: number): number {
+  const safeProgress = clamp01(progress);
+  if (safeProgress <= MIRA_CATALOGUE_INTRO_PROGRESS) return 0;
+  return (safeProgress - MIRA_CATALOGUE_INTRO_PROGRESS) /
+    (1 - MIRA_CATALOGUE_INTRO_PROGRESS);
+}
+
+export function getMiraCatalogueSnapshot(progress: number): MiraCatalogueSnapshot {
+  const routeProgress = getMiraCatalogueRouteProgress(progress);
+  if (routeProgress <= 0) {
+    return {
+      completedRegions: [],
+      focusId: 'OVERVIEW',
+      gameStatus: 'playing',
+      routeProgress,
+    };
+  }
+
+  const lastIndex = MIRA_RECRUITER_JOURNEY.length - 1;
+  const focusIndex = Math.min(lastIndex, Math.floor(routeProgress * MIRA_RECRUITER_JOURNEY.length));
+  const isComplete = routeProgress >= 1;
+  const completedCount = isComplete ? MIRA_RECRUITER_JOURNEY.length : focusIndex;
+
+  return {
+    completedRegions: MIRA_RECRUITER_JOURNEY.slice(0, completedCount),
+    focusId: MIRA_RECRUITER_JOURNEY[focusIndex],
+    gameStatus: isComplete ? 'complete' : 'playing',
+    routeProgress,
+  };
+}
+
+export function setMiraCatalogueProgress(progress: number): void {
+  const snapshot = getMiraCatalogueSnapshot(progress);
+  useMiraState.setState((state) => {
+    const unchanged = state.focusId === snapshot.focusId &&
+      state.gameStatus === snapshot.gameStatus &&
+      sameRegions(state.completedRegions, snapshot.completedRegions);
+    if (unchanged) return state;
+    return {
+      completedRegions: [...snapshot.completedRegions],
+      focusId: snapshot.focusId,
+      gameStatus: snapshot.gameStatus,
+      userExploring: false,
+    };
+  });
+}
+
+export function syncMiraCatalogueForScene(phase: string, localProgress: number): void {
+  if (phase === 'W01_MIRA') {
+    setMiraCatalogueProgress(localProgress);
     return;
   }
-  useMiraState.setState({
-    activeLang: focusId,
-    cycleIndex: CYCLE_ORDER.indexOf(focusId),
-    cycleStartMs: nowMs(),
-    focusId,
+  if (MIRA_PRELUDE_PHASES.has(phase)) {
+    setMiraCatalogueProgress(0);
+    return;
+  }
+  if (phase.startsWith('W')) setMiraCatalogueProgress(1);
+}
+
+function hasRegion(regions: readonly MiraWorkRegionId[], region: MiraWorkRegionId): boolean {
+  return regions.includes(region);
+}
+
+function nextObjective(completed: readonly MiraWorkRegionId[]): MiraWorkRegionId | null {
+  return MIRA_RECRUITER_JOURNEY.find((region) => !hasRegion(completed, region)) ?? null;
+}
+
+export function getCurrentMiraObjective(): MiraWorkRegionId | null {
+  return nextObjective(useMiraState.getState().completedRegions);
+}
+
+export function activateFocusedMiraRegion(): void {
+  useMiraState.setState((state) => {
+    const objective = nextObjective(state.completedRegions);
+    if (!objective) return { ...state, gameStatus: 'complete' };
+    if (state.focusId !== objective) {
+      return { ...state, focusId: objective, userExploring: true };
+    }
+    const completedRegions = [...state.completedRegions, objective];
+    const next = nextObjective(completedRegions);
+    return {
+      ...state,
+      completedRegions,
+      focusId: next ?? objective,
+      gameStatus: next ? 'playing' : 'complete',
+      userExploring: true,
+    };
+  });
+}
+
+export function advanceGuidedTour(): void {
+  useMiraState.setState((s) => {
+    if (s.userExploring || s.tourComplete) return s;
+    const current = MIRA_FOCUS_ORDER.indexOf(s.focusId);
+    const next = current + 1;
+    if (next >= MIRA_FOCUS_ORDER.length) return { ...s, tourComplete: true };
+    return { ...s, focusId: MIRA_FOCUS_ORDER[next] };
   });
 }
 
@@ -149,11 +276,16 @@ export function ingestForLang(lang: MiraLang): void {
 export function resetMiraStateForTest(): void {
   useMiraState.setState({
     activeLang: 'EN',
+    completedRegions: [],
+    gameStatus: 'playing',
     hoverLang: null,
+    hoverRegion: null,
     focusId: 'OVERVIEW',
+    tourComplete: false,
     density: { ...INITIAL_DENSITY },
     cycleIndex: 0,
     cycleStartMs: nowMs(),
+    userExploring: false,
   });
 }
 
@@ -172,10 +304,15 @@ export function detectQualityProfile(probe: QualityProbe): QualityProfile {
 
 export interface MiraDebug {
   readonly activeLang: MiraLang;
+  readonly completedRegions: readonly MiraWorkRegionId[];
   readonly density: Readonly<Density>;
   readonly cycleIndex: number;
   readonly cycleStartMs: number;
+  readonly focusId: MiraFocusId;
+  readonly gameStatus: MiraGameStatus;
+  readonly hoverRegion: MiraWorkRegionId | null;
   readonly reveal: number;
+  readonly tourComplete: boolean;
   readonly qualityProfile: QualityProfile;
 }
 
@@ -190,10 +327,15 @@ export function exposeMiraDebug(target: Window): void {
       const reveal = (target as unknown as { __miraReveal?: number }).__miraReveal ?? 0;
       return {
         activeLang: s.activeLang,
+        completedRegions: s.completedRegions,
         density: s.density,
         cycleIndex: s.cycleIndex,
         cycleStartMs: s.cycleStartMs,
+        focusId: s.focusId,
+        gameStatus: s.gameStatus,
+        hoverRegion: s.hoverRegion,
         reveal,
+        tourComplete: s.tourComplete,
         qualityProfile: detectQualityProfile({ width, search }),
       };
     },

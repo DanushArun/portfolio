@@ -2,7 +2,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resolveKeyAction, dispatchKeyAction } from '@/lib/scene-state/keyboard-adapter';
 import { useScene, ALL_PHASES } from '@/lib/scene-state';
-import { resetMiraStateForTest, useMiraState } from '@/lib/mira-state';
+import { getPortfolioStopForProgress, getPortfolioStops } from '@/lib/portfolio-journey';
+import {
+  resetMiraStateForTest,
+  syncMiraCatalogueForScene,
+  useMiraState,
+} from '@/lib/mira-state';
 
 function resetSceneToOrbit(): void {
   useScene.setState({
@@ -46,8 +51,16 @@ describe('resolveKeyAction', () => {
     expect(resolveKeyAction(' ')).toBe('pause-toggle');
   });
 
+  it('maps Enter to the MIRA focus action', () => {
+    expect(resolveKeyAction('Enter')).toBe('focus-activate');
+  });
+
   it('returns null for unhandled keys', () => {
     expect(resolveKeyAction('q')).toBeNull();
+  });
+
+  it('maps Escape to the MIRA overview focus', () => {
+    expect(resolveKeyAction('Escape')).toBe('focus-overview');
   });
 });
 
@@ -74,9 +87,49 @@ describe('dispatchKeyAction', () => {
     expect(useScene.getState().localProgress).toBeLessThanOrEqual(0.34);
   });
 
-  it('moves MIRA focus instead of scrolling when W01 is active', () => {
+  it('moves MIRA through the first portfolio proof stop when W01 is active', () => {
+    useScene.setState({ phase: 'W01_MIRA', localProgress: 0 });
+    dispatchKeyAction('focus-next');
+
+    expect(getPortfolioStopForProgress(useScene.getState().journeyProgress).id)
+      .toBe('MIRA-shipped');
+  });
+
+  it('derives MIRA focus from keyboard-driven catalogue scroll', () => {
+    useScene.setState({ phase: 'W01_MIRA', localProgress: 0 });
+    dispatchKeyAction('focus-next');
+
+    expect(useMiraState.getState().focusId).toBe('SHIPPED');
+  });
+
+  it('returns MIRA focus to its title stop on Escape', () => {
     useScene.setState({ phase: 'W01_MIRA', localProgress: 0.5 });
     dispatchKeyAction('focus-next');
-    expect(useMiraState.getState().focusId).toBe('EN');
+    dispatchKeyAction('focus-overview');
+    expect(getPortfolioStopForProgress(useScene.getState().journeyProgress).id)
+      .toBe('MIRA-title');
+  });
+
+  it('does not require Enter to activate the focused MIRA chapter', () => {
+    useScene.setState({ phase: 'W01_MIRA', localProgress: 0.1 });
+    syncMiraCatalogueForScene('W01_MIRA', 0.1);
+    dispatchKeyAction('focus-activate');
+
+    expect(useMiraState.getState().completedRegions).toEqual([]);
+  });
+
+  it('advances portfolio chapters through the same stop table as wheel input', () => {
+    const start = getPortfolioStops().find((stop) => stop.id === 'AIDEN-title');
+    if (!start) throw new Error('AIDEN-title stop missing');
+    useScene.setState({
+      phase: start.phase,
+      localProgress: start.localProgress,
+      journeyProgress: start.progress,
+    });
+
+    dispatchKeyAction('local-forward');
+
+    expect(getPortfolioStopForProgress(useScene.getState().journeyProgress).id)
+      .toBe('AIDEN-problem');
   });
 });

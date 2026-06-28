@@ -8,12 +8,19 @@
 import { useEffect } from 'react';
 import { useScene, ALL_PHASES } from '@/lib/scene-state';
 import { progressToPhase, phaseToProgress } from '@/lib/journey-map';
-import { stepMiraFocus } from '@/lib/mira-state';
+import { syncMiraCatalogueForScene } from '@/lib/mira-state';
+import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
+import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
+import {
+  getPortfolioStopForProgress,
+  getPortfolioStops,
+  resolvePortfolioStep,
+} from '@/lib/portfolio-journey';
 
 export type KeyAction =
   | 'phase-next' | 'phase-prev' | 'phase-first' | 'phase-last'
   | 'local-forward' | 'local-back' | 'focus-next' | 'focus-prev'
-  | 'pause-toggle' | null;
+  | 'focus-activate' | 'focus-overview' | 'pause-toggle' | null;
 
 const KEY_MAP: Record<string, KeyAction> = {
   PageDown: 'phase-next',
@@ -24,11 +31,14 @@ const KEY_MAP: Record<string, KeyAction> = {
   ArrowLeft: 'focus-prev',
   ArrowDown: 'local-forward',
   ArrowUp: 'local-back',
+  Enter: 'focus-activate',
+  Escape: 'focus-overview',
   ' ': 'pause-toggle',
   Space: 'pause-toggle',
 };
 
 const LOCAL_STEP = 0.33;
+const MIRA_CATALOGUE_KEY_STEP = 0.125;
 const FORM_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
 function isFormFocused(): boolean {
@@ -47,6 +57,8 @@ function phaseAt(idx: number, local: number): number {
 
 function applyProgress(target: number): void {
   const snap = progressToPhase(target);
+  syncMiraCatalogueForScene(snap.phase, snap.localProgress);
+  syncPortfolioBookForScene(snap.phase, snap.localProgress);
   useScene.getState().setProgress(
     target, snap.cosmicProgress, snap.workProgress, snap.localProgress, snap.phase,
   );
@@ -60,15 +72,57 @@ export function resolveKeyAction(key: string): KeyAction {
   return KEY_MAP[key] ?? null;
 }
 
+function directionForPortfolioAction(action: KeyAction): -1 | 1 | null {
+  if (action === 'focus-next' || action === 'local-forward' || action === 'phase-next') {
+    return 1;
+  }
+  if (action === 'focus-prev' || action === 'local-back' || action === 'phase-prev') {
+    return -1;
+  }
+  return null;
+}
+
+function titleStopForCurrentProject(): number | null {
+  const state = useScene.getState();
+  const current = getPortfolioStopForProgress(state.journeyProgress);
+  const title = getPortfolioStops().find((stop) => (
+    stop.projectId === current.projectId && stop.kind === 'projectTitle'
+  ));
+  return title?.progress ?? null;
+}
+
+function dispatchPortfolioStopAction(action: KeyAction): boolean {
+  const state = useScene.getState();
+  if (!isPortfolioChapterPhase(state.phase)) return false;
+  if (action === 'focus-activate') return true;
+  if (action === 'focus-overview') {
+    const titleProgress = titleStopForCurrentProject();
+    if (titleProgress !== null) applyProgress(titleProgress);
+    return true;
+  }
+  const direction = directionForPortfolioAction(action);
+  if (direction === null) return false;
+  const result = resolvePortfolioStep({ currentProgress: state.journeyProgress, direction });
+  if (result.committed) applyProgress(result.stop.progress);
+  return true;
+}
+
 function dispatchMiraFocusAction(action: KeyAction): boolean {
   const phase = useScene.getState().phase;
   if (phase !== 'W01_MIRA') return false;
+  if (action === 'focus-activate') return true;
+  if (action === 'focus-overview') {
+    applyProgress(phaseToProgress('W01_MIRA', 0));
+    return true;
+  }
   if (action === 'focus-next' || action === 'local-forward') {
-    stepMiraFocus(1);
+    const local = useScene.getState().localProgress + MIRA_CATALOGUE_KEY_STEP;
+    applyProgress(phaseToProgress('W01_MIRA', Math.min(1, local)));
     return true;
   }
   if (action === 'focus-prev' || action === 'local-back') {
-    stepMiraFocus(-1);
+    const local = useScene.getState().localProgress - MIRA_CATALOGUE_KEY_STEP;
+    applyProgress(phaseToProgress('W01_MIRA', Math.max(0, local)));
     return true;
   }
   return false;
@@ -76,6 +130,7 @@ function dispatchMiraFocusAction(action: KeyAction): boolean {
 
 export function dispatchKeyAction(action: KeyAction): void {
   if (!action) return;
+  if (dispatchPortfolioStopAction(action)) return;
   if (dispatchMiraFocusAction(action)) return;
   const state = useScene.getState();
   if (action === 'phase-next') {

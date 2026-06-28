@@ -72,9 +72,78 @@
   top: 70%;
 }
 
+.gameStatus {
+  align-items: center;
+  color: rgba(255, 232, 190, 0.78);
+  display: flex;
+  font-family: var(--font-composer), ui-monospace, monospace;
+  gap: 0.6rem;
+  left: 50%;
+  letter-spacing: 0;
+  position: absolute;
+  text-shadow:
+    0 0 14px rgba(255, 160, 62, 0.28),
+    0 2px 5px rgba(0, 0, 0, 0.82);
+  top: clamp(1rem, 4vh, 2.4rem);
+  transform: translateX(-50%);
+}
+
+.gameStatus span {
+  font-size: clamp(0.7rem, 0.88vw, 0.9rem);
+  text-transform: uppercase;
+}
+
+.gameStatus strong {
+  color: rgba(255, 205, 113, 0.94);
+  font-size: clamp(0.82rem, 1vw, 1rem);
+  font-weight: 650;
+}
+
+.proof {
+  color: rgba(255, 232, 190, 0.88);
+  display: grid;
+  font-family: var(--font-composer), ui-monospace, monospace;
+  gap: 0.28rem;
+  max-width: min(23rem, 30vw);
+  position: absolute;
+  text-shadow:
+    0 0 16px rgba(255, 160, 62, 0.32),
+    0 2px 5px rgba(0, 0, 0, 0.86);
+  transform: translate(-50%, -50%);
+}
+
+.proof strong {
+  color: rgba(255, 205, 113, 0.96);
+  font-size: clamp(1.08rem, 1.5vw, 1.45rem);
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.proof span {
+  font-size: clamp(0.64rem, 0.78vw, 0.82rem);
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.regionTitle {
+  color: rgba(255, 205, 113, 0.88);
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.question {
+  color: rgba(181, 205, 255, 0.72);
+  text-transform: uppercase;
+}
+
 @media (max-width: 760px) {
   .titleBlock {
     bottom: 2.4rem;
     max-width: 78vw;
+  }
+
+  .proof {
+    max-width: 48vw;
   }
 }

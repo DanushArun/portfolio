@@ -11,7 +11,14 @@ import {
   exposeMiraDebug,
   stepMiraFocus,
   setMiraFocus,
+  setActiveLang,
   MIRA_FOCUS_ORDER,
+  MIRA_RECRUITER_JOURNEY,
+  activateFocusedMiraRegion,
+  getCurrentMiraObjective,
+  getMiraCatalogueRouteProgress,
+  getMiraCatalogueSnapshot,
+  syncMiraCatalogueForScene,
 } from '@/lib/mira-state';
 
 beforeEach(() => resetMiraStateForTest());
@@ -101,32 +108,89 @@ describe('mira density accretion', () => {
 });
 
 describe('mira cutaway navigation', () => {
-  it('limits keyboard navigation to the five supercluster cores', () => {
-    expect(MIRA_FOCUS_ORDER).toEqual(['OVERVIEW', 'EN', 'HI', 'TA', 'KN', 'TE']);
+  it('orders keyboard navigation by recruiter journey regions', () => {
+    expect(MIRA_FOCUS_ORDER).toEqual(['OVERVIEW', ...MIRA_RECRUITER_JOURNEY]);
   });
 
   it('starts at the supercluster overview camera stop', () => {
     expect(useMiraState.getState().focusId).toBe('OVERVIEW');
   });
 
-  it('steps from overview into the English language core', () => {
+  it('steps from overview into the shipped proof region', () => {
     stepMiraFocus(1);
-    expect(useMiraState.getState().focusId).toBe('EN');
+    expect(useMiraState.getState().focusId).toBe('SHIPPED');
   });
 
-  it('wraps backward from overview to the Telugu language core', () => {
+  it('wraps backward from overview to the production proof region', () => {
     stepMiraFocus(-1);
-    expect(useMiraState.getState().focusId).toBe('TE');
+    expect(useMiraState.getState().focusId).toBe('PRODUCTION');
   });
 
-  it('sets focus directly for clicked language cores', () => {
-    setMiraFocus('TA');
-    expect(useMiraState.getState().focusId).toBe('TA');
+  it('sets focus directly for clicked work regions', () => {
+    setMiraFocus('OPS_AUTOMATION');
+    expect(useMiraState.getState().focusId).toBe('OPS_AUTOMATION');
   });
 
-  it('activates the language core when it receives focus', () => {
-    setMiraFocus('KN');
-    expect(useMiraState.getState().activeLang).toBe('KN');
+  it('language clicks focus the native language work region', () => {
+    setActiveLang('KN');
+    expect(useMiraState.getState().focusId).toBe('LANGUAGES');
+  });
+
+  it('starts the game with the shipped proof as the first objective', () => {
+    expect(getCurrentMiraObjective()).toBe('SHIPPED');
+  });
+
+  it('activation from overview moves focus to the current objective', () => {
+    activateFocusedMiraRegion();
+    expect(useMiraState.getState().focusId).toBe('SHIPPED');
+  });
+
+  it('activation completes the focused objective and unlocks the next one', () => {
+    activateFocusedMiraRegion();
+    activateFocusedMiraRegion();
+
+    expect(useMiraState.getState().completedRegions).toEqual(['SHIPPED']);
+    expect(getCurrentMiraObjective()).toBe('LATENCY');
+  });
+
+  it('activation completes the game after every native work region is reconstructed', () => {
+    for (const region of MIRA_RECRUITER_JOURNEY) {
+      setMiraFocus(region);
+      activateFocusedMiraRegion();
+    }
+
+    expect(useMiraState.getState().gameStatus).toBe('complete');
+  });
+});
+
+describe('mira scroll catalogue', () => {
+  it('test_catalogue_progress_when_intro_returns_overview', () => {
+    expect(getMiraCatalogueSnapshot(0.01).focusId).toBe('OVERVIEW');
+  });
+
+  it('test_catalogue_progress_when_first_chapter_starts_returns_shipped', () => {
+    expect(getMiraCatalogueSnapshot(0.10).focusId).toBe('SHIPPED');
+  });
+
+  it('test_catalogue_route_progress_when_scroll_reaches_end_returns_one', () => {
+    expect(getMiraCatalogueRouteProgress(1)).toBe(1);
+  });
+
+  it('test_catalogue_progress_when_scroll_reaches_end_marks_complete', () => {
+    expect(getMiraCatalogueSnapshot(1).gameStatus).toBe('complete');
+  });
+
+  it('test_catalogue_sync_when_w01_scrolls_sets_active_focus', () => {
+    syncMiraCatalogueForScene('W01_MIRA', 0.10);
+
+    expect(useMiraState.getState().focusId).toBe('SHIPPED');
+  });
+
+  it('test_catalogue_sync_when_prelude_scrolls_returns_to_overview', () => {
+    syncMiraCatalogueForScene('W01_MIRA', 0.10);
+    syncMiraCatalogueForScene('C09_PROJECT', 0.50);
+
+    expect(useMiraState.getState().focusId).toBe('OVERVIEW');
   });
 });
 

@@ -6,31 +6,19 @@ import { panelCopy } from '@/lib/copy';
 
 const WorkBackdrop = dynamic(() => import('./WorkBackdrop'), { ssr: false });
 
-import MiraPanel from './panels/MiraPanel';
-import AidenPanel from './panels/AidenPanel';
-import VanguardPanel from './panels/VanguardPanel';
-import InspectionPanel from './panels/InspectionPanel';
-import WaveFieldPanel from './panels/WaveFieldPanel';
-import EmiPanel from './panels/EmiPanel';
-import FormulaPanel from './panels/FormulaPanel';
 import AboutPanel from './panels/AboutPanel';
 import ConnectPanel from './panels/ConnectPanel';
 
-const MIRA_PHASES: readonly ScenePhase[] = [
+const BOOK_ENTRY_PHASES: readonly ScenePhase[] = [
   'C07_TRANSITION',
   'C08_EMERGE',
   'C09_PROJECT',
-  'W01_MIRA',
 ];
 
 export default function WorkDashboard() {
   const phase = useScene((s) => s.phase);
-  // MIRA now appears directly after the warp's white flash (C07 onwards),
-  // not at W01. The intermediate phases (C07_TRANSITION, C08_EMERGE,
-  // C09_PROJECT) all render the MiraPanel — see the array on its PanelHost
-  // below. Backdrop / pointer events also need to be live for those phases.
-  const visible = isWork(phase) || MIRA_PHASES.includes(phase);
-  const miraVisible = MIRA_PHASES.includes(phase);
+  const handoffVisible = phase === 'W08_ABOUT' || phase === 'W09_CONNECT';
+  const visible = isWork(phase) || BOOK_ENTRY_PHASES.includes(phase);
 
   return (
     <div
@@ -40,26 +28,15 @@ export default function WorkDashboard() {
         position: 'fixed',
         inset: 0,
         zIndex: 5,
-        pointerEvents: visible ? 'auto' : 'none',
+        pointerEvents: visible && handoffVisible ? 'auto' : 'none',
         opacity: visible ? 1 : 0,
         transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
         overflow: 'hidden',
       }}
     >
       {visible && <WorkBackdrop />}
-      {visible && !miraVisible && <RecruiterLinks />}
+      {handoffVisible && <RecruiterLinks />}
 
-      <PanelHost
-        interactive={false}
-        phase={phase}
-        which={MIRA_PHASES}
-      ><MiraPanel /></PanelHost>
-      <PanelHost phase={phase} which="W02_AIDEN"><AidenPanel /></PanelHost>
-      <PanelHost phase={phase} which="W03_VANGUARD"><VanguardPanel /></PanelHost>
-      <PanelHost phase={phase} which="W04_INSPECTION"><InspectionPanel /></PanelHost>
-      <PanelHost phase={phase} which="W05_WAVEFIELD"><WaveFieldPanel /></PanelHost>
-      <PanelHost phase={phase} which="W06_EMI"><EmiPanel /></PanelHost>
-      <PanelHost phase={phase} which="W07_FORMULA"><FormulaPanel /></PanelHost>
       <PanelHost phase={phase} which="W08_ABOUT"><AboutPanel /></PanelHost>
       <PanelHost phase={phase} which="W09_CONNECT"><ConnectPanel /></PanelHost>
     </div>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PARTICLE_BUDGET } from '@/components/scene/scenes/mira/knot-config';
+import { signalVert } from '@/components/scene/scenes/mira/MiraSignalRibbons';
 
 type Budget = Record<string, number>;
 
@@ -12,17 +13,21 @@ describe('MIRA neural supercluster visual contract', () => {
     const high = PARTICLE_BUDGET.high as Budget;
     const low = PARTICLE_BUDGET.low as Budget;
 
-    expect(Object.keys(high).sort()).toEqual(['halos', 'hubs', 'plume', 'web']);
-    expect(Object.keys(low).sort()).toEqual(['halos', 'hubs', 'plume', 'web']);
+    expect(Object.keys(high).sort()).toEqual(['halos', 'hubs', 'web']);
+    expect(Object.keys(low).sort()).toEqual(['halos', 'hubs', 'web']);
     expect(high.web).toBe(1_500_000);
-    expect(totalParticles(high)).toBeLessThanOrEqual(1_610_000);
+    expect(totalParticles(high)).toBeLessThanOrEqual(1_600_000);
     expect(low.web).toBe(48_000);
-    expect(totalParticles(low)).toBeLessThanOrEqual(62_000);
+    expect(totalParticles(low)).toBeLessThanOrEqual(60_000);
   });
 
-  it('keeps animated plume particles out of the low-quality profile', () => {
-    const low = PARTICLE_BUDGET.low as Budget;
+  it('does not budget an external route plume over the supercluster', () => {
+    const high = PARTICLE_BUDGET.high as Budget;
 
-    expect(low.plume).toBe(0);
+    expect(high.plume).toBeUndefined();
+  });
+
+  it('keeps MIRA region signal shader away from reserved GLSL names', () => {
+    expect(signalVert).not.toContain('float active =');
   });
 });

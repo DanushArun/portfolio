@@ -4,24 +4,23 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import { MIRA_CAMERA } from '@/lib/mira-canonical';
-import {
-  computeMiraGameProgress,
-  getMiraGameCamera,
-  getMiraGameProgressForFocus,
-} from '@/lib/mira-game-route';
 import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
-import { useMiraState } from '@/lib/mira-state';
+import {
+  getPortfolioBookSnapshot,
+  isPortfolioChapterPhase,
+  type PortfolioProjectPhase,
+} from '@/lib/portfolio-book';
+import {
+  samplePortfolioBookCamera,
+  samplePortfolioReadingCamera,
+} from '@/lib/portfolio-book-route';
+import { getPortfolioStopForProgress } from '@/lib/portfolio-journey';
 import { useScene, type ScenePhase } from '@/lib/scene-state';
-import { getMiraCameraStop, type MiraCameraStop } from '@/lib/mira-world';
 
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 const MIRA_POS = new THREE.Vector3(...MIRA_CAMERA.position);
 const DEFAULT_POS = new THREE.Vector3(0, 2, 30);
 const TEMP_ORBIT = new THREE.Vector3();
-const TEMP_POS = new THREE.Vector3();
-const TEMP_LOOK = new THREE.Vector3();
-const TEMP_STOP_POS = new THREE.Vector3();
-const TEMP_STOP_LOOK = new THREE.Vector3();
 
 function setFov(camera: THREE.PerspectiveCamera, fov: number): void {
   camera.fov = fov;
@@ -48,30 +47,23 @@ function applyProjectCamera(camera: THREE.PerspectiveCamera, time: number, local
   setFov(camera, 45 + (MIRA_CAMERA.fov - 45) * local);
 }
 
-function applyMiraCamera(
-  camera: THREE.PerspectiveCamera,
-  gameProgress: number,
-  stop: MiraCameraStop,
-  reducedMotion: boolean,
-): void {
-  const gameCamera = getMiraGameCamera(gameProgress);
-  TEMP_STOP_POS.set(...stop.position);
-  TEMP_STOP_LOOK.set(...stop.lookAt);
-  TEMP_POS.copy(gameCamera.position).lerp(TEMP_STOP_POS, 0.22);
-  TEMP_LOOK.copy(gameCamera.lookAt).lerp(TEMP_STOP_LOOK, 0.18);
-  camera.position.lerp(TEMP_POS, reducedMotion ? 1 : 0.085);
-  camera.lookAt(TEMP_LOOK);
-  const fov = gameCamera.fov + (stop.fov - gameCamera.fov) * 0.18;
-  camera.fov += (fov - camera.fov) * (reducedMotion ? 1 : 0.08);
-}
-
-function applyMiraOverviewCamera(
-  camera: THREE.PerspectiveCamera,
-  reducedMotion: boolean,
-): void {
-  camera.position.lerp(MIRA_POS, reducedMotion ? 1 : 0.085);
-  camera.lookAt(ORIGIN);
-  camera.fov += (MIRA_CAMERA.fov - camera.fov) * (reducedMotion ? 1 : 0.08);
+function applyPortfolioCamera(config: {
+  camera: THREE.PerspectiveCamera;
+  journeyProgress: number;
+  local: number;
+  phase: PortfolioProjectPhase;
+  reducedMotion: boolean;
+}): void {
+  const snapshot = getPortfolioBookSnapshot(config.phase, config.local);
+  const stop = getPortfolioStopForProgress(config.journeyProgress);
+  const portfolioCamera = stop.cameraLocked
+    ? samplePortfolioReadingCamera(snapshot.chapter)
+    : samplePortfolioBookCamera(snapshot);
+  const damping = stop.cameraLocked ? 0.18 : 0.075;
+  config.camera.position.lerp(portfolioCamera.position, config.reducedMotion ? 1 : damping);
+  config.camera.lookAt(portfolioCamera.lookAt);
+  config.camera.fov += (portfolioCamera.fov - config.camera.fov) *
+    (config.reducedMotion ? 1 : damping);
 }
 
 function applyDefaultCamera(camera: THREE.PerspectiveCamera): void {
@@ -82,6 +74,7 @@ function applyDefaultCamera(camera: THREE.PerspectiveCamera): void {
 
 function applyPhaseCamera(config: {
   camera: THREE.PerspectiveCamera;
+  journeyProgress: number;
   local: number;
   phase: ScenePhase;
   reducedMotion: boolean;
@@ -99,16 +92,14 @@ function applyPhaseCamera(config: {
     applyProjectCamera(config.camera, config.time, config.local);
     return;
   }
-  if (config.phase === 'W01_MIRA') {
-    const miraState = useMiraState.getState();
-    if (miraState.focusId === 'OVERVIEW') {
-      applyMiraOverviewCamera(config.camera, config.reducedMotion);
-      return;
-    }
-    const stop = getMiraCameraStop(miraState.focusId);
-    const focusProgress = getMiraGameProgressForFocus(miraState.focusId);
-    const gameProgress = focusProgress ?? computeMiraGameProgress(config.phase, config.local, 1);
-    applyMiraCamera(config.camera, gameProgress, stop, config.reducedMotion);
+  if (isPortfolioChapterPhase(config.phase)) {
+    applyPortfolioCamera({
+      camera: config.camera,
+      journeyProgress: config.journeyProgress,
+      local: config.local,
+      phase: config.phase,
+      reducedMotion: config.reducedMotion,
+    });
     return;
   }
   applyDefaultCamera(config.camera);
@@ -122,6 +113,7 @@ export default function CameraRig(): null {
     const camera = state.camera as THREE.PerspectiveCamera;
     applyPhaseCamera({
       camera,
+      journeyProgress: scene.journeyProgress,
       local: scene.localProgress,
       phase: scene.phase,
       reducedMotion,

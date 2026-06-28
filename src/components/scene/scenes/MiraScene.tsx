@@ -3,7 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
-import { useScene } from '@/lib/scene-state';
+import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
+import { useScene, type ScenePhase } from '@/lib/scene-state';
 import {
   advanceCycle,
   exposeMiraDebug,
@@ -12,17 +13,16 @@ import {
   restartCycleClock,
   useMiraState,
 } from '@/lib/mira-state';
-import MiraPlume from './MiraPlume';
 import MiraSupercluster from './MiraSupercluster';
 
-function computeReveal(phase: string, local: number): number {
+function computeReveal(phase: ScenePhase, local: number): number {
   if (phase === 'C07_TRANSITION') {
     if (local < 0.45) return 0;
     return ((local - 0.45) / 0.55) * 0.40;
   }
   if (phase === 'C08_EMERGE') return 0.40 + Math.min(1, local) * 0.40;
   if (phase === 'C09_PROJECT') return 0.80 + Math.min(1, local) * 0.20;
-  if (phase === 'W01_MIRA') return 1.0;
+  if (isPortfolioChapterPhase(phase)) return 1.0;
   return 0;
 }
 
@@ -72,7 +72,6 @@ export default function MiraScene(): React.ReactElement {
       <color attach="background" args={['#000000']} />
       <MiraCycleController reveal={reveal} />
       {reveal >= 0.20 && <MiraSupercluster reveal={reveal} />}
-      {reveal >= 0.85 && <MiraPlume reveal={reveal} />}
     </group>
   );
 }

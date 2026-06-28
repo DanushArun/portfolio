@@ -34,15 +34,13 @@ export const PARTICLE_BUDGET = {
     web: 1_500_000,
     hubs: 56_000,
     halos: 40_000,
-    plume: 8_192,
   },
   low: {
     web: 48_000,
     hubs: 8_000,
     halos: 4_000,
-    plume: 0,
   },
-} as const satisfies Record<Quality, Record<'web' | 'hubs' | 'halos' | 'plume', number>>;
+} as const satisfies Record<Quality, Record<'web' | 'hubs' | 'halos', number>>;
 
 export function getKnot(lang: MiraLang): KnotW {
   return KNOTS_W[LANG_INDEX[lang]];

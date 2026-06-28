@@ -12,15 +12,16 @@ import CameraRig from './CameraRig';
 import PostFX from './PostFX';
 
 // New high-fidelity R3F components
-const WarpScene             = dynamic(() => import('./scenes/WarpScene'),             { ssr: false });
-const MiraScene             = dynamic(() => import('./scenes/MiraScene'),             { ssr: false });
-const StarField             = dynamic(() => import('./StarField'),                    { ssr: false });
+const WarpScene = dynamic(() => import('./scenes/WarpScene'), { ssr: false });
+const MiraScene = dynamic(() => import('./scenes/MiraScene'), { ssr: false });
+const StarField = dynamic(() => import('./StarField'), { ssr: false });
 
 import HUD from '@/components/hud/HUD';
 import VoidPrologue from './VoidPrologue';
 
 import { useKeyboardNavigation } from '@/lib/scene-state/keyboard-adapter';
 import WorkDashboard from '@/components/work/WorkDashboard';
+import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
 
 export default function SceneManager() {
   const phase           = useScene((s) => s.phase);
@@ -53,8 +54,8 @@ export default function SceneManager() {
   // even mounted.
   const bhAlpha   = showBH ? 1 : 0;
 
-  // ── Journey Remapping ──────────────────────────────────────────────────────
-  // ── Fall-in darkness ───────────────────────────────────────────────────────
+  // Journey remapping.
+  // Fall-in darkness.
   // Pure screen-space black overlay that ramps in during C04 (the user is
   // being engulfed by the singularity — the BH renderer alone can't deliver
   // "darkness fills frame" because it's designed for outside-the-BH views).
@@ -72,7 +73,7 @@ export default function SceneManager() {
     }
     return 0;
   })();
-  // ── Warp-end white flash ───────────────────────────────────────────────────
+  // Warp-end white flash.
   // The flash now spans ~2× its prior scroll window so the user has to keep
   // scrolling to escape it — exiting the warp should feel like coming OUT of
   // something dense, not a quick blink.
@@ -143,11 +144,11 @@ export default function SceneManager() {
                 particles, which breaks the "moving fast" illusion. */}
             {phase !== 'C05_WARP' && phase !== 'C06_ANOMALY' && <StarField />}
             {(phase === 'C05_WARP' || phase === 'C06_ANOMALY') && <WarpScene />}
-            {/* MIRA reveal: pulsing star + 11 converging streams. Active from
-                C07 (post-flash emergence) through W01_MIRA (full body). The
-                MiraPanel chrome (text + chips + languages) overlays at zIndex 5. */}
+            {/* Supercluster reveal: active from post-flash emergence through
+                the full W01-W07 portfolio route. Project information is
+                carried by the canvas particle field, not a DOM overlay. */}
             {(phase === 'C07_TRANSITION' || phase === 'C08_EMERGE'
-              || phase === 'C09_PROJECT' || phase === 'W01_MIRA') && <MiraScene />}
+              || phase === 'C09_PROJECT' || isPortfolioChapterPhase(phase)) && <MiraScene />}
             <PostFX />
           </Suspense>
         </Canvas>
@@ -198,7 +199,7 @@ export default function SceneManager() {
       <div
         aria-hidden
         style={{
-          height: '1500vh',
+          height: '5200vh',
           width: '100%',
           pointerEvents: 'none',
           zIndex: -1,

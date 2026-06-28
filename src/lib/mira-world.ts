@@ -1,31 +1,30 @@
-import { KNOT_TABLE, type MiraFocusId, type MiraLang } from './mira-state';
+import {
+  KNOT_TABLE,
+  MIRA_RECRUITER_JOURNEY,
+  type MiraFocusId,
+  type MiraLang,
+  type MiraWorkRegionId,
+} from './mira-state';
 
 export type MiraVec3 = readonly [number, number, number];
 
-export type MiraWorldKind =
-  | 'language'
-  | 'asr'
-  | 'router'
-  | 'memory'
-  | 'tools'
-  | 'crm'
-  | 'whatsapp'
-  | 'learning';
-
-export interface MiraWorldNode {
-  readonly id: Exclude<MiraFocusId, 'OVERVIEW'>;
-  readonly kind: MiraWorldKind;
-  readonly position: MiraVec3;
-  readonly color: string;
-  readonly scale: number;
+export interface MiraLabelPosition {
+  readonly left: string;
+  readonly top: string;
 }
 
-export interface MiraWorldEdge {
-  readonly from: Exclude<MiraFocusId, 'OVERVIEW'>;
-  readonly to: Exclude<MiraFocusId, 'OVERVIEW'>;
-  readonly bow: MiraVec3;
+export interface MiraWorkRegion {
+  readonly id: MiraWorkRegionId;
+  readonly title: string;
+  readonly recruiterQuestion: string;
+  readonly metric: string;
+  readonly proof: readonly string[];
+  readonly anchor: MiraVec3;
+  readonly radius: number;
   readonly color: string;
-  readonly energy: number;
+  readonly fov: number;
+  readonly labelPosition: MiraLabelPosition;
+  readonly relatedLangs: readonly MiraLang[];
 }
 
 export interface MiraCameraStop {
@@ -35,84 +34,173 @@ export interface MiraCameraStop {
 }
 
 const WORLD_SCALE = 2.35;
+const CENTER: MiraVec3 = [0, 0, 0.85];
 const DEFAULT_STOP: MiraCameraStop = {
   position: [0, 0, 16.2],
   lookAt: [0, 0, 0],
   fov: 46,
 };
 
-function scaleKnotPosition(position: readonly [number, number, number]): MiraVec3 {
+function scalePosition(position: readonly [number, number, number]): MiraVec3 {
   return [position[0] * WORLD_SCALE, position[1] * WORLD_SCALE, position[2] * WORLD_SCALE];
 }
 
-function languageNode(lang: MiraLang): MiraWorldNode {
+function knotAnchor(lang: MiraLang): MiraVec3 {
   const knot = KNOT_TABLE.find((item) => item.lang === lang);
   if (!knot) throw new Error(`Missing MIRA knot for ${lang}`);
-  return {
-    id: lang,
-    kind: 'language',
-    position: scaleKnotPosition(knot.position),
-    color: knot.hue,
-    scale: knot.relativeScale,
-  };
+  return scalePosition(knot.position);
 }
 
-export const MIRA_WORLD_NODES: readonly MiraWorldNode[] = [
-  languageNode('EN'),
-  languageNode('HI'),
-  languageNode('TA'),
-  languageNode('KN'),
-  languageNode('TE'),
-  { id: 'ASR', kind: 'asr', position: [-2.95, 2.18, 1.60], color: '#7bdcff', scale: 1.00 },
-  { id: 'ROUTER', kind: 'router', position: [-0.10, 0.24, 1.16], color: '#d8b5ff', scale: 1.12 },
-  { id: 'MEMORY', kind: 'memory', position: [-1.12, -0.92, 1.82], color: '#9fb7ff', scale: 0.92 },
-  { id: 'TOOLS', kind: 'tools', position: [1.18, -0.44, 1.34], color: '#ffd36a', scale: 0.88 },
-  { id: 'CRM', kind: 'crm', position: [3.22, 0.58, 0.34], color: '#7dff9a', scale: 0.82 },
+function blend(a: MiraVec3, b: MiraVec3, amount: number): MiraVec3 {
+  return [
+    a[0] + (b[0] - a[0]) * amount,
+    a[1] + (b[1] - a[1]) * amount,
+    a[2] + (b[2] - a[2]) * amount,
+  ];
+}
+
+const EN = knotAnchor('EN');
+const HI = knotAnchor('HI');
+const TA = knotAnchor('TA');
+const KN = knotAnchor('KN');
+const TE = knotAnchor('TE');
+
+export const MIRA_WORK_REGIONS: readonly MiraWorkRegion[] = [
   {
-    id: 'WHATSAPP',
-    kind: 'whatsapp',
-    position: [3.34, -1.36, 0.74],
-    color: '#b6ff34',
-    scale: 0.82,
+    id: 'SHIPPED',
+    title: 'Production System',
+    recruiterQuestion: 'Did this ship?',
+    metric: 'DriveX live leads',
+    proof: ['Production outbound voice AI for live DriveX leads.'],
+    anchor: CENTER,
+    radius: 3.2,
+    color: '#ffe2a6',
+    fov: 42,
+    labelPosition: { left: '48%', top: '40%' },
+    relatedLangs: ['EN', 'HI', 'TA', 'KN', 'TE'],
   },
   {
-    id: 'LEARNING',
-    kind: 'learning',
-    position: [0.72, -2.52, 1.62],
-    color: '#ffd15c',
-    scale: 0.96,
+    id: 'LATENCY',
+    title: 'Latency Collapse',
+    recruiterQuestion: 'Did it measurably improve?',
+    metric: '7s -> <500ms',
+    proof: [
+      'First response reduced from 7s to under 500ms.',
+      'Four architecture iterations over 68 days.',
+    ],
+    anchor: blend(EN, TE, 0.54),
+    radius: 2.0,
+    color: '#ffcf77',
+    fov: 35,
+    labelPosition: { left: '45%', top: '50%' },
+    relatedLangs: ['EN', 'TE'],
+  },
+  {
+    id: 'LANGUAGES',
+    title: 'Language Intelligence',
+    recruiterQuestion: 'Could it work across users?',
+    metric: '5 languages',
+    proof: ['Five Indian languages: English, Hindi, Tamil, Kannada, Telugu.'],
+    anchor: CENTER,
+    radius: 4.6,
+    color: '#d6b6ff',
+    fov: 37,
+    labelPosition: { left: '39%', top: '26%' },
+    relatedLangs: ['EN', 'HI', 'TA', 'KN', 'TE'],
+  },
+  {
+    id: 'VOICE_INTAKE',
+    title: 'Realtime Voice Intake',
+    recruiterQuestion: 'What was technically hard?',
+    metric: 'speech pipeline',
+    proof: ['VAD, streaming ASR, telephony WebSockets, Pipecat and FastAPI.'],
+    anchor: blend(EN, TA, 0.42),
+    radius: 1.65,
+    color: '#78b8ff',
+    fov: 34,
+    labelPosition: { left: '31%', top: '44%' },
+    relatedLangs: ['EN', 'TA'],
+  },
+  {
+    id: 'ORCHESTRATION',
+    title: 'Orchestration Core',
+    recruiterQuestion: 'Was this systems architecture?',
+    metric: 'multi-model control',
+    proof: ['Distributed call orchestration with multi-model response control.'],
+    anchor: [0.05, 0.1, 1.42],
+    radius: 1.75,
+    color: '#a48cff',
+    fov: 33,
+    labelPosition: { left: '50%', top: '45%' },
+    relatedLangs: ['EN', 'HI', 'TA', 'KN', 'TE'],
+  },
+  {
+    id: 'POST_CALL',
+    title: 'Post-Call Intelligence',
+    recruiterQuestion: 'Did it produce usable business data?',
+    metric: 'structured intent',
+    proof: ['Post-call intent classification with confidence and ISO dates.'],
+    anchor: blend(TA, TE, 0.62),
+    radius: 1.7,
+    color: '#8ee7ff',
+    fov: 34,
+    labelPosition: { left: '44%', top: '66%' },
+    relatedLangs: ['TA', 'TE'],
+  },
+  {
+    id: 'OPS_AUTOMATION',
+    title: 'Ops Automation Loop',
+    recruiterQuestion: 'Did it connect to the business?',
+    metric: 'CRM + WhatsApp',
+    proof: ['Zoho CRM sync, WhatsApp auto-group creation, live bot and retries.'],
+    anchor: blend(HI, KN, 0.35),
+    radius: 2.25,
+    color: '#ffc56f',
+    fov: 34,
+    labelPosition: { left: '67%', top: '35%' },
+    relatedLangs: ['HI', 'KN'],
+  },
+  {
+    id: 'PRODUCTION',
+    title: 'End-to-End Ownership',
+    recruiterQuestion: 'Was this fully owned?',
+    metric: 'architecture -> Kubernetes',
+    proof: ['Owned architecture, implementation, testing and Kubernetes deployment.'],
+    anchor: blend(KN, TE, 0.42),
+    radius: 2.45,
+    color: '#ffe8bc',
+    fov: 39,
+    labelPosition: { left: '58%', top: '62%' },
+    relatedLangs: ['KN', 'TE'],
   },
 ] as const;
 
-export const MIRA_WORLD_EDGES: readonly MiraWorldEdge[] = [
-  { from: 'EN', to: 'ASR', bow: [-0.18, 0.54, 0.42], color: '#ffbd62', energy: 1.22 },
-  { from: 'HI', to: 'ASR', bow: [0.34, 0.72, 0.56], color: '#f8c76a', energy: 0.84 },
-  { from: 'TA', to: 'ASR', bow: [-0.40, -0.26, 0.52], color: '#b879ff', energy: 0.78 },
-  { from: 'KN', to: 'ASR', bow: [0.72, -0.16, 0.36], color: '#e08bff', energy: 0.72 },
-  { from: 'TE', to: 'ASR', bow: [0.10, -0.62, 0.62], color: '#58b9ff', energy: 0.78 },
-  { from: 'ASR', to: 'ROUTER', bow: [-0.22, 0.36, 0.60], color: '#80e2ff', energy: 1.16 },
-  { from: 'ROUTER', to: 'MEMORY', bow: [-0.46, -0.36, 0.52], color: '#9fb7ff', energy: 0.90 },
-  { from: 'ROUTER', to: 'TOOLS', bow: [0.48, -0.18, 0.44], color: '#d8b5ff', energy: 1.04 },
-  { from: 'TOOLS', to: 'CRM', bow: [0.44, 0.42, 0.26], color: '#7dff9a', energy: 0.86 },
-  { from: 'TOOLS', to: 'WHATSAPP', bow: [0.70, -0.34, 0.34], color: '#b6ff34', energy: 0.94 },
-  { from: 'CRM', to: 'LEARNING', bow: [0.02, -0.94, 0.58], color: '#ffd15c', energy: 1.02 },
-  { from: 'WHATSAPP', to: 'LEARNING', bow: [0.10, -0.58, 0.70], color: '#ffe08a', energy: 1.10 },
-  { from: 'LEARNING', to: 'EN', bow: [-1.20, 0.20, 0.82], color: '#ffbd62', energy: 1.28 },
-] as const;
-
-export function getMiraWorldNode(id: Exclude<MiraFocusId, 'OVERVIEW'>): MiraWorldNode {
-  const node = MIRA_WORLD_NODES.find((item) => item.id === id);
-  if (!node) throw new Error(`Missing MIRA world node ${id}`);
-  return node;
+export function getMiraWorkRegion(id: MiraWorkRegionId): MiraWorkRegion {
+  const region = MIRA_WORK_REGIONS.find((item) => item.id === id);
+  if (!region) throw new Error(`Missing MIRA work region ${id}`);
+  return region;
 }
 
-export function getMiraCameraStop(id: MiraFocusId): MiraCameraStop {
+export function getMiraRegionIndex(id: MiraWorkRegionId): number {
+  return MIRA_RECRUITER_JOURNEY.indexOf(id);
+}
+
+export function getMiraFocusAnchor(id: MiraFocusId, activeLang: MiraLang): MiraVec3 {
+  if (id === 'OVERVIEW') return CENTER;
+  if (id === 'LANGUAGES') return knotAnchor(activeLang);
+  return getMiraWorkRegion(id).anchor;
+}
+
+export function getMiraCameraStop(
+  id: MiraFocusId,
+  activeLang: MiraLang = 'EN',
+): MiraCameraStop {
   if (id === 'OVERVIEW') return DEFAULT_STOP;
-  const node = getMiraWorldNode(id);
-  const [x, y, z] = node.position;
+  const region = getMiraWorkRegion(id);
+  const anchor = getMiraFocusAnchor(id, activeLang);
   return {
-    position: [x * 0.74, y * 0.74, 6.2 + z * 0.36],
-    lookAt: node.position,
-    fov: node.kind === 'language' ? 38 : 34,
+    position: [anchor[0] * 0.72, anchor[1] * 0.72, 6.4 + anchor[2] * 0.32],
+    lookAt: anchor,
+    fov: region.fov,
   };
 }
