@@ -81,6 +81,7 @@ const GLYPH_WORLD_MAX_WIDTH = 4.25;
 const MIN_PARTICLES_PER_BEAT = 1400;
 const MAX_PARTICLES_PER_BEAT = 18000;
 const PARTICLES_PER_GLYPH_AREA = 1050;
+const MIRA_PARTICLE_BUDGET_MULTIPLIER = 1.5;
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -197,7 +198,7 @@ function particleCount(particlesPerBeat: number): number {
   return PORTFOLIO_CHAPTERS.reduce(
     (sum, chapter) => sum + chapter.beats.reduce((chapterSum, beat) => {
       const glyphLayout = buildPortfolioGlyphLayout(beat.particleLines);
-      return chapterSum + particlesForGlyphLayout(glyphLayout, particlesPerBeat);
+      return chapterSum + particlesForGlyphLayout(glyphLayout, chapter.id, particlesPerBeat);
     }, 0),
     0,
   );
@@ -205,6 +206,7 @@ function particleCount(particlesPerBeat: number): number {
 
 function particlesForGlyphLayout(
   layout: PortfolioGlyphLayout,
+  projectId: PortfolioChapterId,
   targetParticles: number,
 ): number {
   const viewportScale = targetParticles / DEFAULT_PARTICLES_PER_BEAT;
@@ -212,7 +214,8 @@ function particlesForGlyphLayout(
   const max = Math.round(MAX_PARTICLES_PER_BEAT * viewportScale);
   const cellStep = glyphCellStep(layout);
   const renderedArea = layout.width * layout.height * cellStep * cellStep;
-  const dynamic = Math.round(renderedArea * PARTICLES_PER_GLYPH_AREA);
+  const multiplier = projectId === 'MIRA' ? MIRA_PARTICLE_BUDGET_MULTIPLIER : 1;
+  const dynamic = Math.round(renderedArea * PARTICLES_PER_GLYPH_AREA * multiplier);
   return Math.max(min, Math.min(max, dynamic));
 }
 
@@ -305,7 +308,7 @@ export function buildPortfolioSuperclusterModel(
     chapter.beats.forEach((beat, beatIndex) => {
       const target = beatCenter(chapter.node.anchor, beatIndex, chapter.beats.length);
       const glyphLayout = buildPortfolioGlyphLayout(beat.particleLines);
-      const beatParticles = particlesForGlyphLayout(glyphLayout, particlesPerBeat);
+      const beatParticles = particlesForGlyphLayout(glyphLayout, chapter.id, particlesPerBeat);
       for (let i = 0; i < beatParticles; i += 1) {
         writeParticle({
           attrs,
