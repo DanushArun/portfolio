@@ -46,7 +46,7 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
   await page.waitForSelector('canvas', { timeout: 30_000 });
   await page.waitForTimeout(1000);
 
-  const progress = phaseToProgress('W01_MIRA', 0.5);
+  const progress = phaseToProgress('W01_MIRA', 0.20);
 
   await page.evaluate((progress) => {
     const testWindow = window as Window & {
@@ -57,30 +57,31 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
 
   await page.waitForTimeout(600);
 
-  await expect(page.getByTestId('mira-project-title')).toContainText('MIRA');
-  await expect(page.getByTestId('mira-particle-caption')).toContainText('Realtime Voice Intake');
+  await expect(page.getByTestId('project-chapter-title')).toContainText('MIRA');
+  await expect(page.getByTestId('project-step-description'))
+    .toContainText('production voice AI');
+  await expect(page.getByTestId('project-tag-rail')).toContainText('FastAPI');
   await expect(page.locator('[data-testid="mira-system-trace"]')).toHaveCount(0);
 
   await expect.poll(async () => page.evaluate(() => {
     const testWindow = window as Window & {
-      __miraArtifactDebug?: {
-        activeBeatId: string;
-        hasFlowTargets: boolean;
-        renderMode: string;
+      __portfolioDebug?: {
+        activeBeat: number;
+        activeProjectId: string;
       };
     };
-    return testWindow.__miraArtifactDebug;
+    return testWindow.__portfolioDebug;
   })).toMatchObject({
-    activeBeatId: 'voice',
-    hasFlowTargets: true,
-    renderMode: 'filament-wake',
+    activeBeat: 0,
+    activeProjectId: 'MIRA',
   });
-  await expect(page.locator('body')).not.toContainText(/LIVE LEADS|DriveX live leads/i);
+  await expect(page.locator('body'))
+    .not.toContainText(/LIVE LEADS|DriveX live leads|Ops Automation Loop|MIRA TRACE|7\/8/i);
 
-  const titleBox = await page.getByTestId('mira-project-title').boundingBox();
-  const captionBox = await page.getByTestId('mira-particle-caption').boundingBox();
+  const titleBox = await page.getByTestId('project-chapter-title').boundingBox();
+  const tagBox = await page.getByTestId('project-tag-rail').boundingBox();
 
   expect(titleBox).not.toBeNull();
-  expect(captionBox).not.toBeNull();
-  expect(titleBox?.y ?? 0).toBeLessThan(captionBox?.y ?? 0);
+  expect(tagBox).not.toBeNull();
+  expect(titleBox?.y ?? 0).toBeLessThan(tagBox?.y ?? 0);
 });

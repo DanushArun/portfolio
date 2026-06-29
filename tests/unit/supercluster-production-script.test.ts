@@ -12,12 +12,12 @@ function totalDots(): number {
 
 describe('supercluster production script', () => {
   it('test_dots_when_loaded_match_pdf_total', () => {
-    expect(totalDots()).toBe(39);
+    expect(totalDots()).toBe(38);
   });
 
   it('test_chapters_when_loaded_match_pdf_dot_counts', () => {
     expect(SUPERCLUSTER_CHAPTERS.map((chapter) => [chapter.id, chapter.dots.length])).toEqual([
-      ['MIRA', 8],
+      ['MIRA', 7],
       ['AIDEN', 6],
       ['VANGUARD', 5],
       ['INSPECTION', 5],
@@ -53,9 +53,31 @@ describe('supercluster production script', () => {
 
   it('test_mira_latency_when_loaded_preserves_pdf_metric_conflict', () => {
     const mira = SUPERCLUSTER_CHAPTERS.find((chapter) => chapter.id === 'MIRA');
-    expect(mira?.dots[1]).toMatchObject({
-      answer: 'Sub-100ms',
-      id: 'latency-collapse',
+
+    expect(mira?.dots[4]).toMatchObject({
+      answer: '7s -> <500ms TTFB',
+      id: 'challenge',
+      label: '5/7',
     });
+  });
+
+  it('test_mira_when_loaded_maps_dots_to_case_study_sections', () => {
+    const mira = SUPERCLUSTER_CHAPTERS.find((chapter) => chapter.id === 'MIRA');
+
+    expect(mira?.dots.map((dot) => dot.id)).toEqual([
+      'hero',
+      'problem',
+      'system',
+      'build',
+      'challenge',
+      'proof',
+      'reflection',
+    ]);
+  });
+
+  it('test_mira_when_loaded_does_not_restore_stale_catalogue_labels', () => {
+    const text = JSON.stringify(SUPERCLUSTER_CHAPTERS.find((chapter) => chapter.id === 'MIRA'));
+
+    expect(text).not.toMatch(/Ops Automation Loop|MIRA TRACE|CRM \+ WHATSAPP|7\/8/);
   });
 });

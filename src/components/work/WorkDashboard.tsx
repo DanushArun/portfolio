@@ -8,13 +8,15 @@ const WorkBackdrop = dynamic(() => import('./WorkBackdrop'), { ssr: false });
 
 import AboutPanel from './panels/AboutPanel';
 import ConnectPanel from './panels/ConnectPanel';
-import MiraPanel from './panels/MiraPanel';
+import ProjectChapterOverlay from './ProjectChapterOverlay';
+import { PORTFOLIO_CHAPTERS } from '@/lib/portfolio-book';
 
 const BOOK_ENTRY_PHASES: readonly ScenePhase[] = [
   'C07_TRANSITION',
   'C08_EMERGE',
   'C09_PROJECT',
 ];
+const PROJECT_CHAPTER_PHASES = PORTFOLIO_CHAPTERS.map((chapter) => chapter.phase);
 
 export default function WorkDashboard() {
   const phase = useScene((s) => s.phase);
@@ -38,7 +40,9 @@ export default function WorkDashboard() {
       {visible && <WorkBackdrop />}
       {handoffVisible && <RecruiterLinks />}
 
-      <PanelHost phase={phase} which="W01_MIRA" interactive={false}><MiraPanel /></PanelHost>
+      <PanelHost phase={phase} which={PROJECT_CHAPTER_PHASES} interactive={false}>
+        <ProjectChapterOverlay />
+      </PanelHost>
       <PanelHost phase={phase} which="W08_ABOUT"><AboutPanel /></PanelHost>
       <PanelHost phase={phase} which="W09_CONNECT"><ConnectPanel /></PanelHost>
     </div>

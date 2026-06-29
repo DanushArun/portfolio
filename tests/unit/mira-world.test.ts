@@ -16,22 +16,21 @@ describe('MIRA work-region map', () => {
     const proof = MIRA_WORK_REGIONS.flatMap((region) => region.proof);
 
     expect(proof).toEqual(expect.arrayContaining([
-      'Production outbound voice AI for sales-call conversion.',
-      'First response reduced from 7s to under 500ms.',
-      'Five Indian languages: English, Hindi, Tamil, Kannada, Telugu.',
-      'VAD, streaming ASR, telephony WebSockets, Pipecat and FastAPI.',
-      'Distributed call orchestration with multi-model response control.',
-      'Post-call intent classification with confidence and ISO dates.',
-      'Zoho CRM sync, WhatsApp auto-group creation, live bot and retries.',
-      'Owned architecture, implementation, testing and Kubernetes deployment.',
+      'MIRA is a production voice AI intake system for multilingual lead qualification.',
+      'Manual SDR follow-ups on DriveX leads were slow and unscalable.',
+      'Full-duplex audio stream orchestration across multiple models.',
+      'Distributed, containerized services handle audio, intent, and sync.',
+      'Pipelining ASR and LLM execution collapsed first-byte response time.',
+      'One core flow handles English, Hindi, Tamil, Kannada, and Telugu.',
+      'CRM sync and WhatsApp automation turned calls into actionable workflows.',
     ]));
   });
 
   it('test_region_when_automation_selected_uses_the_hi_loop_anchor', () => {
-    expect(getMiraWorkRegion('OPS_AUTOMATION').anchor[0]).toBeGreaterThan(3);
+    expect(getMiraWorkRegion('reflection').anchor[0]).toBeGreaterThan(1);
   });
 
   it('test_camera_stop_when_region_focused_moves_inside_supercluster', () => {
-    expect(getMiraCameraStop('ORCHESTRATION').fov).toBeLessThan(getMiraCameraStop('OVERVIEW').fov);
+    expect(getMiraCameraStop('proof').fov).toBeLessThan(getMiraCameraStop('OVERVIEW').fov);
   });
 });

@@ -118,39 +118,39 @@ describe('mira cutaway navigation', () => {
 
   it('steps from overview into the shipped proof region', () => {
     stepMiraFocus(1);
-    expect(useMiraState.getState().focusId).toBe('SHIPPED');
+    expect(useMiraState.getState().focusId).toBe('hero');
   });
 
   it('wraps backward from overview to the production proof region', () => {
     stepMiraFocus(-1);
-    expect(useMiraState.getState().focusId).toBe('PRODUCTION');
+    expect(useMiraState.getState().focusId).toBe('reflection');
   });
 
   it('sets focus directly for clicked work regions', () => {
-    setMiraFocus('OPS_AUTOMATION');
-    expect(useMiraState.getState().focusId).toBe('OPS_AUTOMATION');
+    setMiraFocus('reflection');
+    expect(useMiraState.getState().focusId).toBe('reflection');
   });
 
   it('language clicks focus the native language work region', () => {
     setActiveLang('KN');
-    expect(useMiraState.getState().focusId).toBe('LANGUAGES');
+    expect(useMiraState.getState().focusId).toBe('proof');
   });
 
   it('starts the game with the shipped proof as the first objective', () => {
-    expect(getCurrentMiraObjective()).toBe('SHIPPED');
+    expect(getCurrentMiraObjective()).toBe('hero');
   });
 
   it('activation from overview moves focus to the current objective', () => {
     activateFocusedMiraRegion();
-    expect(useMiraState.getState().focusId).toBe('SHIPPED');
+    expect(useMiraState.getState().focusId).toBe('hero');
   });
 
   it('activation completes the focused objective and unlocks the next one', () => {
     activateFocusedMiraRegion();
     activateFocusedMiraRegion();
 
-    expect(useMiraState.getState().completedRegions).toEqual(['SHIPPED']);
-    expect(getCurrentMiraObjective()).toBe('LATENCY');
+    expect(useMiraState.getState().completedRegions).toEqual(['hero']);
+    expect(getCurrentMiraObjective()).toBe('problem');
   });
 
   it('activation completes the game after every native work region is reconstructed', () => {
@@ -169,7 +169,7 @@ describe('mira scroll catalogue', () => {
   });
 
   it('test_catalogue_progress_when_first_chapter_starts_returns_shipped', () => {
-    expect(getMiraCatalogueSnapshot(0.10).focusId).toBe('SHIPPED');
+    expect(getMiraCatalogueSnapshot(0.10).focusId).toBe('hero');
   });
 
   it('test_catalogue_route_progress_when_scroll_reaches_end_returns_one', () => {
@@ -183,7 +183,7 @@ describe('mira scroll catalogue', () => {
   it('test_catalogue_sync_when_w01_scrolls_sets_active_focus', () => {
     syncMiraCatalogueForScene('W01_MIRA', 0.10);
 
-    expect(useMiraState.getState().focusId).toBe('SHIPPED');
+    expect(useMiraState.getState().focusId).toBe('hero');
   });
 
   it('test_catalogue_sync_when_prelude_scrolls_returns_to_overview', () => {

@@ -117,10 +117,10 @@ function regionPoint(
 ): MiraVec3 {
   const region = MIRA_WORK_REGIONS[regionIndex];
   const angle = flow * Math.PI * 2 * (1 + (regionIndex % 3)) + rng() * 0.24;
-  const radius = region.id === 'LATENCY'
+  const radius = region.id === 'system'
     ? latencyRadius(region.radius, lane)
     : region.radius * (0.18 + rng() * 0.18);
-  const squash = region.id === 'OPS_AUTOMATION' ? 0.52 : 0.74;
+  const squash = region.id === 'reflection' ? 0.52 : 0.74;
   return ringPoint(region.anchor, radius, angle, squash);
 }
 

@@ -160,7 +160,7 @@ as a final safety net for un-audited CSS animations. Components that need a desi
 - `src/components/scene/HUD.tsx` (dev) — currently unanimated. Will get reduced fade-in once production HUD scaffold lands (AC10); ensure RM skips that.
 - `src/components/scene/VoidPrologue.tsx:78-90` + `:132` — "INITIALISING SINGULARITY" loader hard-vanishes at 3.8s. Rule 3 — single static frame (final line only).
 - `src/components/work/WorkDashboard.tsx:62-70` — GSAP `fromTo` on panel enter. Rule 1 — instant to end-state + cream fade.
-- `src/components/work/panels/MiraPanel.tsx:41-156` — Canvas-2D rAF EKG heartbeat. Rule 2 — paint final frame, halt rAF.
+- `src/components/work/ProjectChapterOverlay.tsx` — static project copy and tags. Rule 1 — no JS animation.
 - Any GSAP `power3.out` ease on copy reveals — Rule 1, end-state fade.
 
 These are FYI for the implementer. Final discoveries from AC13 sweep are filed as follow-up tasks if any can't be handled inside Job 003 scope.

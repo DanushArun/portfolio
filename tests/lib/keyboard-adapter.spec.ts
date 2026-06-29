@@ -92,14 +92,14 @@ describe('dispatchKeyAction', () => {
     dispatchKeyAction('focus-next');
 
     expect(getPortfolioStopForProgress(useScene.getState().journeyProgress).id)
-      .toBe('MIRA-shipped');
+      .toBe('MIRA-hero');
   });
 
   it('derives MIRA focus from keyboard-driven catalogue scroll', () => {
     useScene.setState({ phase: 'W01_MIRA', localProgress: 0 });
     dispatchKeyAction('focus-next');
 
-    expect(useMiraState.getState().focusId).toBe('SHIPPED');
+    expect(useMiraState.getState().focusId).toBe('hero');
   });
 
   it('returns MIRA focus to its title stop on Escape', () => {

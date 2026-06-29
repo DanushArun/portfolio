@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { PORTFOLIO_CHAPTERS } from '@/lib/portfolio-book';
 import { getPortfolioArtifactLabel } from '@/lib/portfolio-artifacts';
 import { buildPortfolioGlyphLayout } from '@/lib/portfolio-glyphs';
-import { getProgressForPortfolioStop } from '@/lib/portfolio-journey';
+import { getPortfolioStops } from '@/lib/portfolio-journey';
 import {
   buildPortfolioSuperclusterModel,
   getPortfolioMorphState,
@@ -69,8 +69,8 @@ describe('portfolio supercluster', () => {
     expect(getPortfolioArtifactLabel('AIDEN')).toBe('CALL INTEL');
   });
 
-  it('test_artifact_label_when_mira_maps_to_voice_ops_not_live_leads', () => {
-    expect(getPortfolioArtifactLabel('MIRA')).toBe('VOICE OPS');
+  it('test_artifact_label_when_mira_maps_to_voice_ai_not_live_leads', () => {
+    expect(getPortfolioArtifactLabel('MIRA')).toBe('VOICE AI');
   });
 
   it('test_model_when_built_exposes_project_reading_labels', () => {
@@ -89,10 +89,13 @@ describe('portfolio supercluster', () => {
   });
 
   it('test_morph_state_when_project_title_stop_uses_title_glyphs', () => {
+    const titleStop = getPortfolioStops().find((stop) => stop.id === 'AIDEN-title');
+    if (!titleStop) throw new Error('AIDEN-title stop missing');
+
     const state = getPortfolioMorphState(
       'W02_AIDEN',
       0.16,
-      getProgressForPortfolioStop(9),
+      titleStop.progress,
     );
 
     expect(state.titleMorph).toBeGreaterThan(0.9);

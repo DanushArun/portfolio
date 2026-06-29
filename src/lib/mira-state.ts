@@ -6,14 +6,13 @@ import { create } from 'zustand';
 
 export type MiraLang = 'EN' | 'HI' | 'TA' | 'KN' | 'TE';
 export const MIRA_RECRUITER_JOURNEY = [
-  'SHIPPED',
-  'LATENCY',
-  'LANGUAGES',
-  'VOICE_INTAKE',
-  'ORCHESTRATION',
-  'POST_CALL',
-  'OPS_AUTOMATION',
-  'PRODUCTION',
+  'hero',
+  'problem',
+  'system',
+  'build',
+  'challenge',
+  'proof',
+  'reflection',
 ] as const;
 
 export type MiraWorkRegionId = typeof MIRA_RECRUITER_JOURNEY[number];
@@ -138,7 +137,7 @@ export function setActiveLang(lang: MiraLang): void {
   const idx = CYCLE_ORDER.indexOf(lang);
   useMiraState.setState({
     activeLang: lang,
-    focusId: 'LANGUAGES',
+    focusId: 'proof',
     cycleIndex: idx,
     cycleStartMs: nowMs(),
     userExploring: true,

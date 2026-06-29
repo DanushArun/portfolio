@@ -35,6 +35,28 @@
   user-select: none;
 }
 
+.journeyProgress {
+  appearance: none;
+  background: rgba(240, 228, 210, 0.12);
+  border: none;
+  display: block;
+  height: 2px;
+  pointer-events: none;
+  width: 128px;
+}
+
+.journeyProgress::-webkit-progress-bar {
+  background: rgba(240, 228, 210, 0.12);
+}
+
+.journeyProgress::-webkit-progress-value {
+  background: var(--color-accretion);
+}
+
+.journeyProgress::-moz-progress-bar {
+  background: var(--color-accretion);
+}
+
 .skipButton {
   appearance: none;
   background: none;

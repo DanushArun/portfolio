@@ -265,7 +265,7 @@ export function buildPortfolioSuperclusterModel(
     const titleGlyphLayout = buildPortfolioGlyphLayout([chapter.id, label]);
     chapter.beats.forEach((beat, beatIndex) => {
       const target = beatCenter(chapter.node.anchor, beatIndex, chapter.beats.length);
-      const glyphLayout = buildPortfolioGlyphLayout([label, beat.metric]);
+      const glyphLayout = buildPortfolioGlyphLayout(beat.particleLines);
       for (let i = 0; i < particlesPerBeat; i += 1) {
         writeParticle({
           attrs,

@@ -10,7 +10,7 @@ export interface PortfolioArtifactPointConfig {
 }
 
 const ARTIFACT_LABELS = {
-  MIRA: 'VOICE OPS',
+  MIRA: 'VOICE AI',
   AIDEN: 'CALL INTEL',
   VANGUARD: 'QA GRAPH',
   INSPECTION: 'DEFECT QA',

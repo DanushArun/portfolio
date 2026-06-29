@@ -39,8 +39,8 @@ export const typography = {
   },
 } as const;
 
-// Aliases preserved so existing W-panel components (PanelChrome / MiraPanel /
-// PanelChip) keep compiling. The three voices map to the canonical variables.
+// Aliases preserved so panel components keep compiling. The three voices map
+// to the canonical variables.
 export const type = {
   display: typography.fontFamily.dop,
   body:    typography.fontFamily.dop,

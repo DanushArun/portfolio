@@ -7,6 +7,7 @@
 // During C04 horizon (scroll 0.155–0.205) the HUD fades — ux-spec §C04.
 
 import { useScene, type ScenePhase } from '@/lib/scene-state';
+import { JourneyProgressBar } from './JourneyProgressBar';
 import { PhaseIndicator } from './PhaseIndicator';
 import { SkipToNextButton } from './SkipToNextButton';
 import { ToggleSlot } from './ToggleSlot';
@@ -41,6 +42,7 @@ export default function HUD(): React.JSX.Element | null {
     <div className={styles.root} aria-label="Scene controls" style={{ opacity }}>
       <div className={styles.cluster + ' ' + styles.bottomRight}>
         <PhaseIndicator />
+        <JourneyProgressBar />
         <SkipToNextButton />
       </div>
       <div className={styles.cluster + ' ' + styles.bottomLeft}>
