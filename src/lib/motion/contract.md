@@ -120,7 +120,7 @@ return prefersReducedMotion;
 - **Lenis provider** (`ScrollOrchestrator.tsx`) — controls smooth-scroll lifecycle (destroy/recreate on toggle).
 - **Cursor component** (`CustomCursor.tsx`, future) — skips lerp; snaps to true position.
 - **Every GSAP component** — chooses between scrubbed timeline and instant-jump fallback. Pattern: `const tl = gsap.timeline({ paused: rm }); if (rm) target.style.opacity = '1'; else tl.from(target, {...});`
-- **Every R3F scene component** (`EmergeSystem.tsx`, `AnomalyGlitch.tsx`, `TransitionConvergence.tsx`, `WarpScene.tsx`, future C08/C09 + W01-W09 scenes) — skips `useFrame` body or runs at reduced rate per Black hole exception.
+- **Every R3F scene component** (`WarpScene.tsx`, future C08/C09 + W01-W09 scenes) — skips `useFrame` body or runs at reduced rate per Black hole exception.
 - **Imperative BH loop** (`blackHole/index.ts`) — exposed via a setter (`setReducedMotion(true)`) called from `BlackHoleMount.tsx` after reading `useReducedMotion()`. Internal flag gates the rotation/emission rates and switches the camera sampler to discrete-jump mode.
 - **HUD component** (`src/components/hud/HUD.tsx`, Job 003 AC10) — toggles entrance fade-in.
 - **Audio engine** (Job 004) — master mixer reads the value, forces `motionTied` channels to constant gain.
@@ -151,10 +151,7 @@ html[data-rm="reduce"] *::after {
 as a final safety net for un-audited CSS animations. Components that need a designed end-state fade override this on a per-selector basis.
 
 ## Discoveries the AC13 implementation sweep will likely surface
-- `src/components/scene/scenes/EmergeSystem.tsx:11-113` — `useFrame` procedural sun shader. Rule 2 applies; the fallback should clamp `uTime` rather than freezing the entire scene (visual collapses if `uTime` resets to 0).
 - `src/lib/blackHole/index.ts:617-697` — the `r = R₀ · e^(−λp)` camera curve and 5-phase Phase A–E sampler. Rule 1 applies with the discrete-jump sampler described in "Black hole exception".
-- `src/components/scene/scenes/AnomalyGlitch.tsx:73-83` — cyan wireframe cubes + `useFrame` jitter at `CameraRig.tsx:17-23`. Rule 3 — static frame; jitter halted.
-- `src/components/scene/scenes/TransitionConvergence.tsx:98-148` — chaos→orbit + 3 rings, smoothstep over local progress. Rule 1 — settle to end-state.
 - `src/components/scene/scenes/WarpScene.tsx:35-75` — 2000 instanced cylinders + `useFrame` stretch. Rule 2 freeze + Rule 3 single-frame (audit flagged this scene as redundant with the BH tunnel; coordinate with 3d-graphics-engineer).
 - `src/components/scene/GravityCursor.tsx:30-65` — raw cursor rAF. Rule 2 — snap to mouse position, no lerp.
 - `src/components/scene/HUD.tsx` (dev) — currently unanimated. Will get reduced fade-in once production HUD scaffold lands (AC10); ensure RM skips that.

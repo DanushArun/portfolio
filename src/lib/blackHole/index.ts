@@ -541,23 +541,6 @@ export function createBlackHole(opts: BlackHoleOptions): BlackHoleHandle {
     const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
     return t * t * (3 - 2 * t);
   };
-  // Keyframe interpolation: walks through sorted [p, value] pairs and
-  // smoothsteps between adjacent ones. Single continuous curve across all
-  // of p ∈ [0, 1]. Adjacent segments naturally agree at boundaries because
-  // they share the same endpoint value. No piecewise discontinuities.
-  const lerpKf = (p: number, kfs: [number, number][]): number => {
-    if (p <= kfs[0][0]) return kfs[0][1];
-    if (p >= kfs[kfs.length - 1][0]) return kfs[kfs.length - 1][1];
-    for (let i = 0; i < kfs.length - 1; i++) {
-      const [pa, va] = kfs[i];
-      const [pb, vb] = kfs[i + 1];
-      if (p >= pa && p <= pb) {
-        return va + (vb - va) * ss(pa, pb, p);
-      }
-    }
-    return kfs[kfs.length - 1][1];
-  };
-
   // ── Scroll-approach state ────────────────────────────────────────────────────
   let externalProgress = 0;
   let approachOrigin: THREE.Vector3 | null = null;
