@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 
 import {
   getPortfolioChapter,
@@ -9,7 +9,10 @@ import {
 } from '@/lib/portfolio-book';
 import { usePortfolioBookState } from '@/lib/portfolio-book-state';
 import type { PortfolioStop } from '@/lib/portfolio-journey';
-import { usePortfolioStepTransition } from '@/lib/portfolio-step-transition';
+import {
+  getPortfolioStepTransition,
+  usePortfolioStepTransition,
+} from '@/lib/portfolio-step-transition';
 import styles from './ProjectChapterOverlay.module.css';
 
 interface StepCopy {
@@ -17,6 +20,16 @@ interface StepCopy {
   readonly beatIndex: number;
   readonly chapter: PortfolioChapter;
 }
+
+const OUTGOING_LAYER_STYLE: CSSProperties = {
+  opacity: 'var(--outgoing-opacity, 1)',
+  transform: 'translate3d(0, var(--outgoing-y, 0px), 0)',
+};
+
+const INCOMING_LAYER_STYLE: CSSProperties = {
+  opacity: 'var(--incoming-opacity, 0)',
+  transform: 'translate3d(0, var(--incoming-y, 12px), 0)',
+};
 
 function stepLabel(current: number, total: number): string {
   return `${String(current).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
@@ -32,13 +45,55 @@ function copyForStop(stop: PortfolioStop): StepCopy {
   return { beat: chapter.beats[beatIndex], beatIndex, chapter };
 }
 
-function layerStyle(progress: number, incoming: boolean): CSSProperties {
-  const opacity = incoming ? progress : 1 - progress;
-  const offset = incoming ? (1 - progress) * 12 : progress * -12;
-  return {
-    opacity,
-    transform: `translate3d(0, ${offset}px, 0)`,
-  };
+function formatMotionValue(value: number): string {
+  return value.toFixed(4);
+}
+
+function setTransitionVariables(root: HTMLElement, progress: number): void {
+  const clamped = Math.max(0, Math.min(1, progress));
+  root.style.setProperty('--outgoing-opacity', formatMotionValue(1 - clamped));
+  root.style.setProperty('--incoming-opacity', formatMotionValue(clamped));
+  root.style.setProperty('--outgoing-y', `${formatMotionValue(clamped * -12)}px`);
+  root.style.setProperty('--incoming-y', `${formatMotionValue((1 - clamped) * 12)}px`);
+}
+
+function requestMotionFrame(callback: FrameRequestCallback): number {
+  if (typeof requestAnimationFrame === 'function') return requestAnimationFrame(callback);
+  return window.setTimeout(() => callback(performance.now()), 16);
+}
+
+function cancelMotionFrame(frame: number): void {
+  if (typeof cancelAnimationFrame === 'function') {
+    cancelAnimationFrame(frame);
+    return;
+  }
+  window.clearTimeout(frame);
+}
+
+function useStepTransitionVariables(
+  rootRef: React.RefObject<HTMLElement | null>,
+  enabled: boolean,
+): void {
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    if (!enabled) {
+      setTransitionVariables(root, 1);
+      return undefined;
+    }
+
+    let frame: number | null = null;
+    const tick = (): void => {
+      const transition = getPortfolioStepTransition();
+      setTransitionVariables(root, transition.easedProgress);
+      if (transition.active) frame = requestMotionFrame(tick);
+    };
+    tick();
+    return () => {
+      if (frame !== null) cancelMotionFrame(frame);
+      setTransitionVariables(root, 1);
+    };
+  }, [enabled, rootRef]);
 }
 
 function StepIdentity({
@@ -88,6 +143,7 @@ function TagLayer({
 }
 
 export default function ProjectChapterOverlay(): React.JSX.Element {
+  const rootRef = useRef<HTMLElement | null>(null);
   const chapterId = usePortfolioBookState((state) => state.chapterId);
   const beatIndex = usePortfolioBookState((state) => state.beatIndex);
   const transition = usePortfolioStepTransition((state) => state.transition);
@@ -97,19 +153,24 @@ export default function ProjectChapterOverlay(): React.JSX.Element {
   const showTransition = transition.active && transition.fromStop && transition.toStop;
   const outgoingCopy = showTransition ? copyForStop(transition.fromStop) : settledCopy;
   const incomingCopy = showTransition ? copyForStop(transition.toStop) : settledCopy;
+  useStepTransitionVariables(rootRef, Boolean(showTransition));
 
   return (
-    <section className={styles.root} aria-label={`${chapter.title} case study`}>
+    <section
+      ref={rootRef}
+      className={styles.root}
+      aria-label={`${chapter.title} case study`}
+    >
       <div className={styles.identity}>
         <StepIdentity
           copy={outgoingCopy}
-          style={showTransition ? layerStyle(transition.easedProgress, false) : undefined}
+          style={showTransition ? OUTGOING_LAYER_STYLE : undefined}
         />
         {showTransition && (
           <StepIdentity
             copy={incomingCopy}
             descriptionTestId="project-step-description-incoming"
-            style={layerStyle(transition.easedProgress, true)}
+            style={INCOMING_LAYER_STYLE}
           />
         )}
       </div>
@@ -117,10 +178,10 @@ export default function ProjectChapterOverlay(): React.JSX.Element {
       <div className={styles.tagRail} data-testid="project-tag-rail">
         <TagLayer
           copy={outgoingCopy}
-          style={showTransition ? layerStyle(transition.easedProgress, false) : undefined}
+          style={showTransition ? OUTGOING_LAYER_STYLE : undefined}
         />
         {showTransition && (
-          <TagLayer copy={incomingCopy} style={layerStyle(transition.easedProgress, true)} />
+          <TagLayer copy={incomingCopy} style={INCOMING_LAYER_STYLE} />
         )}
       </div>
     </section>

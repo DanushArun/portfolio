@@ -70,6 +70,9 @@ export default function ScrollOrchestrator() {
   const snappingRef = useRef(false);
   const touchStartYRef = useRef<number | null>(null);
   const warpFrameRef = useRef<number | null>(null);
+  const warpAutoplayConsumedRef = useRef(false);
+  const progressFrameRef = useRef<number | null>(null);
+  const pendingProgressRef = useRef<number | null>(null);
   const lastProgressRef = useRef(0);
 
   useEffect(() => {
@@ -81,6 +84,22 @@ export default function ScrollOrchestrator() {
       wheelMultiplier: 0.68,
     });
     lenisRef.current = lenis;
+    const applyJourneyProgressNow = (progress: number): void => {
+      if (progressFrameRef.current !== null) cancelAnimationFrame(progressFrameRef.current);
+      progressFrameRef.current = null;
+      pendingProgressRef.current = null;
+      applyJourneyProgress(progress);
+    };
+    const scheduleJourneyProgress = (progress: number): void => {
+      pendingProgressRef.current = progress;
+      if (progressFrameRef.current !== null) return;
+      progressFrameRef.current = requestAnimationFrame(() => {
+        const pending = pendingProgressRef.current;
+        progressFrameRef.current = null;
+        pendingProgressRef.current = null;
+        if (pending !== null) applyJourneyProgress(pending);
+      });
+    };
     const snapToStop = (stop: PortfolioStop): void => {
       beginPortfolioStepTransition(useScene.getState().journeyProgress, stop);
       scrollToProgress(lenis, stop.progress, snappingRef, finishPortfolioStepTransition);
@@ -88,36 +107,39 @@ export default function ScrollOrchestrator() {
     const jumpWithLenis = (progress: number): void => {
       const clampedProgress = Math.max(0, Math.min(1, progress));
       const target = clampedProgress * getTotalScroll();
+      warpAutoplayConsumedRef.current = clampedProgress >= WARP_START_PROGRESS;
       resetPortfolioStepTransition();
       snappingRef.current = false;
       lenis.scrollTo(target, { duration: 0, force: true, lock: false });
       window.scrollTo({ top: target, behavior: 'auto' });
-      applyJourneyProgress(clampedProgress);
+      applyJourneyProgressNow(clampedProgress);
       lastProgressRef.current = clampedProgress;
     };
     const finishWarpAutoplay = (): void => {
       if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
       warpFrameRef.current = null;
       syncScrollPosition(WARP_RELEASE_PROGRESS);
-      applyJourneyProgress(WARP_RELEASE_PROGRESS);
+      applyJourneyProgressNow(WARP_RELEASE_PROGRESS);
       useScene.getState().setWarpAutoplayActive(false);
       snappingRef.current = false;
       lenis.start();
       lastProgressRef.current = WARP_RELEASE_PROGRESS;
     };
     const startWarpAutoplay = (): void => {
+      if (warpAutoplayConsumedRef.current) return;
       if (useScene.getState().warpAutoplayActive) return;
+      warpAutoplayConsumedRef.current = true;
       useScene.getState().setWarpAutoplayActive(true);
       snappingRef.current = true;
       lenis.stop();
       syncScrollPosition(WARP_START_PROGRESS);
-      applyJourneyProgress(WARP_START_PROGRESS);
+      applyJourneyProgressNow(WARP_START_PROGRESS);
       const startedAt = performance.now();
       const tick = (now: number): void => {
         const elapsed = now - startedAt;
         const sample = sampleWarpAutoplayProgress(elapsed);
         const progress = sample.progress;
-        applyJourneyProgress(progress);
+        applyJourneyProgressNow(progress);
         if (sample.done) {
           finishWarpAutoplay();
           return;
@@ -172,17 +194,25 @@ export default function ScrollOrchestrator() {
       end:   'bottom bottom',
       onUpdate: (self) => {
         if (useScene.getState().warpAutoplayActive) return;
-        if (shouldStartWarpAutoplay(lastProgressRef.current, self.progress)) {
+        if (self.progress < WARP_START_PROGRESS - 0.012) {
+          warpAutoplayConsumedRef.current = false;
+        }
+        if (shouldStartWarpAutoplay({
+          consumed: warpAutoplayConsumedRef.current,
+          current: self.progress,
+          previous: lastProgressRef.current,
+        })) {
           startWarpAutoplay();
           return;
         }
         lastProgressRef.current = self.progress;
-        applyJourneyProgress(self.progress);
+        scheduleJourneyProgress(self.progress);
       },
     });
 
     return () => {
       if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
+      if (progressFrameRef.current !== null) cancelAnimationFrame(progressFrameRef.current);
       useScene.getState().setWarpAutoplayActive(false);
       resetPortfolioStepTransition();
       trigger.kill();
@@ -257,8 +287,15 @@ function sampleWarpAutoplayProgress(elapsedMs: number): {
   return { done: true, progress: WARP_RELEASE_PROGRESS };
 }
 
-function shouldStartWarpAutoplay(previous: number, current: number): boolean {
-  return current > previous && previous < WARP_START_PROGRESS && current >= WARP_START_PROGRESS;
+export function shouldStartWarpAutoplay(config: {
+  readonly consumed: boolean;
+  readonly current: number;
+  readonly previous: number;
+}): boolean {
+  if (config.consumed) return false;
+  return config.current > config.previous &&
+    config.previous < WARP_START_PROGRESS &&
+    config.current >= WARP_START_PROGRESS;
 }
 
 function isPortfolioActive(): boolean {

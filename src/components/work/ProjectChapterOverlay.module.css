@@ -1,4 +1,9 @@
 .root {
+  --incoming-opacity: 0;
+  --incoming-y: 12px;
+  --outgoing-opacity: 1;
+  --outgoing-y: 0px;
+
   color: #f0e4d2;
   height: 100%;
   inset: 0;
@@ -22,6 +27,7 @@
   gap: 0.64rem;
   grid-area: 1 / 1;
   min-width: 0;
+  transform: translateZ(0);
   will-change: opacity, transform;
 }
 
@@ -95,6 +101,7 @@
   grid-area: 1 / 1;
   justify-content: center;
   max-width: 100%;
+  transform: translateZ(0);
   will-change: opacity, transform;
 }
 

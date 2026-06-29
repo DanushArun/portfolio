@@ -32,6 +32,8 @@ export const usePortfolioStepTransition = create<PortfolioStepTransitionStore>((
   transition: IDLE_TRANSITION,
 }));
 
+let transitionFrame: PortfolioStepTransition = IDLE_TRANSITION;
+
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
@@ -51,6 +53,11 @@ function transitionProgress(config: {
   return clamp01((config.current - config.from) / span);
 }
 
+function publishTransition(transition: PortfolioStepTransition): void {
+  transitionFrame = transition;
+  usePortfolioStepTransition.setState({ transition });
+}
+
 export function beginPortfolioStepTransition(
   currentProgress: number,
   toStop: PortfolioStop,
@@ -58,20 +65,18 @@ export function beginPortfolioStepTransition(
   const fromStop = getPortfolioStopForProgress(currentProgress);
   const direction = toStop.progress >= fromStop.progress ? 1 : -1;
   const active = fromStop.index !== toStop.index;
-  usePortfolioStepTransition.setState({
-    transition: {
-      active,
-      direction,
-      easedProgress: active ? 0 : 1,
-      fromStop,
-      progress: active ? 0 : 1,
-      toStop,
-    },
+  publishTransition({
+    active,
+    direction,
+    easedProgress: active ? 0 : 1,
+    fromStop,
+    progress: active ? 0 : 1,
+    toStop,
   });
 }
 
 export function syncPortfolioStepTransition(currentProgress: number): PortfolioStepTransition {
-  const current = usePortfolioStepTransition.getState().transition;
+  const current = transitionFrame;
   if (!current.active || !current.fromStop || !current.toStop) return current;
   const progress = transitionProgress({
     current: currentProgress,
@@ -83,27 +88,25 @@ export function syncPortfolioStepTransition(currentProgress: number): PortfolioS
     easedProgress: smoothstep(progress),
     progress,
   };
-  usePortfolioStepTransition.setState({ transition });
+  transitionFrame = transition;
   return transition;
 }
 
 export function finishPortfolioStepTransition(): void {
-  const current = usePortfolioStepTransition.getState().transition;
-  usePortfolioStepTransition.setState({
-    transition: {
-      ...current,
-      active: false,
-      easedProgress: 1,
-      fromStop: null,
-      progress: 1,
-    },
+  const current = transitionFrame;
+  publishTransition({
+    ...current,
+    active: false,
+    easedProgress: 1,
+    fromStop: null,
+    progress: 1,
   });
 }
 
 export function resetPortfolioStepTransition(): void {
-  usePortfolioStepTransition.setState({ transition: IDLE_TRANSITION });
+  publishTransition(IDLE_TRANSITION);
 }
 
 export function getPortfolioStepTransition(): PortfolioStepTransition {
-  return usePortfolioStepTransition.getState().transition;
+  return transitionFrame;
 }

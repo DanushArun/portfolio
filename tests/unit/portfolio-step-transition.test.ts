@@ -6,6 +6,7 @@ import {
   getPortfolioStepTransition,
   resetPortfolioStepTransition,
   syncPortfolioStepTransition,
+  usePortfolioStepTransition,
 } from '@/lib/portfolio-step-transition';
 import { getPortfolioStops } from '@/lib/portfolio-journey';
 
@@ -49,5 +50,18 @@ describe('portfolio step transition', () => {
     expect(transition.fromStop).toBeNull();
     expect(transition.toStop?.id).toBe('MIRA-problem');
     expect(transition.progress).toBe(1);
+  });
+
+  it('test_transition_when_synced_updates_frame_snapshot_without_store_churn', () => {
+    const stops = getPortfolioStops();
+    const from = stops.find((stop) => stop.id === 'MIRA-hero');
+    const to = stops.find((stop) => stop.id === 'MIRA-problem');
+    if (!from || !to) throw new Error('MIRA transition stops missing');
+
+    beginPortfolioStepTransition(from.progress, to);
+    syncPortfolioStepTransition((from.progress + to.progress) / 2);
+
+    expect(usePortfolioStepTransition.getState().transition.progress).toBe(0);
+    expect(getPortfolioStepTransition().progress).toBeCloseTo(0.5, 1);
   });
 });
