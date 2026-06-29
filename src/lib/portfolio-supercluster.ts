@@ -78,9 +78,9 @@ const GLYPH_CELL_STEP = 0.043;
 const GLYPH_ROLE_SHARE = 0.9;
 const GLYPH_WORLD_MAX_HEIGHT = 2.1;
 const GLYPH_WORLD_MAX_WIDTH = 4.25;
-const MIN_PARTICLES_PER_BEAT = 5200;
+const MIN_PARTICLES_PER_BEAT = 1400;
 const MAX_PARTICLES_PER_BEAT = 18000;
-const GLYPH_CELLS_PER_PARTICLE = 0.55;
+const PARTICLES_PER_GLYPH_AREA = 1050;
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -138,6 +138,14 @@ function beatCenter(center: PortfolioVec3, beatIndex: number, beatCount: number)
   ];
 }
 
+function glyphCellStep(layout: PortfolioGlyphLayout): number {
+  return Math.min(
+    GLYPH_CELL_STEP,
+    GLYPH_WORLD_MAX_HEIGHT / Math.max(1, layout.height),
+    GLYPH_WORLD_MAX_WIDTH / Math.max(1, layout.width),
+  );
+}
+
 function glyphPoint(
   layout: PortfolioGlyphLayout,
   center: PortfolioVec3,
@@ -151,11 +159,7 @@ function glyphPoint(
     x: layout.width * 0.5,
     y: layout.height * 0.5,
   };
-  const cellStep = Math.min(
-    GLYPH_CELL_STEP,
-    GLYPH_WORLD_MAX_HEIGHT / Math.max(1, layout.height),
-    GLYPH_WORLD_MAX_WIDTH / Math.max(1, layout.width),
-  );
+  const cellStep = glyphCellStep(layout);
   const jitterX = wave(index + total, 0.006);
   const jitterY = wave(index + total * 2, 0.006);
   return [
@@ -206,7 +210,9 @@ function particlesForGlyphLayout(
   const viewportScale = targetParticles / DEFAULT_PARTICLES_PER_BEAT;
   const min = Math.round(MIN_PARTICLES_PER_BEAT * viewportScale);
   const max = Math.round(MAX_PARTICLES_PER_BEAT * viewportScale);
-  const dynamic = Math.ceil(layout.cells.length / GLYPH_CELLS_PER_PARTICLE);
+  const cellStep = glyphCellStep(layout);
+  const renderedArea = layout.width * layout.height * cellStep * cellStep;
+  const dynamic = Math.round(renderedArea * PARTICLES_PER_GLYPH_AREA);
   return Math.max(min, Math.min(max, dynamic));
 }
 

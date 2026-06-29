@@ -166,7 +166,15 @@ describe('portfolio supercluster', () => {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     });
 
-    expect(Math.min(...counts.values())).toBeGreaterThanOrEqual(5200);
+    expect(Math.min(...counts.values())).toBeGreaterThanOrEqual(1400);
+  });
+
+  it('test_model_when_description_is_short_does_not_use_long_text_budget', () => {
+    const vanguardOverviewCount = beatParticleCount({ beatIndex: 0, projectId: 'VANGUARD' });
+    const vanguardProbeCount = beatParticleCount({ beatIndex: 1, projectId: 'VANGUARD' });
+
+    expect(vanguardProbeCount).toBeLessThan(vanguardOverviewCount);
+    expect(vanguardProbeCount).toBeLessThan(5200);
   });
 
   it('test_glyph_positions_when_description_is_long_fit_reading_plane_width', { timeout: 15_000 }, () => {
