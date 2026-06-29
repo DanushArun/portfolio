@@ -32,43 +32,80 @@ type CaseStudyBeatConfig = Readonly<{
   camera: BeatCamera;
   id: string;
   metric: string;
-  particleLines: readonly string[];
   proof: string;
   question: string;
   sectionLabel: string;
   stack: readonly string[];
+  summaryLines?: readonly string[];
   title: string;
 }>;
+
+const PARTICLE_LINE_MAX = 26;
+const SUMMARY_LINE_MAX = 18;
+
+const MIRA_SUMMARY_LINES = {
+  build: ['BACKEND', 'SERVICES'],
+  challenge: ['LATENCY', 'COLLAPSE'],
+  hero: ['MIRA', 'VOICE INTAKE'],
+  problem: ['LEAD INTAKE', 'MANUAL HANDOFF'],
+  proof: ['68 DAYS', '5 LANGUAGES'],
+  reflection: ['TELEMETRY', 'NEXT PASS'],
+  system: ['VOICE PIPELINE', 'OPS HANDOFF'],
+} as const;
 
 function camera(orbit: number, lift: number, distance: number, fov: number): BeatCamera {
   return { distance, fov, lift, orbit };
 }
 
-function particleLinesFor(title: string): readonly string[] {
-  const words = title
+function particleWordsFor(text: string): readonly string[] {
+  return text
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, ' ')
     .split(' ')
-    .filter((word) => word.length > 0 && word !== 'THE' && word !== 'AND');
+    .filter((word) => word.length > 0);
+}
+
+function summaryLinesForTitle(title: string): readonly string[] {
   const lines: string[] = [];
   let line = '';
 
-  words.forEach((word) => {
-    if (line.length === 0) {
-      line = word.slice(0, 18);
-      return;
-    }
-    const next = `${line} ${word}`;
-    if (next.length <= 18) {
+  particleWordsFor(title).forEach((word) => {
+    const safeWord = word.slice(0, SUMMARY_LINE_MAX);
+    const next = line.length === 0 ? safeWord : `${line} ${safeWord}`;
+    if (next.length <= SUMMARY_LINE_MAX) {
       line = next;
       return;
     }
-    lines.push(line);
-    line = word.slice(0, 18);
+    if (line.length > 0) lines.push(line);
+    line = safeWord;
   });
 
   if (line.length > 0) lines.push(line);
   return lines.slice(0, 3);
+}
+
+function particleLinesForDescription(description: string): readonly string[] {
+  const words = particleWordsFor(description);
+  const lines: string[] = [];
+  let line = '';
+
+  words.forEach((word) => {
+    const safeWord = word.slice(0, PARTICLE_LINE_MAX);
+    if (line.length === 0) {
+      line = safeWord;
+      return;
+    }
+    const next = `${line} ${safeWord}`;
+    if (next.length <= PARTICLE_LINE_MAX) {
+      line = next;
+      return;
+    }
+    lines.push(line);
+    line = safeWord;
+  });
+
+  if (line.length > 0) lines.push(line);
+  return lines;
 }
 
 function beat([id, title, question, metric, proof, beatCamera, stack]: BeatTuple): PortfolioBeat {
@@ -80,8 +117,9 @@ function beat([id, title, question, metric, proof, beatCamera, stack]: BeatTuple
     proof,
     stack,
     description: proof,
-    particleLines: particleLinesFor(title),
+    particleLines: particleLinesForDescription(proof),
     sectionLabel: title,
+    summaryLines: summaryLinesForTitle(title),
     ...beatCamera,
   };
 }
@@ -95,8 +133,9 @@ function caseStudyBeat(config: CaseStudyBeatConfig): PortfolioBeat {
     proof: config.proof,
     stack: config.stack,
     description: config.proof,
-    particleLines: config.particleLines,
+    particleLines: particleLinesForDescription(config.proof),
     sectionLabel: config.sectionLabel,
+    summaryLines: config.summaryLines ?? summaryLinesForTitle(config.title),
     ...config.camera,
   };
 }
@@ -141,11 +180,12 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         title: 'MIRA',
         question: 'What is the project?',
         metric: 'Production voice AI',
-        proof: 'Built a production voice AI intake system for multilingual lead qualification, ' +
-          'with CRM and WhatsApp handoffs after each call.',
+        proof: 'MIRA is a production voice AI system for multilingual lead qualification. ' +
+          'It streams telephony audio through VAD, ASR, LLM orchestration and TTS, then ' +
+          'hands structured outcomes to CRM and WhatsApp.',
         camera: camera(0.20, 0.72, 6.2, 39),
-        particleLines: ['MIRA', 'VOICE INTAKE'],
         stack: ['FastAPI', 'Pipecat', 'WebSockets', 'ASR/TTS', 'LLM', 'Zoho', 'WhatsApp'],
+        summaryLines: MIRA_SUMMARY_LINES.hero,
       }),
       caseStudyBeat({
         id: 'problem',
@@ -156,8 +196,8 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         proof: 'Live C2C and OLX leads needed rapid first-touch in five languages; sales teams ' +
           'were still reconciling calls, CRM fields and WhatsApp follow-ups by hand.',
         camera: camera(0.72, 0.52, 5.8, 37),
-        particleLines: ['LEAD INTAKE', 'MANUAL HANDOFF'],
         stack: ['Lead intake', 'Sales ops', 'CRM'],
+        summaryLines: MIRA_SUMMARY_LINES.problem,
       }),
       caseStudyBeat({
         id: 'system',
@@ -169,8 +209,8 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
           'WebSockets, VAD, ASR, language routing, LLM orchestration, TTS, then writes ' +
           'outcomes to Zoho and WhatsApp.',
         camera: camera(1.24, 0.35, 5.2, 34),
-        particleLines: ['VOICE PIPELINE', 'OPS HANDOFF'],
         stack: ['WebSockets', 'VAD', 'ASR', 'TTS', 'LLM'],
+        summaryLines: MIRA_SUMMARY_LINES.system,
       }),
       caseStudyBeat({
         id: 'build',
@@ -182,8 +222,8 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
           'worker handoffs, CRM sync and WhatsApp follow-up; Redis backs queue/state and ' +
           'Kubernetes runs deployment.',
         camera: camera(1.95, 0.95, 6.6, 37),
-        particleLines: ['BACKEND', 'SERVICES'],
         stack: ['FastAPI', 'Redis', 'Workers', 'Kubernetes'],
+        summaryLines: MIRA_SUMMARY_LINES.build,
       }),
       caseStudyBeat({
         id: 'challenge',
@@ -195,8 +235,8 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
           'audio and model calls, so I moved the path to streamed, parallel execution and ' +
           'cut first response from 7s to <500ms.',
         camera: camera(2.80, 0.20, 5.5, 34),
-        particleLines: ['LATENCY', 'COLLAPSE'],
         stack: ['Streaming', 'Pipecat', '<500ms', 'Parallel I/O'],
+        summaryLines: MIRA_SUMMARY_LINES.challenge,
       }),
       caseStudyBeat({
         id: 'proof',
@@ -208,8 +248,8 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
           'Tamil, Kannada and Telugu, with structured call outcomes synced into CRM and ' +
           'WhatsApp workflows.',
         camera: camera(3.70, 0.62, 5.0, 33),
-        particleLines: ['68 DAYS', '5 LANGUAGES'],
         stack: ['Production', '68 days', '5 languages', 'CRM sync', 'WhatsApp'],
+        summaryLines: MIRA_SUMMARY_LINES.proof,
       }),
       caseStudyBeat({
         id: 'reflection',
@@ -221,8 +261,8 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
           'the next pass is stage-level p50/p95 telemetry, replay tests and language-specific ' +
           'failure tracking.',
         camera: camera(4.57, 0.46, 5.8, 35),
-        particleLines: ['TELEMETRY', 'NEXT PASS'],
         stack: ['Observability', 'Replay tests', 'Latency telemetry'],
+        summaryLines: MIRA_SUMMARY_LINES.reflection,
       }),
     ],
   }),
@@ -236,9 +276,18 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
       radius: 1.9,
     },
     beats: [
-      beat(['problem', 'Management visibility', 'What problem is solved?', 'call intelligence',
-        'Every call becomes searchable quality, engagement and opportunity data.',
-        camera(0.35, 0.55, 4.6, 38), ['Django', 'React']]),
+      caseStudyBeat({
+        id: 'problem',
+        sectionLabel: 'Overview',
+        title: 'AIDEN',
+        question: 'What is AIDEN?',
+        metric: 'Call intelligence platform',
+        proof: 'AIDEN is a conversation intelligence system for sales managers. It turns ' +
+          'recorded calls into searchable transcripts, diarized speakers, SOP scores and ' +
+          'CRM-ready coaching signals.',
+        camera: camera(0.35, 0.55, 4.6, 38),
+        stack: ['Django', 'React', 'ASR', 'LLM'],
+      }),
       beat(['diarization', 'Diarized intake', 'Is the transcript usable?', 'speaker roles',
         'Speaker diarization, role detection and word-level highlighting anchor review.',
         camera(0.98, 0.18, 4.2, 35), ['ASR', 'PostgreSQL']]),
@@ -266,9 +315,18 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
       radius: 1.6,
     },
     beats: [
-      beat(['browser-graph', 'Browser Graph', 'What does Vanguard do?', 'autonomous QA',
-        'Browser states condense into a directed graph of pages and navigation paths.',
-        camera(0.45, 0.42, 4.5, 38), ['Playwright', 'VLM']]),
+      caseStudyBeat({
+        id: 'browser-graph',
+        sectionLabel: 'Overview',
+        title: 'VANGUARD',
+        question: 'What is VANGUARD?',
+        metric: 'Autonomous QA agent',
+        proof: 'VANGUARD is an autonomous web-testing agent that maps browser states, ' +
+          'navigates user flows and uses visual plus DOM evidence to catch workflow ' +
+          'regressions before release.',
+        camera: camera(0.45, 0.42, 4.5, 38),
+        stack: ['Playwright', 'VLM', 'DOM', 'Regression'],
+      }),
       beat(['agent-probe', 'Agent Probe', 'How does it test?', 'VLM + Playwright',
         'A vision-guided probe traverses the graph and leaves a luminous decision trail.',
         camera(1.30, 0.62, 4.0, 35), ['TypeScript', 'DOM']]),
@@ -293,9 +351,18 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
       radius: 1.75,
     },
     beats: [
-      beat(['scope', 'Vehicle scope', 'How broad is the inspection?', '1000+ parts',
-        'The inspection agent targets part-level two-wheeler defect consistency.',
-        camera(0.15, 0.25, 4.5, 38), ['YOLOv8', 'Python']]),
+      caseStudyBeat({
+        id: 'scope',
+        sectionLabel: 'Overview',
+        title: 'AI INSPECTION',
+        question: 'What is AI INSPECTION?',
+        metric: 'Vehicle inspection automation',
+        proof: 'AI INSPECTION is a computer-vision workflow for two-wheeler inspection. ' +
+          'It standardizes defect detection, showroom analytics and inspection reporting ' +
+          'so operators are not relying on inconsistent manual checks.',
+        camera: camera(0.15, 0.25, 4.5, 38),
+        stack: ['YOLOv8', 'Python', 'RTSP', 'Electron'],
+      }),
       beat(['defects', 'Defect detection', 'What is detected?', 'YOLOv8m',
         'Computer vision classifies visible damage and inspection states.',
         camera(0.95, 0.70, 4.0, 35), ['CV', 'Inference']]),
@@ -320,9 +387,18 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
       radius: 1.7,
     },
     beats: [
-      beat(['bottleneck', 'Attention bottleneck', 'What limit is attacked?', 'O(n²)',
-        'The research targets the scaling wall of standard softmax attention.',
-        camera(0.25, 0.60, 4.8, 39), ['Attention', 'Research']]),
+      caseStudyBeat({
+        id: 'bottleneck',
+        sectionLabel: 'Overview',
+        title: 'WAVE FIELD',
+        question: 'What is WAVE FIELD?',
+        metric: 'Attention research',
+        proof: 'WAVE FIELD is a research system for rethinking long-context attention. ' +
+          'It explores wave kernels as a path away from quadratic softmax attention and ' +
+          'toward scalable sequence processing.',
+        camera: camera(0.25, 0.60, 4.8, 39),
+        stack: ['Attention', 'Research', 'Fourier', 'Math'],
+      }),
       beat(['kernel', 'Wave-field kernel', 'What is the core idea?', 'Fourier + Green',
         'Position awareness and content gating are separated with wave kernels.',
         camera(1.05, 0.22, 4.2, 35), ['Fourier', 'Green']]),
@@ -347,9 +423,18 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
       radius: 1.7,
     },
     beats: [
-      beat(['model', 'Shielding model', 'What physics is modeled?', 'Schelkunoff',
-        'Reflection, absorption and correction terms model shielding effectiveness.',
-        camera(0.10, 0.35, 4.6, 38), ['Physics', 'Simulation']]),
+      caseStudyBeat({
+        id: 'model',
+        sectionLabel: 'Overview',
+        title: 'EMI ENGINE',
+        question: 'What is EMI ENGINE?',
+        metric: 'Shielding simulation engine',
+        proof: 'EMI ENGINE is a computational physics tool for electromagnetic shielding ' +
+          'design. It models reflection, absorption, correction terms and material sweeps ' +
+          'so shielding choices can be evaluated before fabrication.',
+        camera: camera(0.10, 0.35, 4.6, 38),
+        stack: ['Physics', 'Simulation', 'Python', 'CI/CD'],
+      }),
       beat(['sweep', 'Sweep engine', 'How much is simulated?', '100 kHz-10 GHz',
         'Vectorized frequency sweeps explore broad design behavior quickly.',
         camera(0.90, 0.64, 4.2, 35), ['Vectorization', 'Python']]),
@@ -374,9 +459,18 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
       radius: 1.65,
     },
     beats: [
-      beat(['track-path', 'Track Path', "What's the context?", 'Formula Manipal',
-        'A racing-red circuit filament traces the Formula Manipal system context.',
-        camera(0.50, 0.70, 4.7, 39), ['Leadership', 'Testing']]),
+      caseStudyBeat({
+        id: 'track-path',
+        sectionLabel: 'Overview',
+        title: 'FORMULA MANIPAL',
+        question: 'What is FORMULA MANIPAL?',
+        metric: 'EV race operations',
+        proof: 'FORMULA MANIPAL is the race-engineering program where I led systems work ' +
+          'across autonomous path planning, controls testing, telemetry and operations, ' +
+          'connecting software decisions to track results.',
+        camera: camera(0.50, 0.70, 4.7, 39),
+        stack: ['Leadership', 'Testing', 'Controls', 'Telemetry'],
+      }),
       beat(['telemetry', 'Telemetry Stream', 'What did the car produce?', 'live telemetry',
         'A vehicle particle laps the circuit with speed, braking and apex telemetry.',
         camera(1.35, 0.35, 4.2, 35), ['Controls', 'Path planning']]),

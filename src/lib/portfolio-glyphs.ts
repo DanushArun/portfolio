@@ -13,6 +13,7 @@ const GLYPH_HEIGHT = 7;
 const GLYPH_WIDTH = 5;
 const CHAR_GAP = 1;
 const LINE_GAP = 2;
+const MAX_GLYPH_LINE_LENGTH = 26;
 const SOLID_SAMPLES = 3;
 const SAMPLE_SPACING = 0.26;
 const EMPTY = ['00000', '00000', '00000', '00000', '00000', '00000', '00000'];
@@ -62,7 +63,7 @@ function normalizeLine(value: string): string {
     .replace(/[^A-Z0-9 ]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  return normalized.length > 0 ? normalized.slice(0, 18) : 'PROJECT';
+  return normalized.length > 0 ? normalized.slice(0, MAX_GLYPH_LINE_LENGTH) : 'PROJECT';
 }
 
 function lineWidth(line: string): number {

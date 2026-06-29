@@ -17,7 +17,16 @@ describe('project chapter overlay', () => {
     expect(container.textContent).toContain('MIRA');
     expect(container.textContent).toContain('Hero');
     expect(container.textContent).toContain('01 / 07');
-    expect(container.textContent).toContain('production voice AI');
+    expect(container.textContent).toContain('MIRA / VOICE INTAKE');
+  });
+
+  it('test_mira_hero_when_active_keeps_full_description_as_accessible_label', () => {
+    act(() => syncPortfolioBookForScene('W01_MIRA', 0.20));
+
+    const { container } = render(<ProjectChapterOverlay />);
+    const description = container.querySelector('[data-testid="project-step-description"]');
+
+    expect(description?.getAttribute('aria-label')).toContain('production voice AI');
   });
 
   it('test_mira_hero_when_active_places_tech_badges_in_bottom_center_rail', () => {
@@ -37,7 +46,7 @@ describe('project chapter overlay', () => {
     const { container } = render(<ProjectChapterOverlay />);
 
     expect(container.textContent).toContain('Challenge');
-    expect(container.textContent).toContain('7s to <500ms');
+    expect(container.textContent).toContain('LATENCY / COLLAPSE');
     expect(container.textContent).toContain('Streaming');
   });
 });

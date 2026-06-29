@@ -12,7 +12,7 @@ import {
 } from './portfolio-glyphs';
 import {
   getPortfolioArtifactLabel,
-  portfolioArtifactPoint,
+  portfolioArtifactProfile,
 } from './portfolio-artifacts';
 import { getPortfolioStopForProgress } from './portfolio-journey';
 import type { ScenePhase } from './scene-state';
@@ -30,7 +30,9 @@ export interface PortfolioSuperclusterOptions {
 }
 
 export interface PortfolioSuperclusterAttributes {
+  readonly artifactAlpha: Float32Array;
   readonly artifactPosition: Float32Array;
+  readonly artifactScale: Float32Array;
   readonly beatIndex: Float32Array;
   readonly color: Float32Array;
   readonly glyphPosition: Float32Array;
@@ -73,6 +75,9 @@ export interface PortfolioMorphState {
 const DEFAULT_PARTICLES_PER_BEAT = 5200;
 const MOBILE_PARTICLES_PER_BEAT = 2600;
 const GLYPH_CELL_STEP = 0.043;
+const GLYPH_ROLE_SHARE = 0.9;
+const GLYPH_WORLD_MAX_HEIGHT = 2.1;
+const GLYPH_WORLD_MAX_WIDTH = 4.25;
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -136,15 +141,23 @@ function glyphPoint(
   index: number,
   total: number,
 ): PortfolioVec3 {
-  const cell = layout.cells[index % layout.cells.length] ?? {
+  const glyphTotal = Math.max(1, Math.floor(total * GLYPH_ROLE_SHARE));
+  const sample = Math.min(index, glyphTotal - 1) / Math.max(1, glyphTotal - 1);
+  const cellIndex = Math.floor(sample * Math.max(0, layout.cells.length - 1));
+  const cell = layout.cells[cellIndex] ?? {
     x: layout.width * 0.5,
     y: layout.height * 0.5,
   };
+  const cellStep = Math.min(
+    GLYPH_CELL_STEP,
+    GLYPH_WORLD_MAX_HEIGHT / Math.max(1, layout.height),
+    GLYPH_WORLD_MAX_WIDTH / Math.max(1, layout.width),
+  );
   const jitterX = wave(index + total, 0.006);
   const jitterY = wave(index + total * 2, 0.006);
   return [
-    center[0] + (cell.x - layout.width * 0.5) * GLYPH_CELL_STEP + jitterX,
-    center[1] + (layout.height * 0.5 - cell.y) * GLYPH_CELL_STEP + jitterY,
+    center[0] + (cell.x - layout.width * 0.5) * cellStep + jitterX,
+    center[1] + (layout.height * 0.5 - cell.y) * cellStep + jitterY,
     center[2] + 0.52 + wave(index * 2.1, 0.08),
   ];
 }
@@ -155,7 +168,7 @@ function titleCenter(center: PortfolioVec3): PortfolioVec3 {
 
 function roleFor(localIndex: number, total: number): number {
   const t = localIndex / Math.max(1, total - 1);
-  if (t < 0.9) return PORTFOLIO_PARTICLE_ROLE.glyph;
+  if (t < GLYPH_ROLE_SHARE) return PORTFOLIO_PARTICLE_ROLE.glyph;
   if (t < 0.945) return PORTFOLIO_PARTICLE_ROLE.filament;
   if (t < 0.975) return PORTFOLIO_PARTICLE_ROLE.nucleus;
   return PORTFOLIO_PARTICLE_ROLE.beat;
@@ -183,7 +196,9 @@ function particleCount(particlesPerBeat: number): number {
 function emptyAttributes(count: number): PortfolioSuperclusterAttributes {
   const vectors = count * 3;
   return {
+    artifactAlpha: new Float32Array(count),
     artifactPosition: new Float32Array(vectors),
+    artifactScale: new Float32Array(count),
     beatIndex: new Float32Array(count),
     color: new Float32Array(vectors),
     glyphPosition: new Float32Array(vectors),
@@ -212,26 +227,25 @@ function writeParticle(config: {
   titleGlyphLayout: PortfolioGlyphLayout;
 }): void {
   const seed = config.projectIndex * 1000 + config.beatIndex * 97 + config.localIndex;
+  const artifact = portfolioArtifactProfile({
+    beatIndex: config.beatIndex,
+    center: config.center,
+    id: config.id,
+    localIndex: config.localIndex,
+    seed,
+    total: config.particlesPerBeat,
+  });
   config.attrs.projectIndex[config.cursor] = config.projectIndex;
   config.attrs.beatIndex[config.cursor] = config.beatIndex;
   config.attrs.role[config.cursor] = roleFor(config.localIndex, config.particlesPerBeat);
   config.attrs.seed[config.cursor] = seed;
+  config.attrs.artifactAlpha[config.cursor] = artifact.alpha;
+  config.attrs.artifactScale[config.cursor] = artifact.scale;
   writeVec(config.attrs.color, config.cursor, config.color);
   writeVec(config.attrs.homePosition, config.cursor, radialPoint(config.center, seed, 4.2));
   writeVec(config.attrs.projectPosition, config.cursor, radialPoint(config.center, seed, 1.25));
   writeVec(config.attrs.beatPosition, config.cursor, radialPoint(config.beatCenter, seed, 0.46));
-  writeVec(
-    config.attrs.artifactPosition,
-    config.cursor,
-    portfolioArtifactPoint({
-      beatIndex: config.beatIndex,
-      center: config.center,
-      id: config.id,
-      localIndex: config.localIndex,
-      seed,
-      total: config.particlesPerBeat,
-    }),
-  );
+  writeVec(config.attrs.artifactPosition, config.cursor, artifact.position);
   writeVec(
     config.attrs.glyphPosition,
     config.cursor,
@@ -262,7 +276,9 @@ export function buildPortfolioSuperclusterModel(
     const start = cursor;
     const color = hexToRgb(chapter.node.color);
     const label = getPortfolioArtifactLabel(chapter.id);
-    const titleGlyphLayout = buildPortfolioGlyphLayout([chapter.id, label]);
+    const titleGlyphLayout = buildPortfolioGlyphLayout(
+      chapter.beats[0]?.particleLines ?? [chapter.id, label],
+    );
     chapter.beats.forEach((beat, beatIndex) => {
       const target = beatCenter(chapter.node.anchor, beatIndex, chapter.beats.length);
       const glyphLayout = buildPortfolioGlyphLayout(beat.particleLines);

@@ -148,6 +148,8 @@ export default function PortfolioSupercluster({
             attach="attributes-aArtifactPosition"
             args={[attrs.artifactPosition, 3]}
           />
+          <bufferAttribute attach="attributes-aArtifactAlpha" args={[attrs.artifactAlpha, 1]} />
+          <bufferAttribute attach="attributes-aArtifactScale" args={[attrs.artifactScale, 1]} />
           <bufferAttribute attach="attributes-aBeatPosition" args={[attrs.beatPosition, 3]} />
           <bufferAttribute attach="attributes-aColor" args={[attrs.color, 3]} />
           <bufferAttribute attach="attributes-aGlyphPosition" args={[attrs.glyphPosition, 3]} />

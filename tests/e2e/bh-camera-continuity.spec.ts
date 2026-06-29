@@ -15,6 +15,7 @@
 // non-production builds) at three scroll positions spanning the approach.
 
 import { test, expect } from '@playwright/test';
+import { phaseToProgress } from '@/lib/journey-map';
 
 type Vec3 = { x: number; y: number; z: number };
 
@@ -25,12 +26,18 @@ declare global {
   }
 }
 
-// p=0.16 mid-C03 STRETCH, p=0.22 C03/C04 boundary, p=0.26 mid-C04 HORIZON.
-const SAMPLES = [0.16, 0.22, 0.26];
+const SAMPLES = [
+  { label: 'mid-C03 STRETCH', progress: phaseToProgress('C03_STRETCH', 0.65) },
+  { label: 'early-C04 HORIZON', progress: phaseToProgress('C04_HORIZON', 0.10) },
+  { label: 'late-C04 HORIZON', progress: phaseToProgress('C04_HORIZON', 0.80) },
+] as const;
 const SETTLE_MS = 800;
 
-async function readCam(page: import('@playwright/test').Page, p: number): Promise<Vec3> {
-  await page.evaluate((prog) => window.__setJourneyProgress?.(prog), p);
+async function readCam(
+  page: import('@playwright/test').Page,
+  sample: (typeof SAMPLES)[number],
+): Promise<Vec3> {
+  await page.evaluate((prog) => window.__setJourneyProgress?.(prog), sample.progress);
   await page.waitForTimeout(SETTLE_MS);
   // Two frames so the BH animate loop has published the latest position.
   const pos = await page.evaluate(() => new Promise<Vec3 | undefined>((resolve) => {
@@ -38,7 +45,7 @@ async function readCam(page: import('@playwright/test').Page, p: number): Promis
       requestAnimationFrame(() => resolve(window.__bhCameraPos));
     });
   }));
-  expect(pos, `__bhCameraPos missing at progress=${p}`).toBeDefined();
+  expect(pos, `__bhCameraPos missing at ${sample.label}`).toBeDefined();
   return pos as Vec3;
 }
 
@@ -48,8 +55,8 @@ test('BH camera falls INTO the void across C03→C04 (no retreat)', async ({ pag
   await page.waitForTimeout(1500);
 
   const samples: Vec3[] = [];
-  for (const p of SAMPLES) {
-    samples.push(await readCam(page, p));
+  for (const sample of SAMPLES) {
+    samples.push(await readCam(page, sample));
   }
 
   const lens = samples.map((s) => Math.hypot(s.x, s.y, s.z));
@@ -58,7 +65,8 @@ test('BH camera falls INTO the void across C03→C04 (no retreat)', async ({ pag
     test.info().annotations.push({
       type: 'sample',
       description:
-        `p=${SAMPLES[i]} pos=(${samples[i].x.toFixed(2)}, ${samples[i].y.toFixed(2)}, ` +
+        `${SAMPLES[i].label} p=${SAMPLES[i].progress.toFixed(3)} ` +
+        `pos=(${samples[i].x.toFixed(2)}, ${samples[i].y.toFixed(2)}, ` +
         `${samples[i].z.toFixed(2)}) len=${lens[i].toFixed(3)}`,
     });
   }
@@ -72,8 +80,8 @@ test('BH camera falls INTO the void across C03→C04 (no retreat)', async ({ pag
       expect(
         lens[i],
         `length grew from ${lens[i - 1].toFixed(3)} to ${lens[i].toFixed(3)} ` +
-        `between p=${SAMPLES[i - 1]} and p=${SAMPLES[i]} — viewer retreated ` +
-        `from the BH (z=${samples[i].z.toFixed(3)}).`,
+        `between ${SAMPLES[i - 1].label} and ${SAMPLES[i].label} — ` +
+        `viewer retreated from the BH (z=${samples[i].z.toFixed(3)}).`,
       ).toBeLessThanOrEqual(lens[i - 1] + 0.05);
     }
   }

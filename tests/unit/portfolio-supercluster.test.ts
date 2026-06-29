@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { PORTFOLIO_CHAPTERS } from '@/lib/portfolio-book';
-import { getPortfolioArtifactLabel } from '@/lib/portfolio-artifacts';
+import { PORTFOLIO_CHAPTERS, getPortfolioChapter } from '@/lib/portfolio-book';
+import {
+  getPortfolioArtifactLabel,
+  portfolioArtifactProfile,
+} from '@/lib/portfolio-artifacts';
 import { buildPortfolioGlyphLayout } from '@/lib/portfolio-glyphs';
 import { getPortfolioStops } from '@/lib/portfolio-journey';
 import {
@@ -11,6 +14,40 @@ import {
 } from '@/lib/portfolio-supercluster';
 
 describe('portfolio supercluster', () => {
+  function samplesFor(id: 'MIRA'): ReturnType<typeof portfolioArtifactProfile>[] {
+    const center = getPortfolioChapter(id).node.anchor;
+    return Array.from({ length: 900 }, (_, localIndex) => portfolioArtifactProfile({
+      beatIndex: 0,
+      center,
+      id,
+      localIndex,
+      seed: localIndex * 97,
+      total: 900,
+    }));
+  }
+
+  function glyphPointsForMiraHero(particlesPerBeat: number): readonly [number, number, number][] {
+    const model = buildPortfolioSuperclusterModel({ particlesPerBeat });
+    const points: [number, number, number][] = [];
+    model.attributes.role.forEach((role, index) => {
+      const isMiraHero = role === 4 &&
+        model.attributes.projectIndex[index] === 0 &&
+        model.attributes.beatIndex[index] === 0;
+      if (!isMiraHero) return;
+      const offset = index * 3;
+      points.push([
+        model.attributes.glyphPosition[offset],
+        model.attributes.glyphPosition[offset + 1],
+        model.attributes.glyphPosition[offset + 2],
+      ]);
+    });
+    return points;
+  }
+
+  function spread(values: readonly number[]): number {
+    return Math.max(...values) - Math.min(...values);
+  }
+
   it('test_model_when_built_assigns_particles_to_every_project', () => {
     const model = buildPortfolioSuperclusterModel({ particlesPerBeat: 12 });
 
@@ -29,8 +66,42 @@ describe('portfolio supercluster', () => {
     expect(model.attributes.beatPosition).toHaveLength(vectorLength);
     expect(model.attributes.glyphPosition).toHaveLength(vectorLength);
     expect(model.attributes.artifactPosition).toHaveLength(vectorLength);
+    expect(model.attributes.artifactAlpha).toHaveLength(model.count);
+    expect(model.attributes.artifactScale).toHaveLength(model.count);
     expect(model.attributes.titleGlyphPosition).toHaveLength(vectorLength);
     expect(model.attributes.projectIndex).toHaveLength(model.count);
+  });
+
+  it('test_artifact_profiles_when_sampled_recede_behind_glyph_plane', () => {
+    PORTFOLIO_CHAPTERS.forEach((chapter) => {
+      const profile = portfolioArtifactProfile({
+        beatIndex: 0,
+        center: chapter.node.anchor,
+        id: chapter.id,
+        localIndex: 24,
+        seed: 2048,
+        total: 128,
+      });
+
+      expect(profile.position.every(Number.isFinite)).toBe(true);
+      expect(profile.alpha).toBeGreaterThan(0);
+      expect(profile.alpha).toBeLessThanOrEqual(0.62);
+      expect(profile.scale).toBeGreaterThan(0);
+      expect(profile.scale).toBeLessThanOrEqual(0.9);
+      expect(profile.position[2]).toBeLessThan(chapter.node.anchor[2] + 0.26);
+    });
+  });
+
+  it('test_mira_artifact_when_sampled_forms_a_wide_recessed_signal_field', () => {
+    const samples = samplesFor('MIRA');
+    const xs = samples.map((profile) => profile.position[0]);
+    const zs = samples.map((profile) => profile.position[2]);
+    const centerZ = getPortfolioChapter('MIRA').node.anchor[2];
+    const xSpread = Math.max(...xs) - Math.min(...xs);
+    const meanZ = zs.reduce((sum, z) => sum + z, 0) / zs.length;
+
+    expect(xSpread).toBeGreaterThan(5.2);
+    expect(meanZ).toBeLessThan(centerZ - 0.28);
   });
 
   it('test_model_when_built_contains_glyph_particles_for_each_project', () => {
@@ -63,6 +134,20 @@ describe('portfolio supercluster', () => {
     const model = buildPortfolioSuperclusterModel();
 
     expect(model.count).toBeGreaterThan(180_000);
+  });
+
+  it('test_glyph_positions_when_description_is_long_fit_reading_plane_width', { timeout: 15_000 }, () => {
+    const points = glyphPointsForMiraHero(5200);
+    const xSpread = spread(points.map((point) => point[0]));
+
+    expect(xSpread).toBeLessThanOrEqual(4.45);
+  });
+
+  it('test_glyph_positions_when_particle_budget_is_low_sample_full_description_height', () => {
+    const points = glyphPointsForMiraHero(120);
+    const ySpread = spread(points.map((point) => point[1]));
+
+    expect(ySpread).toBeGreaterThan(1.1);
   });
 
   it('test_artifact_label_when_aiden_maps_to_short_readable_claim', () => {

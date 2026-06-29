@@ -35,6 +35,7 @@ export interface PortfolioBeat {
   readonly question: string;
   readonly sectionLabel: string;
   readonly stack: readonly string[];
+  readonly summaryLines: readonly string[];
   readonly title: string;
 }
 

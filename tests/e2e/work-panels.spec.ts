@@ -14,10 +14,23 @@ const WORK_TARGETS = [
   { project: 'FORMULA', phase: 'W07_FORMULA' },
 ] as const;
 
+async function waitForJourneyControls(
+  page: import('@playwright/test').Page,
+): Promise<void> {
+  await page.waitForFunction(() => {
+    const testWindow = window as Window & {
+      __setJourneyProgress?: (value: number) => void;
+      __portfolioDebug?: { activeProjectId?: string | null };
+    };
+    return typeof testWindow.__setJourneyProgress === 'function' &&
+      typeof testWindow.__portfolioDebug === 'object';
+  }, undefined, { timeout: 30_000 });
+}
+
 test('test_project_phases_when_scrubbed_activate_particle_supercluster', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('canvas', { timeout: 30_000 });
-  await page.waitForTimeout(1000);
+  await page.locator('canvas').first().waitFor({ state: 'attached', timeout: 30_000 });
+  await waitForJourneyControls(page);
 
   for (const target of WORK_TARGETS) {
     const progress = phaseToProgress(target.phase as WorkPhase, 0.5);
@@ -28,8 +41,6 @@ test('test_project_phases_when_scrubbed_activate_particle_supercluster', async (
       };
       testWindow.__setJourneyProgress?.(progress);
     }, progress);
-
-    await page.waitForTimeout(600);
 
     await expect.poll(async () => page.evaluate(() => {
       const testWindow = window as Window & {
@@ -43,8 +54,8 @@ test('test_project_phases_when_scrubbed_activate_particle_supercluster', async (
 
 test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('canvas', { timeout: 30_000 });
-  await page.waitForTimeout(1000);
+  await page.locator('canvas').first().waitFor({ state: 'attached', timeout: 30_000 });
+  await waitForJourneyControls(page);
 
   const progress = phaseToProgress('W01_MIRA', 0.20);
 
@@ -55,11 +66,11 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
     testWindow.__setJourneyProgress?.(progress);
   }, progress);
 
-  await page.waitForTimeout(600);
-
   await expect(page.getByTestId('project-chapter-title')).toContainText('MIRA');
   await expect(page.getByTestId('project-step-description'))
-    .toContainText('production voice AI');
+    .toContainText('MIRA / VOICE INTAKE');
+  await expect(page.getByTestId('project-step-description'))
+    .toHaveAttribute('aria-label', /production voice AI/);
   await expect(page.getByTestId('project-tag-rail')).toContainText('FastAPI');
   await expect(page.locator('[data-testid="mira-system-trace"]')).toHaveCount(0);
 

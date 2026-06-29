@@ -8,6 +8,10 @@ function stepLabel(current: number, total: number): string {
   return `${String(current).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
 }
 
+function summaryLabel(lines: readonly string[]): string {
+  return lines.join(' / ');
+}
+
 export default function ProjectChapterOverlay(): React.JSX.Element {
   const chapterId = usePortfolioBookState((state) => state.chapterId);
   const beatIndex = usePortfolioBookState((state) => state.beatIndex);
@@ -25,8 +29,12 @@ export default function ProjectChapterOverlay(): React.JSX.Element {
           <span>{stepLabel(beatIndex + 1, chapter.beats.length)}</span>
           {beat.title === chapter.title ? chapter.eyebrow : beat.title}
         </p>
-        <p className={styles.description} data-testid="project-step-description">
-          {beat.description}
+        <p
+          aria-label={beat.description}
+          className={styles.description}
+          data-testid="project-step-description"
+        >
+          {summaryLabel(beat.summaryLines)}
         </p>
       </div>
 

@@ -8,6 +8,21 @@ import {
 import { SUPERCLUSTER_CHAPTERS } from '@/lib/supercluster-script';
 
 describe('portfolio book', () => {
+  const FIRST_BEAT_SECTION_LABELS = {
+    MIRA: 'Hero',
+    AIDEN: 'Overview',
+    VANGUARD: 'Overview',
+    INSPECTION: 'Overview',
+    WAVEFIELD: 'Overview',
+    EMI: 'Overview',
+    FORMULA: 'Overview',
+  } as const;
+  const PARTICLE_LINE_MAX = 26;
+
+  function normalizedText(value: string): string {
+    return value.toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
   it('test_chapters_when_loaded_cover_project_phases', () => {
     expect(PORTFOLIO_CHAPTERS.map((chapter) => chapter.phase)).toEqual([
       'W01_MIRA',
@@ -53,15 +68,35 @@ describe('portfolio book', () => {
 
     expect(beats.every((beat) => beat.description.length > 0)).toBe(true);
     expect(beats.every((beat) => beat.particleLines.length >= 1)).toBe(true);
-    expect(beats.every((beat) => beat.particleLines.every((line) => line.length <= 18)))
-      .toBe(true);
+    expect(beats.every((beat) => (
+      beat.particleLines.every((line) => line.length <= PARTICLE_LINE_MAX)
+    ))).toBe(true);
+  });
+
+  it('test_beats_when_loaded_put_description_copy_into_particle_lines', () => {
+    PORTFOLIO_CHAPTERS.flatMap((chapter) => chapter.beats).forEach((beat) => {
+      const particleText = beat.particleLines.join(' ');
+
+      expect(particleText).toBe(normalizedText(beat.description));
+      expect(particleText).not.toBe(normalizedText(beat.title));
+    });
+  });
+
+  it('test_beats_when_loaded_keep_short_summary_copy_outside_particle_lines', () => {
+    const [hero] = getPortfolioChapter('MIRA').beats;
+
+    expect(hero.summaryLines).toEqual(['MIRA', 'VOICE INTAKE']);
+    expect(hero.particleLines.join(' ')).not.toContain('VOICE INTAKE');
   });
 
   it('test_mira_hero_when_loaded_has_case_study_copy_and_tags', () => {
     const [hero] = getPortfolioChapter('MIRA').beats;
 
-    expect(hero.particleLines).toEqual(['MIRA', 'VOICE INTAKE']);
-    expect(hero.description).toContain('production voice AI');
+    expect(hero.particleLines.join(' ')).toContain('MIRA IS A PRODUCTION VOICE');
+    expect(hero.particleLines.join(' ')).toContain('TELEPHONY AUDIO');
+    expect(hero.summaryLines.join(' ')).toContain('VOICE INTAKE');
+    expect(hero.description.startsWith('MIRA is')).toBe(true);
+    expect(hero.description).toContain('telephony');
     expect(hero.stack).toEqual([
       'FastAPI',
       'Pipecat',
@@ -71,6 +106,21 @@ describe('portfolio book', () => {
       'Zoho',
       'WhatsApp',
     ]);
+  });
+
+  it('test_projects_when_loaded_open_with_clear_project_descriptions', () => {
+    PORTFOLIO_CHAPTERS.forEach((chapter) => {
+      const [intro] = chapter.beats;
+
+      expect(intro.title).toBe(chapter.title);
+      expect(intro.sectionLabel).toBe(FIRST_BEAT_SECTION_LABELS[chapter.id]);
+      expect(intro.description.length).toBeGreaterThanOrEqual(135);
+      expect(intro.description).toContain(chapter.title.split(' ')[0]);
+      expect(intro.particleLines.length).toBeGreaterThanOrEqual(3);
+      expect(intro.particleLines.join(' ')).toContain(
+        chapter.title.split(' ')[0].toUpperCase(),
+      );
+    });
   });
 
   it('test_mira_when_loaded_has_tags_for_every_required_section', () => {

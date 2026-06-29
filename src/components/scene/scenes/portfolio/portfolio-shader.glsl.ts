@@ -5,6 +5,8 @@ export const portfolioVert = /* glsl */ `
   attribute vec3 aGlyphPosition;
   attribute vec3 aProjectPosition;
   attribute vec3 aTitleGlyphPosition;
+  attribute float aArtifactAlpha;
+  attribute float aArtifactScale;
   attribute float aBeatIndex;
   attribute float aProjectIndex;
   attribute float aRole;
@@ -44,6 +46,7 @@ export const portfolioVert = /* glsl */ `
     float filament = project * sameRole(aRole, 2.0);
     float nucleus = project * sameRole(aRole, 1.0);
     float artifactFocus = project * (1.0 - glyphRole) * max(uProjectMorph, readMorph);
+    float artifactTone = artifactFocus * aArtifactAlpha * (1.0 - readMorph * 0.78);
 
     vec3 home = position;
     vec3 pos = mix(home, aProjectPosition, project * uProjectMorph);
@@ -61,16 +64,18 @@ export const portfolioVert = /* glsl */ `
 
     float depth = max(1.0, -mv.z);
     float glyphFocus = max(glyph * uGlyphMorph, titleGlyph);
-    float intensity = 0.38 + project * 0.28 + beat * 0.2 + artifactFocus * 0.44 +
+    float intensity = 0.36 + project * 0.24 + beat * 0.18 + artifactTone * 0.92 +
       glyphFocus * 1.12;
-    float baseSize = 0.42 + nucleus * 0.26 + filament * 0.06 + artifactFocus * 0.16 +
+    float artifactSize = artifactFocus * aArtifactScale * (1.0 - readMorph * 0.42);
+    float baseSize = 0.42 + nucleus * 0.22 + filament * 0.05 + artifactSize * 0.12 +
       glyphFocus * 0.58;
     gl_PointSize = clamp(baseSize * uPixelRatio * (42.0 / depth) * uReveal, 0.16, 3.1);
 
     vec3 hot = vec3(1.0, 0.92, 0.72);
-    float readClearance = 1.0 - project * (1.0 - glyphRole) * readMorph * 0.48;
-    vColor = mix(aColor * 0.58, hot, beat * 0.34 + glyphFocus * 0.76) * intensity;
-    vAlpha = (0.035 + project * 0.07 + beat * 0.08 + artifactFocus * 0.2 +
+    float readClearance = 1.0 - project * (1.0 - glyphRole) * readMorph * 0.88;
+    float hotMix = glyphFocus * 0.76 + beat * glyphRole * 0.34 + beat * (1.0 - glyphRole) * 0.06;
+    vColor = mix(aColor * 0.46, hot, hotMix) * intensity;
+    vAlpha = (0.032 + project * 0.055 + beat * 0.07 + artifactTone * 0.95 +
       glyphFocus * 0.74) * readClearance * uReveal;
     vRole = aRole;
   }
