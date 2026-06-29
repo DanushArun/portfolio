@@ -67,6 +67,7 @@ describe('portfolio book', () => {
     const beats = PORTFOLIO_CHAPTERS.flatMap((chapter) => chapter.beats);
 
     expect(beats.every((beat) => beat.description.length > 0)).toBe(true);
+    expect(beats.every((beat) => beat.description.length <= 120)).toBe(true);
     expect(beats.every((beat) => beat.particleLines.length >= 1)).toBe(true);
     expect(beats.every((beat) => (
       beat.particleLines.every((line) => line.length <= PARTICLE_LINE_MAX)
@@ -82,21 +83,23 @@ describe('portfolio book', () => {
     });
   });
 
-  it('test_beats_when_loaded_keep_short_summary_copy_outside_particle_lines', () => {
-    const [hero] = getPortfolioChapter('MIRA').beats;
+  it('test_beats_when_loaded_have_one_description_source', () => {
+    PORTFOLIO_CHAPTERS.flatMap((chapter) => chapter.beats).forEach((beat) => {
+      const runtimeBeat = beat as unknown as Record<string, unknown>;
 
-    expect(hero.summaryLines).toEqual(['MIRA', 'VOICE INTAKE']);
-    expect(hero.particleLines.join(' ')).not.toContain('VOICE INTAKE');
+      expect(runtimeBeat.proof).toBeUndefined();
+      expect(runtimeBeat.summaryLines).toBeUndefined();
+    });
   });
 
   it('test_mira_hero_when_loaded_has_case_study_copy_and_tags', () => {
     const [hero] = getPortfolioChapter('MIRA').beats;
 
-    expect(hero.particleLines.join(' ')).toContain('MIRA IS A PRODUCTION VOICE');
-    expect(hero.particleLines.join(' ')).toContain('TELEPHONY AUDIO');
-    expect(hero.summaryLines.join(' ')).toContain('VOICE INTAKE');
-    expect(hero.description.startsWith('MIRA is')).toBe(true);
-    expect(hero.description).toContain('telephony');
+    expect(hero.particleLines.join(' ')).toContain('ZOHO RECEIVES THE LEAD');
+    expect(hero.particleLines.join(' ')).toContain('CRM');
+    expect(hero.description).toBe(
+      'Zoho receives the lead, MIRA calls the seller, and outcomes sync back to CRM.',
+    );
     expect(hero.stack).toEqual([
       'FastAPI',
       'Pipecat',
@@ -108,13 +111,26 @@ describe('portfolio book', () => {
     ]);
   });
 
+  it('test_vanguard_when_loaded_uses_local_testing_engine_terms', () => {
+    const text = JSON.stringify(getPortfolioChapter('VANGUARD'));
+
+    expect(text).toContain('template clustering');
+  });
+
+  it('test_formula_when_loaded_uses_manufacturing_and_competition_facts', () => {
+    const text = JSON.stringify(getPortfolioChapter('FORMULA'));
+
+    expect(text).toContain('3K twill carbon fiber');
+  });
+
   it('test_projects_when_loaded_open_with_clear_project_descriptions', () => {
     PORTFOLIO_CHAPTERS.forEach((chapter) => {
       const [intro] = chapter.beats;
 
       expect(intro.title).toBe(chapter.title);
       expect(intro.sectionLabel).toBe(FIRST_BEAT_SECTION_LABELS[chapter.id]);
-      expect(intro.description.length).toBeGreaterThanOrEqual(135);
+      expect(intro.description.length).toBeGreaterThanOrEqual(40);
+      expect(intro.description.length).toBeLessThanOrEqual(120);
       expect(intro.description).toContain(chapter.title.split(' ')[0]);
       expect(intro.particleLines.length).toBeGreaterThanOrEqual(3);
       expect(intro.particleLines.join(' ')).toContain(

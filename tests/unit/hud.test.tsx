@@ -31,4 +31,18 @@ describe('HUD progress', () => {
 
     expect(progressBeforeNext).not.toBeNull();
   });
+
+  it('test_hud_when_mira_is_active_keeps_bottom_right_progress_visible', () => {
+    act(() => {
+      useScene.setState({ journeyProgress: 0.57, phase: 'W01_MIRA' });
+    });
+
+    const { container } = render(<HUD />);
+
+    const bottomRightHud = container.querySelector(
+      '[data-phase-indicator] + [data-journey-progress] + [data-skip-next]',
+    );
+
+    expect(bottomRightHud).not.toBeNull();
+  });
 });

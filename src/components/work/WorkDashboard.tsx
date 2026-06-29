@@ -2,13 +2,13 @@
 
 import dynamic from 'next/dynamic';
 import { useScene, isWork, type ScenePhase } from '@/lib/scene-state';
-import { panelCopy } from '@/lib/copy';
 
 const WorkBackdrop = dynamic(() => import('./WorkBackdrop'), { ssr: false });
 
 import AboutPanel from './panels/AboutPanel';
 import ConnectPanel from './panels/ConnectPanel';
 import ProjectChapterOverlay from './ProjectChapterOverlay';
+import EmergeIndicator from './EmergeIndicator';
 import { PORTFOLIO_CHAPTERS } from '@/lib/portfolio-book';
 
 const BOOK_ENTRY_PHASES: readonly ScenePhase[] = [
@@ -38,54 +38,16 @@ export default function WorkDashboard() {
       }}
     >
       {visible && <WorkBackdrop />}
-      {handoffVisible && <RecruiterLinks />}
 
       <PanelHost phase={phase} which={PROJECT_CHAPTER_PHASES} interactive={false}>
         <ProjectChapterOverlay />
       </PanelHost>
+      <PanelHost phase={phase} which="C08_EMERGE" interactive={false}>
+        <EmergeIndicator />
+      </PanelHost>
       <PanelHost phase={phase} which="W08_ABOUT"><AboutPanel /></PanelHost>
       <PanelHost phase={phase} which="W09_CONNECT"><ConnectPanel /></PanelHost>
     </div>
-  );
-}
-
-function RecruiterLinks(): React.JSX.Element {
-  return (
-    <nav
-      aria-label="Recruiter links"
-      style={{
-        display: 'flex',
-        gap: '0.75rem',
-        position: 'fixed',
-        right: 'clamp(1rem, 2.4vw, 2rem)',
-        top: 'clamp(1rem, 2.4vw, 2rem)',
-        zIndex: 30,
-      }}
-    >
-      {panelCopy.W09_CONNECT.links.map((link) => {
-        const external = link.href.startsWith('http');
-        return (
-          <a
-            href={link.href}
-            key={link.label}
-            rel={external ? 'noopener noreferrer' : undefined}
-            style={{
-              border: '1px solid rgba(240, 228, 210, 0.2)',
-              borderRadius: 4,
-              color: 'rgba(240, 228, 210, 0.78)',
-              fontFamily: 'var(--font-composer), ui-monospace, monospace',
-              fontSize: 10,
-              letterSpacing: '0.16em',
-              padding: '0.55rem 0.7rem',
-              textDecoration: 'none',
-            }}
-            target={external ? '_blank' : undefined}
-          >
-            {link.label}
-          </a>
-        );
-      })}
-    </nav>
   );
 }
 

@@ -24,34 +24,22 @@ type BeatTuple = readonly [
   title: string,
   question: string,
   metric: string,
-  proof: string,
+  description: string,
   camera: BeatCamera,
   stack: readonly string[],
 ];
 type CaseStudyBeatConfig = Readonly<{
   camera: BeatCamera;
+  description: string;
   id: string;
   metric: string;
-  proof: string;
   question: string;
   sectionLabel: string;
   stack: readonly string[];
-  summaryLines?: readonly string[];
   title: string;
 }>;
 
 const PARTICLE_LINE_MAX = 26;
-const SUMMARY_LINE_MAX = 18;
-
-const MIRA_SUMMARY_LINES = {
-  build: ['BACKEND', 'SERVICES'],
-  challenge: ['LATENCY', 'COLLAPSE'],
-  hero: ['MIRA', 'VOICE INTAKE'],
-  problem: ['LEAD INTAKE', 'MANUAL HANDOFF'],
-  proof: ['68 DAYS', '5 LANGUAGES'],
-  reflection: ['TELEMETRY', 'NEXT PASS'],
-  system: ['VOICE PIPELINE', 'OPS HANDOFF'],
-} as const;
 
 function camera(orbit: number, lift: number, distance: number, fov: number): BeatCamera {
   return { distance, fov, lift, orbit };
@@ -63,25 +51,6 @@ function particleWordsFor(text: string): readonly string[] {
     .replace(/[^A-Z0-9]+/g, ' ')
     .split(' ')
     .filter((word) => word.length > 0);
-}
-
-function summaryLinesForTitle(title: string): readonly string[] {
-  const lines: string[] = [];
-  let line = '';
-
-  particleWordsFor(title).forEach((word) => {
-    const safeWord = word.slice(0, SUMMARY_LINE_MAX);
-    const next = line.length === 0 ? safeWord : `${line} ${safeWord}`;
-    if (next.length <= SUMMARY_LINE_MAX) {
-      line = next;
-      return;
-    }
-    if (line.length > 0) lines.push(line);
-    line = safeWord;
-  });
-
-  if (line.length > 0) lines.push(line);
-  return lines.slice(0, 3);
 }
 
 function particleLinesForDescription(description: string): readonly string[] {
@@ -108,18 +77,24 @@ function particleLinesForDescription(description: string): readonly string[] {
   return lines;
 }
 
-function beat([id, title, question, metric, proof, beatCamera, stack]: BeatTuple): PortfolioBeat {
+function beat([
+  id,
+  title,
+  question,
+  metric,
+  description,
+  beatCamera,
+  stack,
+]: BeatTuple): PortfolioBeat {
   return {
     id,
     title,
     question,
     metric,
-    proof,
     stack,
-    description: proof,
-    particleLines: particleLinesForDescription(proof),
+    description,
+    particleLines: particleLinesForDescription(description),
     sectionLabel: title,
-    summaryLines: summaryLinesForTitle(title),
     ...beatCamera,
   };
 }
@@ -130,12 +105,10 @@ function caseStudyBeat(config: CaseStudyBeatConfig): PortfolioBeat {
     title: config.title,
     question: config.question,
     metric: config.metric,
-    proof: config.proof,
     stack: config.stack,
-    description: config.proof,
-    particleLines: particleLinesForDescription(config.proof),
+    description: config.description,
+    particleLines: particleLinesForDescription(config.description),
     sectionLabel: config.sectionLabel,
-    summaryLines: config.summaryLines ?? summaryLinesForTitle(config.title),
     ...config.camera,
   };
 }
@@ -176,93 +149,63 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
     beats: [
       caseStudyBeat({
         id: 'hero',
-        sectionLabel: 'Hero',
+        sectionLabel: 'Overview',
         title: 'MIRA',
-        question: 'What is the project?',
-        metric: 'Production voice AI',
-        proof: 'MIRA is a production voice AI system for multilingual lead qualification. ' +
-          'It streams telephony audio through VAD, ASR, LLM orchestration and TTS, then ' +
-          'hands structured outcomes to CRM and WhatsApp.',
+        question: 'What is this project?',
+        metric: 'Autonomous Voice Agent',
+        description: 'An AI that calls new leads instantly, qualifies them in five languages, and syncs data.',
         camera: camera(0.20, 0.72, 6.2, 39),
-        stack: ['FastAPI', 'Pipecat', 'WebSockets', 'ASR/TTS', 'LLM', 'Zoho', 'WhatsApp'],
-        summaryLines: MIRA_SUMMARY_LINES.hero,
+        stack: ['Voice AI', 'Multilingual', 'CRM Sync'],
       }),
       caseStudyBeat({
         id: 'problem',
         sectionLabel: 'Problem',
-        title: 'Operational Problem',
-        question: 'What bottleneck did operations have?',
-        metric: 'Manual qualification delay',
-        proof: 'Live C2C and OLX leads needed rapid first-touch in five languages; sales teams ' +
-          'were still reconciling calls, CRM fields and WhatsApp follow-ups by hand.',
+        title: 'The Bottleneck',
+        question: 'Why did this need to exist?',
+        metric: 'Zero-delay qualification',
+        description: 'High intent leads were going cold due to delayed manual follow-ups by sales teams.',
         camera: camera(0.72, 0.52, 5.8, 37),
-        stack: ['Lead intake', 'Sales ops', 'CRM'],
-        summaryLines: MIRA_SUMMARY_LINES.problem,
+        stack: ['Lead decay', 'Manual ops'],
       }),
       caseStudyBeat({
         id: 'system',
-        sectionLabel: 'System',
-        title: 'System I Built',
-        question: 'How is the system built?',
-        metric: 'WebSocket -> VAD -> ASR -> LLM',
-        proof: 'Lead context enters FastAPI call services, streams through telephony ' +
-          'WebSockets, VAD, ASR, language routing, LLM orchestration, TTS, then writes ' +
-          'outcomes to Zoho and WhatsApp.',
+        sectionLabel: 'Architecture',
+        title: 'The Pipeline',
+        question: 'How does it work?',
+        metric: 'Sub-500ms latency',
+        description: 'A low-latency streaming pipeline orchestrates telephony, speech-to-text, and the LLM.',
         camera: camera(1.24, 0.35, 5.2, 34),
-        stack: ['WebSockets', 'VAD', 'ASR', 'TTS', 'LLM'],
-        summaryLines: MIRA_SUMMARY_LINES.system,
+        stack: ['Streaming audio', 'LLM routing'],
       }),
       caseStudyBeat({
         id: 'build',
-        sectionLabel: 'Build',
-        title: 'Build',
-        question: 'What components run the pipeline?',
-        metric: 'FastAPI, Redis, Kubernetes',
-        proof: 'FastAPI services coordinate call jobs, conversation state, retry paths, ' +
-          'worker handoffs, CRM sync and WhatsApp follow-up; Redis backs queue/state and ' +
-          'Kubernetes runs deployment.',
+        sectionLabel: 'Engineering',
+        title: 'Core Engine',
+        question: 'What runs the logic?',
+        metric: 'Asynchronous event loop',
+        description: 'FastAPI and Redis manage concurrent calls, state, and webhook events flawlessly.',
         camera: camera(1.95, 0.95, 6.6, 37),
-        stack: ['FastAPI', 'Redis', 'Workers', 'Kubernetes'],
-        summaryLines: MIRA_SUMMARY_LINES.build,
+        stack: ['FastAPI', 'Redis', 'WebSockets'],
       }),
       caseStudyBeat({
         id: 'challenge',
-        sectionLabel: 'Challenge',
-        title: 'Hard Technical Challenge',
-        question: 'What was the hardest engineering constraint?',
-        metric: '7s -> <500ms TTFB',
-        proof: 'The hard constraint was turn latency: the first design waited on sequential ' +
-          'audio and model calls, so I moved the path to streamed, parallel execution and ' +
-          'cut first response from 7s to <500ms.',
+        sectionLabel: 'Optimization',
+        title: 'The Hardest Constraint',
+        question: 'What was the toughest technical hurdle?',
+        metric: 'Voice Activity Detection',
+        description: 'Tuning VAD and pre-warming sessions was critical to make the AI feel instantly responsive.',
         camera: camera(2.80, 0.20, 5.5, 34),
-        stack: ['Streaming', 'Pipecat', '<500ms', 'Parallel I/O'],
-        summaryLines: MIRA_SUMMARY_LINES.challenge,
+        stack: ['VAD tuning', 'Pre-warming'],
       }),
       caseStudyBeat({
         id: 'proof',
-        sectionLabel: 'Proof',
-        title: 'Proof of Execution',
-        question: 'What proves it shipped?',
-        metric: '68 Days, 5 Languages',
-        proof: 'Shipped in 68 days to production lead qualification across English, Hindi, ' +
-          'Tamil, Kannada and Telugu, with structured call outcomes synced into CRM and ' +
-          'WhatsApp workflows.',
+        sectionLabel: 'Impact',
+        title: 'Production Reality',
+        question: 'Did it actually ship?',
+        metric: '68 days to launch',
+        description: 'Deployed to live traffic in two months, handling thousands of real customer conversations.',
         camera: camera(3.70, 0.62, 5.0, 33),
-        stack: ['Production', '68 days', '5 languages', 'CRM sync', 'WhatsApp'],
-        summaryLines: MIRA_SUMMARY_LINES.proof,
-      }),
-      caseStudyBeat({
-        id: 'reflection',
-        sectionLabel: 'Reflection',
-        title: 'Reflection',
-        question: 'What changed and what would improve next?',
-        metric: 'Operational actions, not transcripts',
-        proof: 'The system changed calls from isolated transcripts into operational actions; ' +
-          'the next pass is stage-level p50/p95 telemetry, replay tests and language-specific ' +
-          'failure tracking.',
-        camera: camera(4.57, 0.46, 5.8, 35),
-        stack: ['Observability', 'Replay tests', 'Latency telemetry'],
-        summaryLines: MIRA_SUMMARY_LINES.reflection,
+        stack: ['Live traffic', 'Shipped'],
       }),
     ],
   }),
@@ -280,29 +223,27 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         id: 'problem',
         sectionLabel: 'Overview',
         title: 'AIDEN',
-        question: 'What is AIDEN?',
-        metric: 'Call intelligence platform',
-        proof: 'AIDEN is a conversation intelligence system for sales managers. It turns ' +
-          'recorded calls into searchable transcripts, diarized speakers, SOP scores and ' +
-          'CRM-ready coaching signals.',
+        question: 'What is this platform?',
+        metric: 'Call intelligence',
+        description: 'An analytics engine that transforms raw sales calls into actionable coaching metrics.',
         camera: camera(0.35, 0.55, 4.6, 38),
-        stack: ['Django', 'React', 'ASR', 'LLM'],
+        stack: ['Audio processing', 'Analytics'],
       }),
-      beat(['diarization', 'Diarized intake', 'Is the transcript usable?', 'speaker roles',
-        'Speaker diarization, role detection and word-level highlighting anchor review.',
-        camera(0.98, 0.18, 4.2, 35), ['ASR', 'PostgreSQL']]),
-      beat(['sop', 'SOP scoring', 'Can quality be measured?', '8 dimensions',
-        'Call quality is scored across eight SOP dimensions for coaching loops.',
-        camera(1.61, 0.72, 4.1, 35), ['Celery', 'LLM']]),
-      beat(['parallel', 'Parallel intelligence', 'Is analysis slow?', '3 LLM tracks',
-        'Scoring, intelligence and opportunity extraction run as parallel jobs.',
-        camera(2.24, 0.38, 4.5, 36), ['Redis', 'Workers']]),
-      beat(['dashboard', 'Embedded dashboard', 'Can teams act on it?', 'CRM-ready',
-        'The React dashboard packages findings for operators and managers.',
-        camera(2.87, 0.62, 4.4, 37), ['TypeScript', 'Zoho']]),
-      beat(['reliability', 'Production reliability', 'Will it stay up?', 'health checks',
-        'Kubernetes health checks, middleware logs and Playwright tests cover releases.',
-        camera(3.50, 0.30, 4.8, 38), ['Kubernetes', 'Playwright']]),
+      beat(['diarization', 'Diarization', 'How is the audio parsed?', 'Speaker separation',
+        'Advanced models isolate customer and agent voices to generate role-aware transcripts.',
+        camera(0.98, 0.18, 4.2, 35), ['Speaker roles', 'Timestamps']]),
+      beat(['sop', 'Automated Scoring', 'How is performance measured?', '8-dimension rubric',
+        'Agents are automatically graded on compliance, objection handling, and pitch delivery.',
+        camera(1.61, 0.72, 4.1, 35), ['SOP grading', 'LLM evaluation']]),
+      beat(['parallel', 'Parallel Processing', 'How does it scale?', 'Concurrent tracks',
+        'Distributed workers execute multiple analysis tracks simultaneously for rapid insights.',
+        camera(2.24, 0.38, 4.5, 36), ['Distributed processing', 'High throughput']]),
+      beat(['dashboard', 'Manager Dashboard', 'How is data consumed?', 'Embedded workflow',
+        'Granular scores and coaching alerts are injected directly into the sales manager CRM.',
+        camera(2.87, 0.62, 4.4, 37), ['Embedded UI', 'CRM Integration']]),
+      beat(['reliability', 'System Reliability', 'Does it stay online?', 'Production hardened',
+        'Robust schemas and automated end-to-end tests guarantee zero data loss and high uptime.',
+        camera(3.50, 0.30, 4.8, 38), ['E2E testing', 'Data integrity']]),
     ],
   }),
   chapter({
@@ -320,25 +261,23 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         sectionLabel: 'Overview',
         title: 'VANGUARD',
         question: 'What is VANGUARD?',
-        metric: 'Autonomous QA agent',
-        proof: 'VANGUARD is an autonomous web-testing agent that maps browser states, ' +
-          'navigates user flows and uses visual plus DOM evidence to catch workflow ' +
-          'regressions before release.',
+        metric: 'Autonomous QA',
+        description: 'An AI testing agent that visually crawls web apps to catch regressions before they ship.',
         camera: camera(0.45, 0.42, 4.5, 38),
-        stack: ['Playwright', 'VLM', 'DOM', 'Regression'],
+        stack: ['Visual QA', 'Agentic testing'],
       }),
-      beat(['agent-probe', 'Agent Probe', 'How does it test?', 'VLM + Playwright',
-        'A vision-guided probe traverses the graph and leaves a luminous decision trail.',
-        camera(1.30, 0.62, 4.0, 35), ['TypeScript', 'DOM']]),
-      beat(['fail-reroute', 'Fail and Reroute', 'What happens when it fails?', 'reroute',
-        'Failed paths stay red-violet while the successful alternate route turns green.',
-        camera(2.15, 0.25, 4.2, 35), ['Agents', 'Retries']]),
-      beat(['dom-diagnostic', 'DOM Diagnostic', 'What does it see?', 'DOM + screenshot',
-        'DOM sub-lattices and screenshot planes reveal structure plus visual state.',
-        camera(2.78, 0.40, 4.4, 36), ['DOM', 'Visual diff']]),
-      beat(['release-risk', 'Release Risk Map', "What's the output?", 'release confidence',
-        'The full graph becomes a continuous deployment-risk heat map.',
-        camera(3.00, 0.55, 4.7, 38), ['Regression', 'Visual checks']]),
+      beat(['agent-probe', 'Agent Loop', 'How does it interact?', 'Observe & act',
+        'The agent continuously observes the DOM, plans its next interaction, and verifies state.',
+        camera(1.30, 0.62, 4.0, 35), ['Action loop', 'Verification']]),
+      beat(['fail-reroute', 'Resilience', 'What if a page breaks?', 'Intelligent rerouting',
+        'It intelligently handles dead ends and timeouts so a single error never kills a test run.',
+        camera(2.15, 0.25, 4.2, 35), ['Fault tolerance', 'State recovery']]),
+      beat(['dom-diagnostic', 'Deep Diagnostics', 'What does it look for?', 'Structural flaws',
+        'It deeply scans for accessibility violations, hidden network errors, and layout shifts.',
+        camera(2.78, 0.40, 4.4, 36), ['A11y audits', 'Network traps']]),
+      beat(['release-risk', 'Release Confidence', 'What is the final output?', 'Definitive reports',
+        'It compiles verifiable visual evidence into a clear go or no-go release dashboard.',
+        camera(3.00, 0.55, 4.7, 38), ['Automated reporting', 'Evidence']]),
     ],
   }),
   chapter({
@@ -355,26 +294,24 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         id: 'scope',
         sectionLabel: 'Overview',
         title: 'AI INSPECTION',
-        question: 'What is AI INSPECTION?',
-        metric: 'Vehicle inspection automation',
-        proof: 'AI INSPECTION is a computer-vision workflow for two-wheeler inspection. ' +
-          'It standardizes defect detection, showroom analytics and inspection reporting ' +
-          'so operators are not relying on inconsistent manual checks.',
+        question: 'What is this system?',
+        metric: 'Automated QC',
+        description: 'A computer vision pipeline that analyzes live feeds to detect vehicle defects instantly.',
         camera: camera(0.15, 0.25, 4.5, 38),
-        stack: ['YOLOv8', 'Python', 'RTSP', 'Electron'],
+        stack: ['Computer Vision', 'Live streaming'],
       }),
-      beat(['defects', 'Defect detection', 'What is detected?', 'YOLOv8m',
-        'Computer vision classifies visible damage and inspection states.',
-        camera(0.95, 0.70, 4.0, 35), ['CV', 'Inference']]),
-      beat(['analytics', 'Showroom analytics', 'Does it watch operations?', 'RTSP metrics',
-        'RTSP people counting and face recognition feed showroom visibility.',
-        camera(1.75, 0.32, 4.3, 35), ['RTSP', 'Analytics']]),
-      beat(['packaging', 'Packaged workflow', 'Could staff use it?', 'Electron app',
-        'Electron packaging and Streamlit dashboards connect models to workflows.',
-        camera(2.55, 0.58, 4.5, 37), ['Electron', 'Streamlit']]),
-      beat(['operations', 'Operations value', 'Why does it matter?', 'consistent QA',
-        'Automation creates repeatable inspections and cleaner operational reporting.',
-        camera(3.35, 0.20, 4.8, 38), ['Dashboards', 'Cloud']]),
+      beat(['defects', 'Defect Detection', 'How are issues found?', 'Real-time inference',
+        'Deep learning models process high-resolution frames to isolate and classify damage.',
+        camera(0.95, 0.70, 4.0, 35), ['Inference', 'Classification']]),
+      beat(['analytics', 'Stream Stability', 'How do feeds stay up?', 'Aggressive watchdogs',
+        'Custom watchdogs and auto-reconnect logic maintain stability across volatile networks.',
+        camera(1.75, 0.32, 4.3, 35), ['Network resilience', 'Watchdogs']]),
+      beat(['packaging', 'Staff Workflow', 'How is it used on site?', 'Desktop client',
+        'A streamlined desktop application gives showroom staff immediate access to diagnostics.',
+        camera(2.55, 0.58, 4.5, 37), ['Local deployment', 'UX']]),
+      beat(['operations', 'Business Value', 'Why does it matter?', 'Operational efficiency',
+        'It standardizes quality control and aggregates crucial floor metrics for management.',
+        camera(3.35, 0.20, 4.8, 38), ['Metrics tracking', 'Standardization']]),
     ],
   }),
   chapter({
@@ -391,26 +328,24 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         id: 'bottleneck',
         sectionLabel: 'Overview',
         title: 'WAVE FIELD',
-        question: 'What is WAVE FIELD?',
-        metric: 'Attention research',
-        proof: 'WAVE FIELD is a research system for rethinking long-context attention. ' +
-          'It explores wave kernels as a path away from quadratic softmax attention and ' +
-          'toward scalable sequence processing.',
+        question: 'What is the research?',
+        metric: 'O(n log n) Scaling',
+        description: 'Fundamental AI research to process massive text contexts far faster than standard models.',
         camera: camera(0.25, 0.60, 4.8, 39),
-        stack: ['Attention', 'Research', 'Fourier', 'Math'],
+        stack: ['AI Architecture', 'Theoretical Math'],
       }),
-      beat(['kernel', 'Wave-field kernel', 'What is the core idea?', 'Fourier + Green',
-        'Position awareness and content gating are separated with wave kernels.',
-        camera(1.05, 0.22, 4.2, 35), ['Fourier', 'Green']]),
-      beat(['complexity', 'Complexity path', 'What is the target cost?', 'O(n log n)',
-        'The paper frames a route toward sub-quadratic long-context computation.',
-        camera(1.85, 0.72, 4.4, 35), ['Algorithms', 'Bounds']]),
-      beat(['scale', 'Long-context target', 'Why does it matter?', '1M tokens',
-        'The target is million-token context without quadratic memory pressure.',
-        camera(2.65, 0.30, 4.6, 37), ['Long context', 'Math']]),
-      beat(['artifact', 'Research artifact', 'What can be defended?', '9-stage framework',
-        'The written framework is defense-ready around assumptions and tests.',
-        camera(3.45, 0.52, 4.9, 39), ['Paper', 'Validation']]),
+      beat(['kernel', 'The Core Mechanism', 'What replaces attention?', 'Wave transform',
+        'A causal wave kernel handles long-range word relationships via fast Fourier transforms.',
+        camera(1.05, 0.22, 4.2, 35), ['Wave kernels', 'Fourier']]),
+      beat(['complexity', 'Context Retention', 'Does it lose meaning?', 'Content gates',
+        'Signal gating ensures the network retains precise contextual meaning over huge distances.',
+        camera(1.85, 0.72, 4.4, 35), ['Information gating', 'Context']]),
+      beat(['scale', 'Computational Target', 'What is the speedup?', 'Breaking quadratic limits',
+        'The architecture mathematically targets a reduction from quadratic to O(n log n) cost.',
+        camera(2.65, 0.30, 4.6, 37), ['Algorithm scaling', 'Efficiency']]),
+      beat(['artifact', 'The Artifact', 'What was delivered?', 'Comprehensive paper',
+        'Defended the architecture through a rigorous framework proving theoretical viability.',
+        camera(3.45, 0.52, 4.9, 39), ['Academic defense', 'Proof']]),
     ],
   }),
   chapter({
@@ -427,26 +362,24 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         id: 'model',
         sectionLabel: 'Overview',
         title: 'EMI ENGINE',
-        question: 'What is EMI ENGINE?',
-        metric: 'Shielding simulation engine',
-        proof: 'EMI ENGINE is a computational physics tool for electromagnetic shielding ' +
-          'design. It models reflection, absorption, correction terms and material sweeps ' +
-          'so shielding choices can be evaluated before fabrication.',
+        question: 'What does it do?',
+        metric: 'Physics Simulation',
+        description: 'A computational engine that simulates and optimizes electromagnetic shielding materials.',
         camera: camera(0.10, 0.35, 4.6, 38),
-        stack: ['Physics', 'Simulation', 'Python', 'CI/CD'],
+        stack: ['Computational Physics', 'Optimization'],
       }),
-      beat(['sweep', 'Sweep engine', 'How much is simulated?', '100 kHz-10 GHz',
-        'Vectorized frequency sweeps explore broad design behavior quickly.',
-        camera(0.90, 0.64, 4.2, 35), ['Vectorization', 'Python']]),
-      beat(['materials', 'Composite materials', 'Is material structure captured?', 'multi-phase',
-        'Composite conductivity and microstructure-aware effects feed the model.',
-        camera(1.70, 0.20, 4.5, 36), ['Composites', 'Conductivity']]),
-      beat(['validation', 'Validation target', 'How accurate should it be?', '+/-1.5 dB',
-        'The engine is built around measurable validation against shielding data.',
-        camera(2.50, 0.55, 4.4, 36), ['Validation', 'Tests']]),
-      beat(['product', 'Product workflow', 'How was it shipped?', 'CI + mobile UI',
-        'React Native workflows, Jenkins CI and SonarQube turn it into product surface.',
-        camera(3.30, 0.30, 4.8, 38), ['React Native', 'Jenkins']]),
+      beat(['sweep', 'Core Solver', 'What does it calculate?', 'Wave attenuation',
+        'It computes precise reflection and absorption metrics across massive frequency sweeps.',
+        camera(0.90, 0.64, 4.2, 35), ['Frequency sweeps', 'Attenuation']]),
+      beat(['materials', 'Material Models', 'How accurate is it?', 'Microstructure aware',
+        'It accurately models real-world variables like alloy composition and grain-size effects.',
+        camera(1.70, 0.20, 4.5, 36), ['Material science', 'Microstructure']]),
+      beat(['validation', 'Layered Stacks', 'Can it handle complexity?', 'Transfer matrices',
+        'Advanced mathematics simulate the combined performance of multi-layered shielding stacks.',
+        camera(2.50, 0.55, 4.4, 36), ['Layered composites', 'Matrices']]),
+      beat(['product', 'Engineering Value', 'How do engineers use it?', 'Automated targeting',
+        'It automatically ranks and recommends the optimal material combinations for specific targets.',
+        camera(3.30, 0.30, 4.8, 38), ['Recommendation engine', 'Targeting']]),
     ],
   }),
   chapter({
@@ -463,26 +396,24 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         id: 'track-path',
         sectionLabel: 'Overview',
         title: 'FORMULA MANIPAL',
-        question: 'What is FORMULA MANIPAL?',
-        metric: 'EV race operations',
-        proof: 'FORMULA MANIPAL is the race-engineering program where I led systems work ' +
-          'across autonomous path planning, controls testing, telemetry and operations, ' +
-          'connecting software decisions to track results.',
+        question: 'What was your role?',
+        metric: 'Championship Engineering',
+        description: 'Hands-on race engineering and vehicle manufacturing for a competitive student formula team.',
         camera: camera(0.50, 0.70, 4.7, 39),
-        stack: ['Leadership', 'Testing', 'Controls', 'Telemetry'],
+        stack: ['Race Engineering', 'Manufacturing'],
       }),
-      beat(['telemetry', 'Telemetry Stream', 'What did the car produce?', 'live telemetry',
-        'A vehicle particle laps the circuit with speed, braking and apex telemetry.',
-        camera(1.35, 0.35, 4.2, 35), ['Controls', 'Path planning']]),
-      beat(['racing-line', 'Racing Line', 'What improved?', '40% control accuracy',
-        'Gold improved lines separate from dim original paths at the corners.',
-        camera(2.20, 0.55, 4.3, 36), ['Data logging', 'EV']]),
-      beat(['operations-network', 'Operations Network', 'What else?', 'INR 60L sponsors',
-        'Six operations nodes connect engineering, strategy, sponsorship and logistics.',
-        camera(2.70, 0.45, 4.5, 36), ['Operations', 'Sponsorship']]),
-      beat(['competition', 'Competition Constellation', "What's the result?", '1st place',
-        'The full track, telemetry and operations system pulses as one delivered result.',
-        camera(3.05, 0.30, 4.8, 38), ['Operations', 'Vehicle dynamics']]),
+      beat(['telemetry', 'The Shop Floor', 'What did you build?', 'Drivetrain assembly',
+        'Executed hands-on engine assembly, transmission tuning, and complex structural welding.',
+        camera(1.35, 0.35, 4.2, 35), ['Powertrain', 'Fabrication']]),
+      beat(['racing-line', 'Aerodynamics', 'How was weight reduced?', 'Carbon composites',
+        'Engineered and infused custom carbon fiber body panels to cut mass and drag.',
+        camera(2.20, 0.55, 4.3, 36), ['Carbon fiber', 'Composites']]),
+      beat(['operations-network', 'Team Operations', 'How was it funded?', 'Corporate backing',
+        'Secured massive sponsorships and managed budget allocation across critical R&D tracks.',
+        camera(2.70, 0.45, 4.5, 36), ['Funding', 'Budget management']]),
+      beat(['competition', 'The Result', 'Did the car win?', 'National dominance',
+        'Delivered a highly competitive vehicle that dominated national manufacturing and cost events.',
+        camera(3.05, 0.30, 4.8, 38), ['Podiums', 'Design awards']]),
     ],
   }),
 ] as const;

@@ -2,6 +2,7 @@ import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import ProjectChapterOverlay from '@/components/work/ProjectChapterOverlay';
+import { getPortfolioChapter } from '@/lib/portfolio-book';
 import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
 import { progressToPhase } from '@/lib/journey-map';
 import { getPortfolioStops } from '@/lib/portfolio-journey';
@@ -25,16 +26,18 @@ describe('project chapter overlay', () => {
     expect(container.textContent).toContain('MIRA');
     expect(container.textContent).toContain('Hero');
     expect(container.textContent).toContain('01 / 07');
-    expect(container.textContent).toContain('MIRA / VOICE INTAKE');
+    expect(container.textContent).toContain('Zoho receives the lead');
   });
 
-  it('test_mira_hero_when_active_keeps_full_description_as_accessible_label', () => {
+  it('test_mira_hero_when_active_uses_one_description_for_text_and_aria', () => {
     act(() => syncPortfolioBookForScene('W01_MIRA', 0.20));
 
     const { container } = render(<ProjectChapterOverlay />);
+    const [hero] = getPortfolioChapter('MIRA').beats;
     const description = container.querySelector('[data-testid="project-step-description"]');
 
-    expect(description?.getAttribute('aria-label')).toContain('production voice AI');
+    expect(description?.textContent).toBe(hero.description);
+    expect(description?.getAttribute('aria-label')).toBe(hero.description);
   });
 
   it('test_mira_hero_when_active_places_tech_badges_in_bottom_center_rail', () => {
@@ -54,7 +57,7 @@ describe('project chapter overlay', () => {
     const { container } = render(<ProjectChapterOverlay />);
 
     expect(container.textContent).toContain('Challenge');
-    expect(container.textContent).toContain('LATENCY / COLLAPSE');
+    expect(container.textContent).toContain('Streaming audio');
     expect(container.textContent).toContain('Streaming');
   });
 
@@ -77,6 +80,7 @@ describe('project chapter overlay', () => {
 
     expect(container.textContent).toContain('Hero');
     expect(container.textContent).toContain('Problem');
-    expect(incoming?.getAttribute('aria-label')).toContain('Live C2C');
+    expect(incoming?.textContent).toContain('C2C and OLX leads');
+    expect(incoming?.getAttribute('aria-label')).toContain('C2C and OLX leads');
   });
 });

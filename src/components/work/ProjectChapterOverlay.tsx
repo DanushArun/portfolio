@@ -35,10 +35,6 @@ function stepLabel(current: number, total: number): string {
   return `${String(current).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
 }
 
-function summaryLabel(lines: readonly string[]): string {
-  return lines.join(' / ');
-}
-
 function copyForStop(stop: PortfolioStop): StepCopy {
   const chapter = getPortfolioChapter(stop.projectId);
   const beatIndex = Math.min(stop.beatIndex, chapter.beats.length - 1);
@@ -120,7 +116,7 @@ function StepIdentity({
         className={styles.description}
         data-testid={descriptionTestId}
       >
-        {summaryLabel(copy.beat.summaryLines)}
+        {copy.beat.description}
       </p>
     </div>
   );

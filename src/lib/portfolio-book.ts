@@ -31,11 +31,9 @@ export interface PortfolioBeat {
   readonly metric: string;
   readonly orbit: number;
   readonly particleLines: readonly string[];
-  readonly proof: string;
   readonly question: string;
   readonly sectionLabel: string;
   readonly stack: readonly string[];
-  readonly summaryLines: readonly string[];
   readonly title: string;
 }
 

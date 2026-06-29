@@ -7,7 +7,7 @@ import { panelCopy } from '@/lib/copy';
 
 const PANELS = [
   { title: 'SYSTEMS-FIRST ENGINEER', Component: AboutPanel },
-  { title: "LET'S CONNECT", Component: ConnectPanel },
+  { title: 'SEND THE SIGNAL', Component: ConnectPanel },
 ] as const;
 
 afterEach(() => cleanup());
@@ -25,9 +25,26 @@ describe('work panels', () => {
     expect(container.textContent).not.toContain('Stub');
   });
 
-  it('test_connect_email_when_rendered_matches_resume_contact', () => {
+  it('test_connect_email_when_rendered_matches_contact_source', () => {
     const email = panelCopy.W09_CONNECT.links.find((link) => link.label === 'EMAIL');
 
     expect(email?.href).toBe('mailto:danusharun999@gmail.com');
+  });
+
+  it('test_connect_links_when_rendered_expose_existing_handoff_paths', () => {
+    const { container } = render(<ConnectPanel />);
+    const hrefs = Array.from(container.querySelectorAll('a')).map((link) => link.href);
+
+    expect(hrefs).toEqual(expect.arrayContaining([
+      'https://linkedin.com/in/danush-arun-5aa762267',
+      'https://github.com/DanushArun',
+      'mailto:danusharun999@gmail.com',
+    ]));
+  });
+
+  it('test_about_panel_when_rendered_shows_operating_loop', () => {
+    const { container } = render(<AboutPanel />);
+
+    expect(container.textContent).toContain('Find the bottleneck');
   });
 });

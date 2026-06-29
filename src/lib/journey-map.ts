@@ -38,8 +38,8 @@ const WORK_WEIGHTS: Record<(typeof WORK_PHASES)[number], number> = {
   W05_WAVEFIELD: 1.6,
   W06_EMI: 1.6,
   W07_FORMULA: 1.3,
-  W08_ABOUT: 0.6,
-  W09_CONNECT: 0.5,
+  W08_ABOUT: 1.0,
+  W09_CONNECT: 0.9,
 };
 
 const WORK_TOTAL_WEIGHT = WORK_PHASES.reduce((sum, phase) => sum + WORK_WEIGHTS[phase], 0);

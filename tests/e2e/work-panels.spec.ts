@@ -20,10 +20,8 @@ async function waitForJourneyControls(
   await page.waitForFunction(() => {
     const testWindow = window as Window & {
       __setJourneyProgress?: (value: number) => void;
-      __portfolioDebug?: { activeProjectId?: string | null };
     };
-    return typeof testWindow.__setJourneyProgress === 'function' &&
-      typeof testWindow.__portfolioDebug === 'object';
+    return typeof testWindow.__setJourneyProgress === 'function';
   }, undefined, { timeout: 30_000 });
 }
 
@@ -68,11 +66,14 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
 
   await expect(page.getByTestId('project-chapter-title')).toContainText('MIRA');
   await expect(page.getByTestId('project-step-description'))
-    .toContainText('MIRA / VOICE INTAKE');
+    .toContainText('Zoho receives the lead');
   await expect(page.getByTestId('project-step-description'))
-    .toHaveAttribute('aria-label', /production voice AI/);
+    .toHaveAttribute('aria-label', /Zoho receives the lead/);
   await expect(page.getByTestId('project-tag-rail')).toContainText('FastAPI');
   await expect(page.locator('[data-testid="mira-system-trace"]')).toHaveCount(0);
+  await expect(page.locator('[data-phase-indicator]')).toBeVisible();
+  await expect(page.locator('[data-journey-progress]')).toBeVisible();
+  await expect(page.locator('[data-skip-next]')).toBeVisible();
 
   await expect.poll(async () => page.evaluate(() => {
     const testWindow = window as Window & {
@@ -95,4 +96,33 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
   expect(titleBox).not.toBeNull();
   expect(tagBox).not.toBeNull();
   expect(titleBox?.y ?? 0).toBeLessThan(tagBox?.y ?? 0);
+});
+
+test('test_about_phase_when_scrubbed_shows_finale_identity', async ({ page }) => {
+  await page.goto('/');
+  await waitForJourneyControls(page);
+
+  await page.evaluate((progress) => {
+    const testWindow = window as Window & {
+      __setJourneyProgress?: (value: number) => void;
+    };
+    testWindow.__setJourneyProgress?.(progress);
+  }, phaseToProgress('W08_ABOUT', 0.5));
+
+  await expect(page.getByRole('heading', { name: 'SYSTEMS-FIRST ENGINEER' })).toBeVisible();
+});
+
+test('test_connect_phase_when_scrubbed_exposes_email_handoff', async ({ page }) => {
+  await page.goto('/');
+  await waitForJourneyControls(page);
+
+  await page.evaluate((progress) => {
+    const testWindow = window as Window & {
+      __setJourneyProgress?: (value: number) => void;
+    };
+    testWindow.__setJourneyProgress?.(progress);
+  }, phaseToProgress('W09_CONNECT', 0.5));
+
+  await expect(page.getByRole('link', { name: /Email Danush/i }))
+    .toHaveAttribute('href', 'mailto:danusharun999@gmail.com');
 });

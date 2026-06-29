@@ -15,11 +15,10 @@ import styles from './HUD.module.css';
 
 const C04_FADE_START = 0.155;
 const C04_FADE_END = 0.205;
-const MIRA_PHASES: readonly ScenePhase[] = [
+const HUD_HIDDEN_PHASES: readonly ScenePhase[] = [
   'C07_TRANSITION',
   'C08_EMERGE',
   'C09_PROJECT',
-  'W01_MIRA',
 ];
 
 function c04Opacity(journey: number): number {
@@ -36,7 +35,7 @@ export default function HUD(): React.JSX.Element | null {
   const phase = useScene((s) => s.phase);
   const opacity = c04Opacity(journey);
 
-  if (MIRA_PHASES.includes(phase)) return null;
+  if (HUD_HIDDEN_PHASES.includes(phase)) return null;
 
   return (
     <div className={styles.root} aria-label="Scene controls" style={{ opacity }}>
