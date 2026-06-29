@@ -123,7 +123,6 @@ function scrollToProgress(
       }, SNAP_COOLDOWN_MS);
     },
   });
-  applyJourneyProgress(progress);
 }
 
 function jumpToProgress(progress: number): void {

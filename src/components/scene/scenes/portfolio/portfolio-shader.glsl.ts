@@ -64,19 +64,19 @@ export const portfolioVert = /* glsl */ `
 
     float depth = max(1.0, -mv.z);
     float glyphFocus = max(glyph * uGlyphMorph, titleGlyph);
-    float intensity = 0.36 + project * 0.24 + beat * 0.18 + artifactTone * 0.92 +
-      glyphFocus * 1.12;
+    float intensity = 0.32 + project * 0.18 + beat * 0.12 + artifactTone * 0.58 +
+      glyphFocus * 2.08;
     float artifactSize = artifactFocus * aArtifactScale * (1.0 - readMorph * 0.42);
     float baseSize = 0.42 + nucleus * 0.22 + filament * 0.05 + artifactSize * 0.12 +
-      glyphFocus * 0.58;
-    gl_PointSize = clamp(baseSize * uPixelRatio * (42.0 / depth) * uReveal, 0.16, 3.1);
+      glyphFocus * 1.02;
+    gl_PointSize = clamp(baseSize * uPixelRatio * (42.0 / depth) * uReveal, 0.16, 4.4);
 
     vec3 hot = vec3(1.0, 0.92, 0.72);
-    float readClearance = 1.0 - project * (1.0 - glyphRole) * readMorph * 0.88;
-    float hotMix = glyphFocus * 0.76 + beat * glyphRole * 0.34 + beat * (1.0 - glyphRole) * 0.06;
+    float readClearance = 1.0 - project * (1.0 - glyphRole) * readMorph * 0.98;
+    float hotMix = glyphFocus * 0.98 + beat * glyphRole * 0.42 + beat * (1.0 - glyphRole) * 0.03;
     vColor = mix(aColor * 0.46, hot, hotMix) * intensity;
     vAlpha = (0.032 + project * 0.055 + beat * 0.07 + artifactTone * 0.95 +
-      glyphFocus * 0.74) * readClearance * uReveal;
+      glyphFocus * 1.36) * readClearance * uReveal;
     vRole = aRole;
   }
 `;
@@ -100,8 +100,8 @@ export const portfolioFrag = /* glsl */ `
     float glyph = sameRole(vRole, 4.0);
     float core = pow(1.0 - dist, 6.0);
     float soft = pow(1.0 - dist, 1.7);
-    float alpha = (soft + core * (0.32 + glyph * 0.62)) * vAlpha;
-    vec3 color = vColor * (0.32 + soft * 0.48 + core * 0.82);
+    float alpha = (soft + core * (0.32 + glyph * 1.14)) * vAlpha;
+    vec3 color = vColor * (0.28 + soft * 0.44 + core * (0.86 + glyph * 0.42));
 
     gl_FragColor = vec4(color, alpha);
   }

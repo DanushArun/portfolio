@@ -44,6 +44,18 @@ describe('portfolio supercluster', () => {
     return points;
   }
 
+  function beatParticleCount(config: {
+    readonly beatIndex: number;
+    readonly projectId: string;
+  }): number {
+    const model = buildPortfolioSuperclusterModel();
+    return model.attributes.projectIndex.reduce((sum, projectIndex, index) => {
+      const project = PORTFOLIO_CHAPTERS[projectIndex]?.id;
+      if (project !== config.projectId) return sum;
+      return model.attributes.beatIndex[index] === config.beatIndex ? sum + 1 : sum;
+    }, 0);
+  }
+
   function spread(values: readonly number[]): number {
     return Math.max(...values) - Math.min(...values);
   }
@@ -134,6 +146,27 @@ describe('portfolio supercluster', () => {
     const model = buildPortfolioSuperclusterModel();
 
     expect(model.count).toBeGreaterThan(180_000);
+  });
+
+  it('test_model_when_description_is_long_allocates_more_particles', () => {
+    const miraHeroCount = beatParticleCount({ beatIndex: 0, projectId: 'MIRA' });
+    const aidenSopCount = beatParticleCount({ beatIndex: 2, projectId: 'AIDEN' });
+
+    expect(miraHeroCount).toBeGreaterThan(aidenSopCount);
+  });
+
+  it('test_model_when_built_keeps_each_beat_above_readable_particle_floor', () => {
+    const model = buildPortfolioSuperclusterModel();
+    const counts = new Map<string, number>();
+
+    model.attributes.projectIndex.forEach((projectIndex, index) => {
+      const project = PORTFOLIO_CHAPTERS[projectIndex]?.id;
+      const beat = model.attributes.beatIndex[index];
+      const key = `${project}-${beat}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+
+    expect(Math.min(...counts.values())).toBeGreaterThanOrEqual(5200);
   });
 
   it('test_glyph_positions_when_description_is_long_fit_reading_plane_width', { timeout: 15_000 }, () => {

@@ -78,6 +78,9 @@ const GLYPH_CELL_STEP = 0.043;
 const GLYPH_ROLE_SHARE = 0.9;
 const GLYPH_WORLD_MAX_HEIGHT = 2.1;
 const GLYPH_WORLD_MAX_WIDTH = 4.25;
+const MIN_PARTICLES_PER_BEAT = 5200;
+const MAX_PARTICLES_PER_BEAT = 18000;
+const GLYPH_CELLS_PER_PARTICLE = 0.55;
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -188,9 +191,23 @@ export function portfolioProjectIndex(id: PortfolioChapterId): number {
 
 function particleCount(particlesPerBeat: number): number {
   return PORTFOLIO_CHAPTERS.reduce(
-    (sum, chapter) => sum + chapter.beats.length * particlesPerBeat,
+    (sum, chapter) => sum + chapter.beats.reduce((chapterSum, beat) => {
+      const glyphLayout = buildPortfolioGlyphLayout(beat.particleLines);
+      return chapterSum + particlesForGlyphLayout(glyphLayout, particlesPerBeat);
+    }, 0),
     0,
   );
+}
+
+function particlesForGlyphLayout(
+  layout: PortfolioGlyphLayout,
+  targetParticles: number,
+): number {
+  const viewportScale = targetParticles / DEFAULT_PARTICLES_PER_BEAT;
+  const min = Math.round(MIN_PARTICLES_PER_BEAT * viewportScale);
+  const max = Math.round(MAX_PARTICLES_PER_BEAT * viewportScale);
+  const dynamic = Math.ceil(layout.cells.length / GLYPH_CELLS_PER_PARTICLE);
+  return Math.max(min, Math.min(max, dynamic));
 }
 
 function emptyAttributes(count: number): PortfolioSuperclusterAttributes {
@@ -282,7 +299,8 @@ export function buildPortfolioSuperclusterModel(
     chapter.beats.forEach((beat, beatIndex) => {
       const target = beatCenter(chapter.node.anchor, beatIndex, chapter.beats.length);
       const glyphLayout = buildPortfolioGlyphLayout(beat.particleLines);
-      for (let i = 0; i < particlesPerBeat; i += 1) {
+      const beatParticles = particlesForGlyphLayout(glyphLayout, particlesPerBeat);
+      for (let i = 0; i < beatParticles; i += 1) {
         writeParticle({
           attrs,
           beatCenter: target,
@@ -293,7 +311,7 @@ export function buildPortfolioSuperclusterModel(
           glyphLayout,
           id: chapter.id,
           localIndex: i,
-          particlesPerBeat,
+          particlesPerBeat: beatParticles,
           projectIndex,
           titleGlyphLayout,
         });
