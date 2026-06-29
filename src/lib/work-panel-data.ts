@@ -129,7 +129,7 @@ export const workPanelDetails = {
     lead: 'Systems-first engineer with software, AI, physics and product execution range.',
     role: 'I am strongest when the work needs architecture, implementation and defense.',
     metrics: [
-      { label: 'Primary lane', value: 'AI systems' },
+      { label: 'Primary lane', value: 'AI systems & product' },
       { label: 'Execution style', value: 'End-to-end' },
       { label: 'Interview focus', value: 'Defense-ready' },
     ],
@@ -145,7 +145,7 @@ export const workPanelDetails = {
     role: 'The fastest next step is a technical screen or systems walkthrough.',
     metrics: [
       { label: 'Location', value: 'Bengaluru' },
-      { label: 'Target', value: 'AI systems' },
+      { label: 'Target', value: 'AI systems & product' },
       { label: 'Contact', value: 'Email' },
     ],
     proof: [

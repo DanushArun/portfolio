@@ -117,7 +117,7 @@ export const panelCopy = {
     body: 'I build the layer between ambitious AI ideas and operating reality: backends, ' +
       'agents, data flows, product surfaces and the tradeoffs that keep them alive.',
     chips: [
-      'AI SYSTEMS',
+      'AI SYSTEMS & PRODUCT',
       'FULL STACK',
       'BACKEND ARCHITECTURE',
       'PRODUCT JUDGMENT',
@@ -126,7 +126,7 @@ export const panelCopy = {
     ],
     trail: ['FIND THE BOTTLENECK', 'BUILD THE SYSTEM', 'DEFEND THE TRADEOFF'],
     skills: [
-      'AI SYSTEMS',
+      'AI SYSTEMS & PRODUCT',
       'BACKEND ENGINEERING',
       'FRONTEND EXECUTION',
       'RESEARCH',

@@ -6,6 +6,8 @@
 
 import { useScene, ALL_PHASES, type ScenePhase } from '@/lib/scene-state';
 import { phaseToProgress } from '@/lib/journey-map';
+import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
+import { getPrimaryPortfolioStopForPhase } from '@/lib/portfolio-journey';
 import styles from './HUD.module.css';
 
 const FINAL_PHASE: ScenePhase = ALL_PHASES[ALL_PHASES.length - 1];
@@ -16,6 +18,7 @@ function nextPhaseProgress(phase: ScenePhase): number | null {
   const index = ALL_PHASES.indexOf(phase);
   const next = ALL_PHASES[index + 1];
   if (!next) return null;
+  if (isPortfolioChapterPhase(next)) return getPrimaryPortfolioStopForPhase(next).progress;
   return phaseToProgress(next, 0.05);
 }
 

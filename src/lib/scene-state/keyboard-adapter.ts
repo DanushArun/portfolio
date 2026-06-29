@@ -12,6 +12,7 @@ import { syncMiraCatalogueForScene } from '@/lib/mira-state';
 import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
 import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
 import {
+  getPrimaryPortfolioStopForPhase,
   getPortfolioStopForProgress,
   getPortfolioStops,
   resolvePortfolioStep,
@@ -59,7 +60,9 @@ function isFormFocused(): boolean {
 
 function phaseAt(idx: number, local: number): number {
   const clamped = Math.max(0, Math.min(ALL_PHASES.length - 1, idx));
-  return phaseToProgress(ALL_PHASES[clamped], Math.max(0, Math.min(1, local)));
+  const phase = ALL_PHASES[clamped];
+  if (isPortfolioChapterPhase(phase)) return getPrimaryPortfolioStopForPhase(phase).progress;
+  return phaseToProgress(phase, Math.max(0, Math.min(1, local)));
 }
 
 function applyProgress(target: number): void {

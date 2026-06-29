@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getPrimaryPortfolioStopForPhase,
   getPortfolioStopForProgress,
   getPortfolioStops,
   resolvePortfolioGesture,
@@ -29,6 +30,13 @@ describe('portfolio journey stops', () => {
       beatIndex: 2,
       cameraLocked: true,
     });
+  });
+
+  it('test_primary_stop_when_mira_phase_requested_returns_first_readable_beat', () => {
+    const stop = getPrimaryPortfolioStopForPhase('W01_MIRA');
+
+    expect(stop.id).toBe('MIRA-hero');
+    expect(stop.kind).toBe('proofBeat');
   });
 
   it('test_gesture_when_delta_is_small_holds_current_stop', () => {

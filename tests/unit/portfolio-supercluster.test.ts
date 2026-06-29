@@ -10,6 +10,7 @@ import { buildPortfolioGlyphLayout } from '@/lib/portfolio-glyphs';
 import { getPortfolioStops } from '@/lib/portfolio-journey';
 import {
   buildPortfolioSuperclusterModel,
+  getPortfolioTitleGlyphLines,
   getPortfolioMorphState,
   portfolioProjectIndex,
 } from '@/lib/portfolio-supercluster';
@@ -211,6 +212,14 @@ describe('portfolio supercluster', () => {
 
     expect(model.projectRanges.find((project) => project.id === 'FORMULA')?.label)
       .toBe('RACE OPS');
+  });
+
+  it('test_title_glyph_lines_when_mira_title_builds_do_not_use_description_copy', () => {
+    const lines = getPortfolioTitleGlyphLines(getPortfolioChapter('MIRA'));
+    const text = lines.join(' ');
+
+    expect(lines).toEqual(['MIRA', 'VOICE AI']);
+    expect(text).not.toMatch(/calls new leads|qualifies them|syncs data/i);
   });
 
   it('test_morph_state_when_phase_is_aiden_selects_aiden_and_current_beat', () => {

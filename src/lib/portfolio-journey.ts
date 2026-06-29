@@ -117,6 +117,15 @@ export function getProgressForPortfolioStop(index: number): number {
   return stops[clamped].progress;
 }
 
+export function getPrimaryPortfolioStopForPhase(phase: PortfolioProjectPhase): PortfolioStop {
+  const stops = getPortfolioStops();
+  const proofStop = stops.find((stop) => stop.phase === phase && stop.kind === 'proofBeat');
+  const titleStop = stops.find((stop) => stop.phase === phase && stop.kind === 'projectTitle');
+  const stop = proofStop ?? titleStop;
+  if (!stop) throw new Error(`Missing primary portfolio stop for ${phase}`);
+  return stop;
+}
+
 export function resolvePortfolioGesture(input: PortfolioGestureInput): PortfolioGestureResult {
   return resolvePortfolioStep({
     currentProgress: input.currentProgress,

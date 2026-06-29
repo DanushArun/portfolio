@@ -2,6 +2,7 @@ import {
   PORTFOLIO_CHAPTERS,
   getPortfolioBookSnapshot,
   isPortfolioChapterPhase,
+  type PortfolioChapter,
   type PortfolioChapterId,
   type PortfolioProjectPhase,
   type PortfolioVec3,
@@ -185,6 +186,10 @@ function titleCenter(center: PortfolioVec3): PortfolioVec3 {
   return [center[0] + 0.42, center[1] + 0.06, center[2] + 0.1];
 }
 
+export function getPortfolioTitleGlyphLines(chapter: PortfolioChapter): readonly string[] {
+  return [chapter.title, getPortfolioArtifactLabel(chapter.id)];
+}
+
 function roleFor(localIndex: number, total: number): number {
   const t = localIndex / Math.max(1, total - 1);
   if (t < GLYPH_ROLE_SHARE) return PORTFOLIO_PARTICLE_ROLE.glyph;
@@ -317,9 +322,7 @@ export function buildPortfolioSuperclusterModel(
     const start = cursor;
     const color = hexToRgb(chapter.node.color);
     const label = getPortfolioArtifactLabel(chapter.id);
-    const titleGlyphLayout = buildPortfolioGlyphLayout(
-      chapter.beats[0]?.particleLines ?? [chapter.id, label],
-    );
+    const titleGlyphLayout = buildPortfolioGlyphLayout(getPortfolioTitleGlyphLines(chapter));
     chapter.beats.forEach((beat, beatIndex) => {
       const target = beatCenter(chapter.node.anchor, beatIndex, chapter.beats.length);
       const glyphLayout = buildPortfolioGlyphLayout(beat.particleLines);
