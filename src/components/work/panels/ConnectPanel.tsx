@@ -48,9 +48,9 @@ function SignalHeader({ titleId }: { titleId: string }): React.JSX.Element {
         {copy.eyebrow}
       </p>
       <h1 className={styles.signalTitle} id={titleId}>{copy.title}</h1>
-      <p className={styles.connectLead}>{copy.body}</p>
-      <p className={styles.connectBody}>{detail.lead}</p>
-      <p className={styles.connectBody}>{detail.role}</p>
+      {copy.body && <p className={styles.connectLead}>{copy.body}</p>}
+      {detail.lead && <p className={styles.connectBody}>{detail.lead}</p>}
+      {detail.role && <p className={styles.connectBody}>{detail.role}</p>}
     </>
   );
 }

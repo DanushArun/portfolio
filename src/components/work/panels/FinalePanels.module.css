@@ -70,8 +70,10 @@
 }
 
 .aboutDetail {
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  justify-content: center;
 }
 
 .eyebrow,
@@ -143,8 +145,8 @@
 
 .metricStrip {
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .metricCell,

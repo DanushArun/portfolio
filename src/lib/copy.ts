@@ -139,7 +139,7 @@ export const panelCopy = {
     number: '09',
     eyebrow: "LET'S CONNECT",
     title: 'SEND THE SIGNAL',
-    body: 'Best fit: teams building AI products where correctness, latency and ownership matter.',
+    body: '',
     trail: ['EMAIL FIRST', 'TECHNICAL SCREEN', 'SYSTEMS WALKTHROUGH'],
     links: [
       {

@@ -131,7 +131,6 @@ export const workPanelDetails = {
     metrics: [
       { label: 'Primary lane', value: 'AI systems & product' },
       { label: 'Execution style', value: 'End-to-end' },
-      { label: 'Interview focus', value: 'Defense-ready' },
     ],
     proof: [
       'Production signal: multilingual voice AI, call intelligence and CV workflows.',
@@ -141,7 +140,7 @@ export const workPanelDetails = {
     stack: ['Python', 'TypeScript', 'React', 'Kubernetes', 'PostgreSQL', 'ML Systems'],
   },
   W09_CONNECT: {
-    lead: 'Best fit: teams building AI products with real operational consequences.',
+    lead: '',
     role: 'The fastest next step is a technical screen or systems walkthrough.',
     metrics: [
       { label: 'Location', value: 'Bengaluru' },

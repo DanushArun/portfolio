@@ -4,20 +4,7 @@ import { workPanelDetails, type WorkPanelMetric } from '@/lib/work-panel-data';
 
 import styles from './FinalePanels.module.css';
 
-const OPERATING_LOOP = [
-  {
-    title: 'Find the bottleneck',
-    body: 'Start from the real constraint: latency, handoff quality, reliability or proof.',
-  },
-  {
-    title: 'Build the system',
-    body: 'Turn the constraint into services, product surfaces and tests that operators can use.',
-  },
-  {
-    title: 'Defend the tradeoff',
-    body: 'Explain what shipped, what was rejected, where it fails and what improves next.',
-  },
-] as const;
+
 
 function MetricStrip({ metrics }: { metrics: readonly WorkPanelMetric[] }): React.JSX.Element {
   return (
@@ -36,31 +23,7 @@ function MetricStrip({ metrics }: { metrics: readonly WorkPanelMetric[] }): Reac
   );
 }
 
-function OperatingLoop(): React.JSX.Element {
-  return (
-    <div className={styles.loopGrid} aria-label="Operating loop">
-      {OPERATING_LOOP.map((beat, index) => (
-        <article 
-          className={`${styles.loopCard} ${styles.staggerReveal}`} 
-          style={{ '--stagger-index': index + 3 } as React.CSSProperties}
-          key={beat.title}
-        >
-          <span className={styles.loopIndex}>0{index + 1}</span>
-          <h2>{beat.title}</h2>
-          <p>{beat.body}</p>
-        </article>
-      ))}
-    </div>
-  );
-}
 
-function ProofRail({ proof }: { proof: readonly string[] }): React.JSX.Element {
-  return (
-    <ul className={`${styles.proofRail} ${styles.staggerReveal}`} style={{ '--stagger-index': 6 } as React.CSSProperties} aria-label="Proof points">
-      {proof.map((item) => <li key={item}>{item}</li>)}
-    </ul>
-  );
-}
 
 function SkillCloud({ skills }: { skills: readonly string[] }): React.JSX.Element {
   return (
@@ -106,8 +69,8 @@ export default function AboutPanel(): React.JSX.Element {
 
       <div className={styles.aboutDetail}>
         <MetricStrip metrics={detail.metrics} />
-        <OperatingLoop />
-        <ProofRail proof={detail.proof} />
+
+
         <SkillCloud skills={copy.skills} />
       </div>
     </section>
