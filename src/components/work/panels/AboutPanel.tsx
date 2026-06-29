@@ -22,8 +22,12 @@ const OPERATING_LOOP = [
 function MetricStrip({ metrics }: { metrics: readonly WorkPanelMetric[] }): React.JSX.Element {
   return (
     <div className={styles.metricStrip} aria-label="Engineer profile">
-      {metrics.map((metric) => (
-        <div className={styles.metricCell} key={metric.label}>
+      {metrics.map((metric, index) => (
+        <div 
+          className={`${styles.metricCell} ${styles.staggerReveal}`} 
+          style={{ '--stagger-index': index } as React.CSSProperties}
+          key={metric.label}
+        >
           <span>{metric.label}</span>
           <strong>{metric.value}</strong>
         </div>
@@ -36,7 +40,11 @@ function OperatingLoop(): React.JSX.Element {
   return (
     <div className={styles.loopGrid} aria-label="Operating loop">
       {OPERATING_LOOP.map((beat, index) => (
-        <article className={styles.loopCard} key={beat.title}>
+        <article 
+          className={`${styles.loopCard} ${styles.staggerReveal}`} 
+          style={{ '--stagger-index': index + 3 } as React.CSSProperties}
+          key={beat.title}
+        >
           <span className={styles.loopIndex}>0{index + 1}</span>
           <h2>{beat.title}</h2>
           <p>{beat.body}</p>
@@ -48,7 +56,7 @@ function OperatingLoop(): React.JSX.Element {
 
 function ProofRail({ proof }: { proof: readonly string[] }): React.JSX.Element {
   return (
-    <ul className={styles.proofRail} aria-label="Proof points">
+    <ul className={`${styles.proofRail} ${styles.staggerReveal}`} style={{ '--stagger-index': 6 } as React.CSSProperties} aria-label="Proof points">
       {proof.map((item) => <li key={item}>{item}</li>)}
     </ul>
   );
@@ -57,7 +65,15 @@ function ProofRail({ proof }: { proof: readonly string[] }): React.JSX.Element {
 function SkillCloud({ skills }: { skills: readonly string[] }): React.JSX.Element {
   return (
     <div className={styles.skillCloud} aria-label="Skill areas">
-      {skills.map((skill) => <span key={skill}>{skill}</span>)}
+      {skills.map((skill, index) => (
+        <span 
+          key={skill}
+          className={styles.staggerReveal}
+          style={{ '--stagger-index': 7 + (index % 5) } as React.CSSProperties}
+        >
+          {skill}
+        </span>
+      ))}
     </div>
   );
 }

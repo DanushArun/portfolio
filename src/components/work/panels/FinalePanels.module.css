@@ -1,6 +1,14 @@
 .root {
   --panel-accent: #ffa85c;
   --panel-primary: #f0e4d2;
+  
+  /* Motion Tokens */
+  --duration-fast: 200ms;
+  --duration-normal: 400ms;
+  --duration-slow: 720ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
   color: var(--color-cream);
   height: 100%;
   isolation: isolate;
@@ -51,13 +59,17 @@
 }
 
 .heroBlock,
-.aboutDetail,
 .signalFrame {
-  animation: finaleRise 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: finaleRise var(--duration-slow) var(--ease-out) both;
+}
+
+.staggerReveal {
+  animation: finaleRise var(--duration-normal) var(--ease-spring) both;
+  animation-delay: calc(var(--stagger-index, 0) * 80ms + 400ms);
+  will-change: transform, opacity;
 }
 
 .aboutDetail {
-  animation-delay: 110ms;
   display: grid;
   gap: 1rem;
 }
@@ -145,6 +157,17 @@
   background: rgba(8, 7, 10, 0.48);
   border: 1px solid rgba(240, 228, 210, 0.12);
   border-radius: 10px;
+}
+
+.metricCell,
+.loopCard {
+  transition: transform var(--duration-fast) var(--ease-spring), border-color var(--duration-fast);
+}
+
+.metricCell:hover,
+.loopCard:hover {
+  border-color: color-mix(in srgb, var(--panel-accent), transparent 40%);
+  transform: translateY(-4px);
 }
 
 .metricCell {
@@ -235,6 +258,12 @@
   color: color-mix(in srgb, var(--panel-accent), white 16%);
   font-size: 0.62rem;
   padding: 0.44rem 0.62rem;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+.skillCloud span:hover {
+  background-color: color-mix(in srgb, var(--panel-accent), transparent 85%);
+  color: var(--panel-primary);
 }
 
 .signalFrame {
@@ -267,6 +296,7 @@
 
 .primaryCta {
   align-items: center;
+  animation: hudGlow 3s ease-in-out infinite;
   background: var(--panel-accent);
   border: 1px solid var(--panel-accent);
   border-radius: 999px;
@@ -278,6 +308,7 @@
   margin-top: 2rem;
   padding: 0.9rem 1rem 0.9rem 1.2rem;
   text-transform: uppercase;
+  transition: transform var(--duration-fast) var(--ease-spring), filter var(--duration-fast);
 }
 
 .primaryCta span {
@@ -306,6 +337,7 @@
   display: grid;
   gap: 0.35rem;
   padding: 0.9rem 1rem;
+  transition: background var(--duration-fast), transform var(--duration-fast) var(--ease-spring);
 }
 
 .secondaryLink span {
@@ -349,11 +381,18 @@
 }
 
 .primaryCta:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.12);
+  transform: scale(1.02);
 }
 
 .secondaryLink:hover {
   background: color-mix(in srgb, var(--panel-accent), transparent 90%);
+  transform: translateY(-2px);
+}
+
+@keyframes hudGlow {
+  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--panel-accent), transparent 60%); }
+  50% { box-shadow: 0 0 20px color-mix(in srgb, var(--panel-accent), transparent 30%), 0 0 35px color-mix(in srgb, var(--panel-accent), transparent 60%); }
 }
 
 @keyframes finaleRise {
@@ -410,8 +449,28 @@
 
 @media (prefers-reduced-motion: reduce) {
   .heroBlock,
-  .aboutDetail,
-  .signalFrame {
+  .signalFrame,
+  .staggerReveal {
     animation: none;
+    transition: none;
+  }
+  
+  .primaryCta {
+    animation: none;
+    transition: none;
+  }
+  
+  .metricCell,
+  .loopCard,
+  .skillCloud span,
+  .secondaryLink {
+    transition: none;
+  }
+  
+  .metricCell:hover,
+  .loopCard:hover,
+  .primaryCta:hover,
+  .secondaryLink:hover {
+    transform: none;
   }
 }

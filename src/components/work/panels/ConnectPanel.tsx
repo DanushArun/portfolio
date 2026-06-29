@@ -20,12 +20,13 @@ function secondaryLinks(): readonly ConnectLink[] {
   return panelCopy.W09_CONNECT.links.filter((link) => link.label !== 'EMAIL');
 }
 
-function HandoffLink({ link }: { link: ConnectLink }): React.JSX.Element {
+function HandoffLink({ link, index }: { link: ConnectLink; index: number }): React.JSX.Element {
   const external = isExternalLink(link);
   return (
     <a
       aria-label={`${link.label.toLowerCase()} contact path`}
-      className={styles.secondaryLink}
+      className={`${styles.secondaryLink} ${styles.staggerReveal}`}
+      style={{ '--stagger-index': index + 1 } as React.CSSProperties}
       href={link.href}
       rel={external ? 'noopener noreferrer' : undefined}
       target={external ? '_blank' : undefined}
@@ -58,7 +59,11 @@ function PrimaryEmailLink(): React.JSX.Element {
   const email = linkByLabel('EMAIL');
 
   return (
-    <a className={styles.primaryCta} href={email.href}>
+    <a 
+      className={`${styles.primaryCta} ${styles.staggerReveal}`} 
+      style={{ '--stagger-index': 0 } as React.CSSProperties}
+      href={email.href}
+    >
       <span>Email Danush</span>
       <strong>danusharun999@gmail.com</strong>
     </a>
@@ -68,14 +73,18 @@ function PrimaryEmailLink(): React.JSX.Element {
 function SecondaryLinks(): React.JSX.Element {
   return (
     <div className={styles.secondaryGrid} aria-label="Secondary handoff links">
-      {secondaryLinks().map((link) => <HandoffLink key={link.label} link={link} />)}
+      {secondaryLinks().map((link, i) => <HandoffLink key={link.label} link={link} index={i} />)}
     </div>
   );
 }
 
 function BestNextStep(): React.JSX.Element {
   return (
-    <div className={styles.nextStep} aria-label="Best next step">
+    <div 
+      className={`${styles.nextStep} ${styles.staggerReveal}`} 
+      style={{ '--stagger-index': 4 } as React.CSSProperties}
+      aria-label="Best next step"
+    >
       <span>Best next step</span>
       <strong>Technical screen or systems walkthrough.</strong>
     </div>
