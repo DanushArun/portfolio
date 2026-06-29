@@ -21,13 +21,6 @@ interface PortfolioSuperclusterProps {
   readonly reveal: number;
 }
 
-interface MorphUniformConfig {
-  readonly materialRef: React.RefObject<THREE.ShaderMaterial | null>;
-  readonly morph: PortfolioMorphState;
-  readonly reducedMotion: boolean;
-  readonly reveal: number;
-}
-
 function buildUniforms(): Record<string, THREE.IUniform<number>> {
   return {
     uActiveBeat: { value: -1 },
@@ -44,22 +37,27 @@ function buildUniforms(): Record<string, THREE.IUniform<number>> {
   };
 }
 
-function useMorphUniforms(config: MorphUniformConfig): void {
+function useMorphUniforms(
+  materialRef: React.RefObject<THREE.ShaderMaterial | null>,
+  morph: PortfolioMorphState,
+  reducedMotion: boolean,
+  reveal: number,
+): void {
   useFrame(({ clock }) => {
-    const material = config.materialRef.current;
+    const material = materialRef.current;
     if (!material) return;
     const uniforms = material.uniforms;
-    uniforms.uActiveBeat.value = config.morph.activeBeat;
-    uniforms.uActiveProject.value = config.morph.activeProject;
-    uniforms.uBeatMorph.value = config.reducedMotion ? 1 : config.morph.beatMorph;
-    uniforms.uGlyphMorph.value = config.reducedMotion ? 0.82 : config.morph.glyphMorph;
-    uniforms.uMotion.value = config.reducedMotion ? 0 : 1;
+    uniforms.uActiveBeat.value = morph.activeBeat;
+    uniforms.uActiveProject.value = morph.activeProject;
+    uniforms.uBeatMorph.value = reducedMotion ? 1 : morph.beatMorph;
+    uniforms.uGlyphMorph.value = reducedMotion ? 0.82 : morph.glyphMorph;
+    uniforms.uMotion.value = reducedMotion ? 0 : 1;
     uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio || 1, 1.5);
-    uniforms.uProjectMorph.value = config.reducedMotion ? 1 : config.morph.projectMorph;
-    uniforms.uRelease.value = config.reducedMotion ? 0 : config.morph.release;
-    uniforms.uReveal.value = config.reveal;
-    uniforms.uTitleMorph.value = config.morph.titleMorph;
-    uniforms.uTime.value = config.reducedMotion ? 0 : clock.elapsedTime;
+    uniforms.uProjectMorph.value = reducedMotion ? 1 : morph.projectMorph;
+    uniforms.uRelease.value = reducedMotion ? 0 : morph.release;
+    uniforms.uReveal.value = reveal;
+    uniforms.uTitleMorph.value = morph.titleMorph;
+    uniforms.uTime.value = reducedMotion ? 0 : clock.elapsedTime;
   });
 }
 
@@ -138,7 +136,7 @@ export default function PortfolioSupercluster({
   const morph = getPortfolioMorphState(phase, local, progress);
   const attrs = model.attributes;
 
-  useMorphUniforms({ materialRef, morph, reducedMotion, reveal });
+  useMorphUniforms(materialRef, morph, reducedMotion, reveal);
   usePortfolioDebug({ model, morph, progress });
 
   return (

@@ -8,142 +8,76 @@
   width: 100%;
 }
 
-.titleBlock {
-  bottom: clamp(1.9rem, 4.8vh, 3.4rem);
-  left: clamp(1.2rem, 3.6vw, 4rem);
-  max-width: min(28rem, 31vw);
+.context {
+  display: grid;
+  gap: 0.4rem;
+  left: clamp(1.4rem, 9.8vw, 12rem);
   position: absolute;
+  top: clamp(1rem, 3.6vh, 2.6rem);
 }
 
-.title {
-  color: rgba(250, 239, 220, 0.54);
+.context p,
+.caption {
+  font-family: var(--font-composer), ui-monospace, monospace;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.context p {
+  color: rgba(255, 197, 111, 0.72);
+  font-size: clamp(0.72rem, 0.82vw, 0.9rem);
+  margin: 0;
+}
+
+.context h1 {
+  color: rgba(250, 239, 220, 0.66);
   font-family: var(--font-dop), Georgia, Cambria, "Times New Roman", serif;
-  font-size: clamp(3.3rem, 4.7vw, 5.9rem);
+  font-size: clamp(4.5rem, 7.8vw, 10rem);
   font-style: italic;
   font-weight: 400;
   letter-spacing: 0;
-  line-height: 0.82;
+  line-height: 0.78;
   margin: 0;
-  text-shadow:
-    0 0 18px rgba(255, 232, 190, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.10);
+  text-shadow: 0 0 28px rgba(255, 197, 111, 0.10);
 }
 
-.labels {
-  font-family: var(--font-composer), ui-monospace, monospace;
-  inset: 0;
-  pointer-events: none;
-  position: absolute;
-}
-
-.label {
-  color: rgba(255, 218, 126, 0.84);
-  font-size: clamp(1rem, 1.6vw, 1.55rem);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  position: absolute;
-  text-shadow:
-    0 0 16px rgba(255, 166, 54, 0.56),
-    0 0 2px rgba(0, 0, 0, 0.96);
-}
-
-.en {
-  left: 34.5%;
-  top: 23.5%;
-}
-
-.hi {
-  left: 60.5%;
-  top: 33%;
-}
-
-.ta {
-  left: 32%;
-  top: 57%;
-}
-
-.kn {
-  left: 68.5%;
-  top: 58.5%;
-}
-
-.te {
-  left: 49.5%;
-  top: 70%;
-}
-
-.gameStatus {
-  align-items: center;
-  color: rgba(255, 232, 190, 0.78);
+.caption {
+  align-items: baseline;
+  color: rgba(240, 228, 210, 0.74);
   display: flex;
-  font-family: var(--font-composer), ui-monospace, monospace;
-  gap: 0.6rem;
-  left: 50%;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  max-width: min(62vw, 56rem);
+}
+
+.caption span,
+.caption em {
+  color: rgba(255, 197, 111, 0.78);
+  font-size: clamp(0.7rem, 0.78vw, 0.84rem);
+  font-style: normal;
+}
+
+.caption strong {
+  color: rgba(250, 239, 220, 0.86);
+  font-family: var(--font-dop), Georgia, Cambria, "Times New Roman", serif;
+  font-size: clamp(1.2rem, 1.7vw, 2rem);
+  font-style: italic;
+  font-weight: 400;
   letter-spacing: 0;
-  position: absolute;
-  text-shadow:
-    0 0 14px rgba(255, 160, 62, 0.28),
-    0 2px 5px rgba(0, 0, 0, 0.82);
-  top: clamp(1rem, 4vh, 2.4rem);
-  transform: translateX(-50%);
-}
-
-.gameStatus span {
-  font-size: clamp(0.7rem, 0.88vw, 0.9rem);
-  text-transform: uppercase;
-}
-
-.gameStatus strong {
-  color: rgba(255, 205, 113, 0.94);
-  font-size: clamp(0.82rem, 1vw, 1rem);
-  font-weight: 650;
-}
-
-.proof {
-  color: rgba(255, 232, 190, 0.88);
-  display: grid;
-  font-family: var(--font-composer), ui-monospace, monospace;
-  gap: 0.28rem;
-  max-width: min(23rem, 30vw);
-  position: absolute;
-  text-shadow:
-    0 0 16px rgba(255, 160, 62, 0.32),
-    0 2px 5px rgba(0, 0, 0, 0.86);
-  transform: translate(-50%, -50%);
-}
-
-.proof strong {
-  color: rgba(255, 205, 113, 0.96);
-  font-size: clamp(1.08rem, 1.5vw, 1.45rem);
-  font-weight: 650;
-  letter-spacing: 0;
-  line-height: 1;
-}
-
-.proof span {
-  font-size: clamp(0.64rem, 0.78vw, 0.82rem);
-  letter-spacing: 0;
-  line-height: 1.35;
-}
-
-.regionTitle {
-  color: rgba(255, 205, 113, 0.88);
-  font-weight: 650;
-  text-transform: uppercase;
-}
-
-.question {
-  color: rgba(181, 205, 255, 0.72);
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 @media (max-width: 760px) {
-  .titleBlock {
-    bottom: 2.4rem;
-    max-width: 78vw;
+  .context {
+    left: 1.1rem;
+    top: 1rem;
   }
 
-  .proof {
-    max-width: 48vw;
+  .context h1 {
+    font-size: clamp(4rem, 21vw, 6.3rem);
+  }
+
+  .caption {
+    max-width: calc(100vw - 2.2rem);
   }
 }

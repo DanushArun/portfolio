@@ -8,6 +8,7 @@ import { useScene } from '@/lib/scene-state';
 
 import { MiraNebulaField } from './mira/MiraNebulaField';
 import { MiraSignalRibbons } from './mira/MiraSignalRibbons';
+import { MiraSystemArtifact } from './mira/MiraSystemArtifact';
 import { MiraTendrilLines } from './mira/MiraTendrilLines';
 import type { Quality } from './mira/knot-config';
 import PortfolioSupercluster from './portfolio/PortfolioSupercluster';
@@ -38,6 +39,7 @@ export default function MiraSupercluster({
       <MiraTendrilLines reveal={reveal} />
       {showSignalRibbons ? <MiraSignalRibbons reveal={reveal} /> : null}
       <PortfolioSupercluster reveal={reveal} />
+      {phase === 'W01_MIRA' ? <MiraSystemArtifact forceVisible reveal={reveal} /> : null}
     </group>
   );
 }

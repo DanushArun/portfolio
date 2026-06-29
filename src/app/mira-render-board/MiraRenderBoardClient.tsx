@@ -9,6 +9,7 @@ import {
   getMiraArtifactBeatByIndex,
   type MiraArtifactBeat,
 } from '@/components/scene/scenes/mira/mira-artifact-model';
+import { getMiraFlowSnapshot } from '@/lib/mira-flow';
 import styles from './MiraRenderBoardClient.module.css';
 
 const DEFAULT_BEAT_INDEX = 5;
@@ -77,15 +78,17 @@ function Readout({ beat, beatIndex }: {
   readonly beat: MiraArtifactBeat;
   readonly beatIndex: number;
 }): React.JSX.Element {
+  const snapshot = getMiraFlowSnapshot(beatIndex);
+
   return (
     <aside className={styles.readout}>
       <p className={styles.eyebrow}>REMOTION BOARD / FRAME {frameForBeat(beatIndex)}</p>
       <h1 className={styles.title}>MIRA</h1>
       <p className={styles.frame}>{beatIndex + 1}/8</p>
-      <h2 className={styles.beatName}>{titleForBeat(beat)}</h2>
-      <strong className={styles.metric}>{outputLabel(beat)}</strong>
+      <h2 className={styles.beatName}>{snapshot.title}</h2>
+      <strong className={styles.metric}>{snapshot.metric}</strong>
       <p className={styles.copy}>
-        Voice intake, orchestration, and operational outputs rendered as one inspectable system.
+        Particle flow: {snapshot.activeStage.label}. {outputLabel(beat)} path is active.
       </p>
     </aside>
   );

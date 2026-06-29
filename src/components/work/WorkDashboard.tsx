@@ -8,6 +8,7 @@ const WorkBackdrop = dynamic(() => import('./WorkBackdrop'), { ssr: false });
 
 import AboutPanel from './panels/AboutPanel';
 import ConnectPanel from './panels/ConnectPanel';
+import MiraPanel from './panels/MiraPanel';
 
 const BOOK_ENTRY_PHASES: readonly ScenePhase[] = [
   'C07_TRANSITION',
@@ -37,6 +38,7 @@ export default function WorkDashboard() {
       {visible && <WorkBackdrop />}
       {handoffVisible && <RecruiterLinks />}
 
+      <PanelHost phase={phase} which="W01_MIRA" interactive={false}><MiraPanel /></PanelHost>
       <PanelHost phase={phase} which="W08_ABOUT"><AboutPanel /></PanelHost>
       <PanelHost phase={phase} which="W09_CONNECT"><ConnectPanel /></PanelHost>
     </div>

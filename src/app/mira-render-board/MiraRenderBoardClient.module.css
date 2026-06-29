@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  overflow: hidden;
+  overflow: auto;
   background:
     radial-gradient(circle at 68% 36%, rgba(255, 168, 92, 0.16), transparent 32%),
     radial-gradient(circle at 24% 72%, rgba(120, 184, 255, 0.1), transparent 30%),
@@ -118,10 +118,6 @@
 }
 
 @media (max-width: 900px) {
-  .page {
-    overflow: auto;
-  }
-
   .stage {
     grid-template-columns: 1fr;
     min-height: auto;

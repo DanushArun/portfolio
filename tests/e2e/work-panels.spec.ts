@@ -40,3 +40,41 @@ test('test_project_phases_when_scrubbed_activate_particle_supercluster', async (
     await expect(page.locator('body')).not.toContainText('catalogue');
   }
 });
+
+test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('canvas', { timeout: 30_000 });
+  await page.waitForTimeout(1000);
+
+  const progress = phaseToProgress('W01_MIRA', 0.5);
+
+  await page.evaluate((progress) => {
+    const testWindow = window as Window & {
+      __setJourneyProgress?: (value: number) => void;
+    };
+    testWindow.__setJourneyProgress?.(progress);
+  }, progress);
+
+  await page.waitForTimeout(600);
+
+  await expect(page.getByTestId('mira-project-title')).toContainText('MIRA');
+  await expect(page.getByTestId('mira-particle-caption')).toContainText('Realtime Voice Intake');
+  await expect(page.locator('[data-testid="mira-system-trace"]')).toHaveCount(0);
+
+  await expect.poll(async () => page.evaluate(() => {
+    const testWindow = window as Window & {
+      __miraArtifactDebug?: { activeBeatId: string; hasFlowTargets: boolean };
+    };
+    return testWindow.__miraArtifactDebug;
+  })).toMatchObject({
+    activeBeatId: 'voice',
+    hasFlowTargets: true,
+  });
+
+  const titleBox = await page.getByTestId('mira-project-title').boundingBox();
+  const captionBox = await page.getByTestId('mira-particle-caption').boundingBox();
+
+  expect(titleBox).not.toBeNull();
+  expect(captionBox).not.toBeNull();
+  expect(titleBox?.y ?? 0).toBeLessThan(captionBox?.y ?? 0);
+});
