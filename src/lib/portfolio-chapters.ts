@@ -48,7 +48,7 @@ function camera(orbit: number, lift: number, distance: number, fov: number): Bea
 function particleWordsFor(text: string): readonly string[] {
   return text
     .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/[^A-Z0-9,]+/g, ' ')
     .split(' ')
     .filter((word) => word.length > 0);
 }

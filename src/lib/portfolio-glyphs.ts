@@ -55,12 +55,13 @@ const GLYPHS: Record<string, readonly string[]> = {
   7: ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
   8: ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
   9: ['01110', '10001', '10001', '01111', '00001', '00001', '01110'],
+  ',': ['00000', '00000', '00000', '00000', '00000', '00110', '00100'],
 };
 
 function normalizeLine(value: string): string {
   const normalized = value
     .toUpperCase()
-    .replace(/[^A-Z0-9 ]+/g, ' ')
+    .replace(/[^A-Z0-9 ,]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   return normalized.length > 0 ? normalized.slice(0, MAX_GLYPH_LINE_LENGTH) : 'PROJECT';
