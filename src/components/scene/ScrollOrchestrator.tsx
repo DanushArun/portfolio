@@ -106,24 +106,22 @@ export default function ScrollOrchestrator() {
     };
     const jumpWithLenis = (progress: number): void => {
       const clampedProgress = Math.max(0, Math.min(1, progress));
-      const target = clampedProgress * getTotalScroll();
       warpAutoplayConsumedRef.current = clampedProgress >= WARP_START_PROGRESS;
       resetPortfolioStepTransition();
       snappingRef.current = false;
-      lenis.scrollTo(target, { duration: 0, force: true, lock: false });
-      window.scrollTo({ top: target, behavior: 'auto' });
+      syncLenisScrollPosition(lenis, clampedProgress);
       applyJourneyProgressNow(clampedProgress);
       lastProgressRef.current = clampedProgress;
     };
     const finishWarpAutoplay = (): void => {
       if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
       warpFrameRef.current = null;
-      syncScrollPosition(WARP_RELEASE_PROGRESS);
+      lastProgressRef.current = WARP_RELEASE_PROGRESS;
+      syncLenisScrollPosition(lenis, WARP_RELEASE_PROGRESS);
       applyJourneyProgressNow(WARP_RELEASE_PROGRESS);
       useScene.getState().setWarpAutoplayActive(false);
       snappingRef.current = false;
       lenis.start();
-      lastProgressRef.current = WARP_RELEASE_PROGRESS;
     };
     const startWarpAutoplay = (): void => {
       if (warpAutoplayConsumedRef.current) return;
@@ -132,7 +130,8 @@ export default function ScrollOrchestrator() {
       useScene.getState().setWarpAutoplayActive(true);
       snappingRef.current = true;
       lenis.stop();
-      syncScrollPosition(WARP_START_PROGRESS);
+      lastProgressRef.current = WARP_START_PROGRESS;
+      syncLenisScrollPosition(lenis, WARP_START_PROGRESS);
       applyJourneyProgressNow(WARP_START_PROGRESS);
       const startedAt = performance.now();
       const tick = (now: number): void => {
@@ -180,7 +179,12 @@ export default function ScrollOrchestrator() {
         event.preventDefault();
         return;
       }
-      handlePortfolioTouch(event, touchStartYRef, isPortfolioLocked(snappingRef.current), snapToStop);
+      handlePortfolioTouch(
+        event,
+        touchStartYRef,
+        isPortfolioLocked(snappingRef.current),
+        snapToStop,
+      );
     };
 
     window.addEventListener('wheel', onWheel, { capture: true, passive: false });
@@ -255,9 +259,9 @@ function scrollToProgress(
   });
 }
 
-function syncScrollPosition(progress: number): void {
+function syncLenisScrollPosition(lenis: Lenis, progress: number): void {
   const target = progress * getTotalScroll();
-  window.scrollTo({ top: target, behavior: 'auto' });
+  lenis.scrollTo(target, { immediate: true, force: true, lock: false });
 }
 
 function easeInOut(t: number): number {
