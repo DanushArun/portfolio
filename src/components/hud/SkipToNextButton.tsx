@@ -5,24 +5,40 @@
 // AC11 keyboard adapter dispatches the same `advanceScene()` action.
 
 import { useScene, ALL_PHASES, type ScenePhase } from '@/lib/scene-state';
+import { phaseToProgress } from '@/lib/journey-map';
 import styles from './HUD.module.css';
 
 const FINAL_PHASE: ScenePhase = ALL_PHASES[ALL_PHASES.length - 1];
 const PENULTIMATE_PHASE: ScenePhase = ALL_PHASES[ALL_PHASES.length - 2];
+const JOURNEY_NAVIGATION_EVENT = 'portfolio:go-to-progress';
+
+function nextPhaseProgress(phase: ScenePhase): number | null {
+  const index = ALL_PHASES.indexOf(phase);
+  const next = ALL_PHASES[index + 1];
+  if (!next) return null;
+  return phaseToProgress(next, 0.05);
+}
+
+function requestJourneyProgress(progress: number): void {
+  window.dispatchEvent(new CustomEvent(JOURNEY_NAVIGATION_EVENT, {
+    detail: { progress },
+  }));
+}
 
 export function SkipToNextButton(): React.JSX.Element | null {
   const phase = useScene((s) => s.phase);
   const warpAutoplayActive = useScene((s) => s.warpAutoplayActive);
-  const advance = useScene((s) => s.advanceScene);
   if (warpAutoplayActive) return null;
   if (phase === FINAL_PHASE) return null;
   const label = phase === PENULTIMATE_PHASE ? 'outro' : 'next';
+  const targetProgress = nextPhaseProgress(phase);
+  if (targetProgress === null) return null;
   return (
     <button
       type="button"
       className={styles.skipButton}
       aria-label="Skip to next phase"
-      onClick={advance}
+      onClick={() => requestJourneyProgress(targetProgress)}
       data-skip-next
     >
       <span aria-hidden="true" className={styles.skipArrow}>↓</span>

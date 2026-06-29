@@ -54,9 +54,7 @@ function MiraCycleController({ reveal }: { reveal: number }): null {
 }
 
 export default function MiraScene(): React.ReactElement {
-  const phase = useScene((state) => state.phase);
-  const local = useScene((state) => state.localProgress);
-  const reveal = computeReveal(phase, local);
+  const reveal = useScene((state) => computeReveal(state.phase, state.localProgress));
 
   useEffect(() => {
     if (typeof window !== 'undefined') exposeMiraDebug(window);

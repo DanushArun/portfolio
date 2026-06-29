@@ -43,7 +43,7 @@ describe('portfolio journey stops', () => {
     expect(result).toEqual({ committed: false, stop: current });
   });
 
-  it('test_gesture_when_delta_is_committed_advances_one_stop_only', () => {
+  it('test_gesture_when_delta_is_committed_allows_native_scroll_to_drive_progress', () => {
     const stops = getPortfolioStops();
     const current = stops.find((stop) => stop.id === 'AIDEN-sop');
     const result = resolvePortfolioGesture({
@@ -52,8 +52,7 @@ describe('portfolio journey stops', () => {
       locked: false,
     });
 
-    expect(result.committed).toBe(true);
-    expect(result.stop.index).toBe((current?.index ?? 0) + 1);
+    expect(result).toEqual({ committed: false, stop: current });
   });
 
   it('test_gesture_when_locked_holds_current_stop', () => {

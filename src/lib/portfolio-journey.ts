@@ -43,7 +43,6 @@ export interface PortfolioStepInput {
 const ENTRY_SPAN = 0.14;
 const EXIT_START = 0.88;
 const TITLE_LOCAL_PROGRESS = 0.16;
-const GESTURE_THRESHOLD = 72;
 
 function beatLocalProgress(beatIndex: number, beatCount: number): number {
   const beatCenter = (beatIndex + 0.5) / Math.max(1, beatCount);
@@ -119,16 +118,10 @@ export function getProgressForPortfolioStop(index: number): number {
 }
 
 export function resolvePortfolioGesture(input: PortfolioGestureInput): PortfolioGestureResult {
-  if (input.locked || Math.abs(input.delta) < GESTURE_THRESHOLD) {
-    return resolvePortfolioStep({
-      currentProgress: input.currentProgress,
-      direction: input.delta > 0 ? 1 : -1,
-      locked: true,
-    });
-  }
   return resolvePortfolioStep({
     currentProgress: input.currentProgress,
     direction: input.delta > 0 ? 1 : -1,
+    locked: true,
   });
 }
 

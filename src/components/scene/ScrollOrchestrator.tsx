@@ -1,7 +1,7 @@
 // src/components/scene/ScrollOrchestrator.tsx
 'use client';
 
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -14,7 +14,6 @@ import {
   type PortfolioStop,
   getPortfolioStopForProgress,
   getProgressForPortfolioStop,
-  resolvePortfolioGesture,
 } from '@/lib/portfolio-journey';
 import { getPortfolioMorphState } from '@/lib/portfolio-supercluster';
 import {
@@ -28,6 +27,7 @@ import {
 gsap.registerPlugin(ScrollTrigger);
 
 const SNAP_COOLDOWN_MS = 520;
+const JOURNEY_NAVIGATION_EVENT = 'portfolio:go-to-progress';
 const WARP_START_PROGRESS = phaseToProgress('C04_HORIZON', 0);
 const WARP_RELEASE_PROGRESS = phaseToProgress('C08_EMERGE', 0.12);
 const WARP_AUTOPLAY_SEGMENTS = [
@@ -60,15 +60,19 @@ const WARP_AUTOPLAY_SEGMENTS = [
 
 declare global {
   interface Window {
+    __goToJourneyProgress?: (progress: number, options?: JourneyNavigationOptions) => void;
     __setJourneyProgress?: (progress: number) => void;
     __setPortfolioStop?: (index: number) => void;
   }
 }
 
+interface JourneyNavigationOptions {
+  readonly immediate?: boolean;
+}
+
 export default function ScrollOrchestrator() {
   const lenisRef = useRef<Lenis | null>(null);
   const snappingRef = useRef(false);
-  const touchStartYRef = useRef<number | null>(null);
   const warpFrameRef = useRef<number | null>(null);
   const warpAutoplayConsumedRef = useRef(false);
   const progressFrameRef = useRef<number | null>(null);
@@ -77,11 +81,12 @@ export default function ScrollOrchestrator() {
 
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.05,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      lerp: 0.32,
       smoothWheel: true,
-      touchMultiplier: 0.72,
-      wheelMultiplier: 0.68,
+      syncTouch: true,
+      syncTouchLerp: 0.12,
+      touchMultiplier: 1.1,
+      wheelMultiplier: 1.15,
     });
     lenisRef.current = lenis;
     const applyJourneyProgressNow = (progress: number): void => {
@@ -104,13 +109,20 @@ export default function ScrollOrchestrator() {
       beginPortfolioStepTransition(useScene.getState().journeyProgress, stop);
       scrollToProgress(lenis, stop.progress, snappingRef, finishPortfolioStepTransition);
     };
-    const jumpWithLenis = (progress: number): void => {
+    const jumpWithLenis = (
+      progress: number,
+      options: JourneyNavigationOptions = {},
+    ): void => {
       const clampedProgress = Math.max(0, Math.min(1, progress));
       warpAutoplayConsumedRef.current = clampedProgress >= WARP_START_PROGRESS;
       resetPortfolioStepTransition();
       snappingRef.current = false;
-      syncLenisScrollPosition(lenis, clampedProgress);
-      applyJourneyProgressNow(clampedProgress);
+      if (options.immediate) {
+        syncLenisScrollPosition(lenis, clampedProgress);
+        applyJourneyProgressNow(clampedProgress);
+      } else {
+        scrollToProgress(lenis, clampedProgress, snappingRef, undefined);
+      }
       lastProgressRef.current = clampedProgress;
     };
     const finishWarpAutoplay = (): void => {
@@ -160,36 +172,19 @@ export default function ScrollOrchestrator() {
       window.__setJourneyProgress = jumpWithLenis;
       window.__setPortfolioStop = (index: number) => {
         snappingRef.current = false;
-        jumpWithLenis(getProgressForPortfolioStop(index));
+        jumpWithLenis(getProgressForPortfolioStop(index), { immediate: true });
       };
     }
 
-    const onWheel = (event: WheelEvent): void => {
-      if (useScene.getState().warpAutoplayActive) {
-        event.preventDefault();
-        return;
-      }
-      handlePortfolioWheel(event, isPortfolioLocked(snappingRef.current), snapToStop);
+    window.__goToJourneyProgress = jumpWithLenis;
+    const onJourneyNavigation = (event: Event): void => {
+      const detail = (event as CustomEvent<JourneyNavigationOptions & {
+        readonly progress?: number;
+      }>).detail;
+      if (typeof detail?.progress !== 'number') return;
+      jumpWithLenis(detail.progress, detail);
     };
-    const onTouchStart = (event: TouchEvent): void => {
-      touchStartYRef.current = event.touches[0]?.clientY ?? null;
-    };
-    const onTouchMove = (event: TouchEvent): void => {
-      if (useScene.getState().warpAutoplayActive) {
-        event.preventDefault();
-        return;
-      }
-      handlePortfolioTouch(
-        event,
-        touchStartYRef,
-        isPortfolioLocked(snappingRef.current),
-        snapToStop,
-      );
-    };
-
-    window.addEventListener('wheel', onWheel, { capture: true, passive: false });
-    window.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
-    window.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
+    window.addEventListener(JOURNEY_NAVIGATION_EVENT, onJourneyNavigation);
 
     // Single ScrollTrigger driving journeyProgress.
     const trigger = ScrollTrigger.create({
@@ -220,11 +215,10 @@ export default function ScrollOrchestrator() {
       useScene.getState().setWarpAutoplayActive(false);
       resetPortfolioStepTransition();
       trigger.kill();
-      window.removeEventListener('wheel', onWheel, { capture: true });
-      window.removeEventListener('touchstart', onTouchStart, { capture: true });
-      window.removeEventListener('touchmove', onTouchMove, { capture: true });
+      window.removeEventListener(JOURNEY_NAVIGATION_EVENT, onJourneyNavigation);
       gsap.ticker.remove(lenisRaf);
       lenis.destroy();
+      delete window.__goToJourneyProgress;
       delete window.__setJourneyProgress;
       delete window.__setPortfolioStop;
     };
@@ -247,8 +241,8 @@ function scrollToProgress(
   const target = progress * getTotalScroll();
   snappingRef.current = true;
   lenis.scrollTo(target, {
-    duration: 0.92,
-    lock: true,
+    duration: 0.24,
+    lock: false,
     onComplete: () => {
       applyJourneyProgress(progress);
       onComplete?.();
@@ -304,47 +298,6 @@ export function shouldStartWarpAutoplay(config: {
 
 function isPortfolioActive(): boolean {
   return isPortfolioChapterPhase(useScene.getState().phase);
-}
-
-function isPortfolioLocked(snapping: boolean): boolean {
-  return snapping || getPortfolioStepTransition().active;
-}
-
-function handlePortfolioWheel(
-  event: WheelEvent,
-  locked: boolean,
-  snapToStop: (stop: PortfolioStop) => void,
-): void {
-  if (!isPortfolioActive()) return;
-  event.preventDefault();
-  const state = useScene.getState();
-  const result = resolvePortfolioGesture({
-    currentProgress: state.journeyProgress,
-    delta: event.deltaY,
-    locked,
-  });
-  if (result.committed) snapToStop(result.stop);
-}
-
-function handlePortfolioTouch(
-  event: TouchEvent,
-  touchStartYRef: MutableRefObject<number | null>,
-  locked: boolean,
-  snapToStop: (stop: PortfolioStop) => void,
-): void {
-  if (!isPortfolioActive()) return;
-  const touchY = event.touches[0]?.clientY;
-  if (touchY === undefined || touchStartYRef.current === null) return;
-  event.preventDefault();
-  const delta = touchStartYRef.current - touchY;
-  const result = resolvePortfolioGesture({
-    currentProgress: useScene.getState().journeyProgress,
-    delta,
-    locked,
-  });
-  if (!result.committed) return;
-  touchStartYRef.current = touchY;
-  snapToStop(result.stop);
 }
 
 function applyJourneyProgress(progress: number): void {

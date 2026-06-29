@@ -220,7 +220,7 @@ export default function SceneManager() {
       <div
         aria-hidden
         style={{
-          height: '5200vh',
+          height: '3000vh',
           width: '100%',
           pointerEvents: 'none',
           zIndex: -1,

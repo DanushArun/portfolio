@@ -40,6 +40,13 @@ const KEY_MAP: Record<string, KeyAction> = {
 const LOCAL_STEP = 0.33;
 const MIRA_CATALOGUE_KEY_STEP = 0.125;
 const FORM_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
+const JOURNEY_NAVIGATION_EVENT = 'portfolio:go-to-progress';
+
+declare global {
+  interface Window {
+    __goToJourneyProgress?: (progress: number, options?: { readonly immediate?: boolean }) => void;
+  }
+}
 
 function isFormFocused(): boolean {
   if (typeof document === 'undefined') return false;
@@ -56,6 +63,10 @@ function phaseAt(idx: number, local: number): number {
 }
 
 function applyProgress(target: number): void {
+  if (typeof window !== 'undefined' && window.__goToJourneyProgress) {
+    window.__goToJourneyProgress(target);
+    return;
+  }
   const snap = progressToPhase(target);
   syncMiraCatalogueForScene(snap.phase, snap.localProgress);
   syncPortfolioBookForScene(snap.phase, snap.localProgress);
@@ -63,6 +74,9 @@ function applyProgress(target: number): void {
     target, snap.cosmicProgress, snap.workProgress, snap.localProgress, snap.phase,
   );
   if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(JOURNEY_NAVIGATION_EVENT, {
+      detail: { immediate: true, progress: target },
+    }));
     const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
     if (totalScroll > 0) window.scrollTo({ top: target * totalScroll, behavior: 'auto' });
   }

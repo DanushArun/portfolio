@@ -5,7 +5,7 @@ import {
 
 // Bands.
 // Keep the arrival cinematic tight; the long product-catalogue chapter is MIRA.
-const COSMIC_END = 0.27;
+const COSMIC_END = 0.47;
 const COSMIC_WEIGHTS = [
   8, // C01 ORBIT
   8, // C02 PULL
