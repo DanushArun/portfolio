@@ -24,6 +24,7 @@ export default function MiraPanel(): React.JSX.Element {
       <div className={styles.context}>
         <p>MIRA trace</p>
         <h1 data-testid="mira-project-title">MIRA</h1>
+        <p className={styles.systemLine}>Live sales call -&gt; voice AI -&gt; CRM / WhatsApp</p>
         <div className={styles.caption} data-testid="mira-particle-caption">
           <span>{snapshot.index + 1}/8</span>
           <strong>{snapshot.title}</strong>

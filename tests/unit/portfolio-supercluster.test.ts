@@ -46,7 +46,7 @@ describe('portfolio supercluster', () => {
   });
 
   it('test_glyph_layout_when_built_maps_project_name_to_letter_cells', () => {
-    const layout = buildPortfolioGlyphLayout(['MIRA', 'LIVE LEADS']);
+    const layout = buildPortfolioGlyphLayout(['MIRA', 'VOICE OPS']);
 
     expect(layout.cells.length).toBeGreaterThan(40);
     expect(layout.width).toBeGreaterThan(20);
@@ -67,6 +67,10 @@ describe('portfolio supercluster', () => {
 
   it('test_artifact_label_when_aiden_maps_to_short_readable_claim', () => {
     expect(getPortfolioArtifactLabel('AIDEN')).toBe('CALL INTEL');
+  });
+
+  it('test_artifact_label_when_mira_maps_to_voice_ops_not_live_leads', () => {
+    expect(getPortfolioArtifactLabel('MIRA')).toBe('VOICE OPS');
   });
 
   it('test_model_when_built_exposes_project_reading_labels', () => {

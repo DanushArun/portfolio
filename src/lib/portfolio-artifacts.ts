@@ -10,7 +10,7 @@ export interface PortfolioArtifactPointConfig {
 }
 
 const ARTIFACT_LABELS = {
-  MIRA: 'LIVE LEADS',
+  MIRA: 'VOICE OPS',
   AIDEN: 'CALL INTEL',
   VANGUARD: 'QA GRAPH',
   INSPECTION: 'DEFECT QA',
@@ -23,10 +23,12 @@ function wave(seed: number, amplitude: number): number {
   return (Math.sin(seed * 9.37) * 0.5 + Math.cos(seed * 3.91) * 0.5) * amplitude;
 }
 
-function lanePoint(config: PortfolioArtifactPointConfig): PortfolioVec3 {
-  const x = ((config.localIndex % 96) / 95 - 0.5) * 3.9;
-  const band = Math.floor(config.localIndex / 96) % 9;
-  const y = (band - 4) * 0.15 + Math.sin(x * 2.1 + config.beatIndex) * 0.13;
+function miraPoint(config: PortfolioArtifactPointConfig): PortfolioVec3 {
+  const t = (config.localIndex % 180) / 179;
+  const lane = Math.floor(config.localIndex / 180) % 7;
+  const x = (t - 0.5) * 3.7;
+  const bow = Math.sin(Math.PI * t) * (lane % 2 === 0 ? 0.34 : -0.22);
+  const y = (lane - 3) * 0.16 + bow;
   return [
     config.center[0] + x,
     config.center[1] + y,
@@ -97,7 +99,7 @@ export function getPortfolioArtifactLabel(id: PortfolioChapterId): string {
 }
 
 export function portfolioArtifactPoint(config: PortfolioArtifactPointConfig): PortfolioVec3 {
-  if (config.id === 'MIRA') return lanePoint(config);
+  if (config.id === 'MIRA') return miraPoint(config);
   if (config.id === 'AIDEN') return gridPoint(config);
   if (config.id === 'VANGUARD') return graphPoint(config);
   if (config.id === 'INSPECTION') return scanPoint(config);

@@ -17,6 +17,7 @@
 }
 
 .context p,
+.systemLine,
 .caption {
   font-family: var(--font-composer), ui-monospace, monospace;
   letter-spacing: 0;
@@ -27,6 +28,13 @@
   color: rgba(255, 197, 111, 0.72);
   font-size: clamp(0.72rem, 0.82vw, 0.9rem);
   margin: 0;
+}
+
+.systemLine {
+  color: rgba(240, 228, 210, 0.58);
+  font-size: clamp(0.66rem, 0.7vw, 0.78rem);
+  margin: 0.22rem 0 0;
+  max-width: min(70vw, 42rem);
 }
 
 .context h1 {

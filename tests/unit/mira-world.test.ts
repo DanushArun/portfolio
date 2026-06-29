@@ -16,7 +16,7 @@ describe('MIRA work-region map', () => {
     const proof = MIRA_WORK_REGIONS.flatMap((region) => region.proof);
 
     expect(proof).toEqual(expect.arrayContaining([
-      'Production outbound voice AI for live DriveX leads.',
+      'Production outbound voice AI for sales-call conversion.',
       'First response reduced from 7s to under 500ms.',
       'Five Indian languages: English, Hindi, Tamil, Kannada, Telugu.',
       'VAD, streaming ASR, telephony WebSockets, Pipecat and FastAPI.',

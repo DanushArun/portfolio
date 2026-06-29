@@ -57,20 +57,20 @@ const BEAT_STAGE_MAP: Record<MiraArtifactBeatId, MiraFlowStageId> = {
 };
 
 const BEAT_METRICS: Record<MiraArtifactBeatId, string> = {
-  shipped: 'DriveX live leads',
+  shipped: 'Production voice agent',
   latency: '7s -> <500ms',
-  languages: '5 Indian languages',
+  languages: '5 languages',
   voice: 'VAD + streaming ASR',
-  orchestration: 'multi-model response control',
-  'post-call': 'structured intent',
+  orchestration: 'LLM + tool routing',
+  'post-call': 'Structured intent',
   ops: 'CRM + WhatsApp',
-  ownership: 'repo -> Kubernetes',
+  ownership: 'Kubernetes ownership',
 };
 
 export const MIRA_FLOW_STAGES: readonly MiraFlowStage[] = [
   {
     id: 'lead',
-    label: 'Live Lead',
+    label: 'Lead Context',
     shortLabel: 'Lead',
     input: 'Fresh DriveX sales lead with caller, source, and vehicle context.',
     action: 'Create a live call job and keep the lead state visible to operations.',

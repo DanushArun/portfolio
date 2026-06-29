@@ -82,6 +82,16 @@
   line-height: 1.45;
 }
 
+.systemLine {
+  margin: -6px 0 18px;
+  color: rgba(240, 228, 210, 0.58);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
 .timeline {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));

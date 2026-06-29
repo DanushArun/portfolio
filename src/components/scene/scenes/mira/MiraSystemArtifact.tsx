@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { usePortfolioBookState } from '@/lib/portfolio-book-state';
 import {
   MIRA_ARTIFACT_BEATS,
+  getMiraArtifactVisualMode,
   getMiraArtifactBeatByIndex,
   type MiraArtifactBeat,
 } from './mira-artifact-model';
@@ -112,7 +113,7 @@ function buildPointGeometry(pointCount: number): THREE.BufferGeometry {
 }
 
 function useArtifactGeometry(beat: MiraArtifactBeat): ArtifactGeometry {
-  const pointGeometry = useMemo(() => buildPointGeometry(18_000), []);
+  const pointGeometry = useMemo(() => buildPointGeometry(16_000), []);
   const lineGeometry = useMemo(() => {
     const buffers = buildMiraArtifactVisuals(beat, { lineCopies: 8, pointCount: 256 });
     return buildGeometry(buffers.lines);
@@ -121,7 +122,7 @@ function useArtifactGeometry(beat: MiraArtifactBeat): ArtifactGeometry {
   useEffect(() => () => pointGeometry.dispose(), [pointGeometry]);
   useEffect(() => () => lineGeometry.dispose(), [lineGeometry]);
 
-  return { lineGeometry, pointGeometry, pointCount: 18_000 };
+  return { lineGeometry, pointGeometry, pointCount: 16_000 };
 }
 
 function buildUniforms(): Record<string, THREE.IUniform<number>> {
@@ -163,7 +164,7 @@ function ArtifactField(config: {
         <lineBasicMaterial
           blending={THREE.AdditiveBlending}
           depthWrite={false}
-          opacity={0.2 * config.reveal}
+          opacity={0.16 * config.reveal}
           transparent
           vertexColors
         />
@@ -192,6 +193,7 @@ function exposeArtifactDebug(beatId: string, beatIndex: number, pointCount: numb
     activeBeatIndex: beatIndex,
     hasFlowTargets: true,
     particleCount: pointCount,
+    renderMode: getMiraArtifactVisualMode(),
   };
 }
 
@@ -213,7 +215,7 @@ export function MiraSystemArtifact({
   const transform = artifactTransformForSize(size);
 
   useEffect(() => {
-    if (visible) exposeArtifactDebug(beat.id, activeBeatIndex, 18_000);
+    if (visible) exposeArtifactDebug(beat.id, activeBeatIndex, 16_000);
   }, [activeBeatIndex, beat.id, visible]);
 
   useEffect(() => () => {

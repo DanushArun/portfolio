@@ -124,8 +124,8 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
       radius: 3.2,
     },
     beats: [
-      beat('shipped', 'Production system', 'Did this ship?', 'DriveX live leads',
-        'Production outbound voice AI for live DriveX lead conversion.',
+      beat('shipped', 'Production system', 'Did this ship?', 'Production voice agent',
+        'Production outbound voice AI for sales-call conversion.',
         camera(0.20, 0.72, 6.2, 39), ['FastAPI', 'Kubernetes']),
       beat('latency', 'Latency collapse', 'Did it improve?', '7s -> 482ms',
         'First response fell from a seven second delay to sub-second response.',

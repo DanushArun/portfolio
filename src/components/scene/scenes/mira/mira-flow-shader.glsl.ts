@@ -37,21 +37,22 @@ export const miraFlowVert = /* glsl */ `
     vec3 target = mix(targetForBeat(previousBeat), targetForBeat(safeBeat), morph);
     vec3 home = position;
 
-    float phase = uTime * 1.35 + aSeed * 0.017;
-    float stream = sin(phase + target.x * 2.4) * 0.045;
+    float seedPhase = aSeed * 0.017;
+    float phase = uTime * (0.74 + fract(aSeed * 0.0019) * 0.46) + seedPhase;
     vec3 pos = mix(home, target, uReveal);
-    pos.xy += vec2(stream, -stream * 0.35) * uReveal;
+    vec2 drift = vec2(cos(phase * 0.63), sin(phase * 0.81)) * 0.026;
+    pos.xy += drift * uReveal;
 
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mv;
 
     float depth = max(1.0, -mv.z);
     float pulse = 0.72 + sin(phase) * 0.28;
-    gl_PointSize = clamp((0.52 + pulse * 0.24) * uPixelRatio * (42.0 / depth), 0.2, 3.6);
+    gl_PointSize = clamp((0.48 + pulse * 0.22) * uPixelRatio * (42.0 / depth), 0.2, 3.2);
 
     vec3 heat = vec3(1.0, 0.74, 0.36);
-    vColor = mix(aColor * 0.72, heat, 0.18 + pulse * 0.22);
-    vAlpha = (0.26 + pulse * 0.18) * uReveal;
+    vColor = mix(aColor * 0.76, heat, 0.14 + pulse * 0.18);
+    vAlpha = (0.22 + pulse * 0.16) * uReveal;
   }
 `;
 

@@ -26,9 +26,9 @@ const SUPERCLUSTER_HEAD_CHAPTERS: readonly SuperclusterChapter[] = [
     title: 'Multilingual Intelligent Real-time Agent',
     dots: [
       dot({
-        answer: 'DriveX live leads',
+        answer: 'Production voice agent',
         behaviors: ['pulse', 'condense'],
-        body: 'Production outbound voice AI for live DriveX lead conversion.',
+        body: 'Production outbound voice AI for sales-call conversion.',
         camera: 'Wide arrival on MIRA density node, center-right and slightly elevated.',
         id: 'production-system',
         label: '1/8',

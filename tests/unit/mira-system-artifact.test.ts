@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MIRA_ARTIFACT_BEATS,
+  getMiraArtifactVisualMode,
   getMiraArtifactBeat,
   getMiraArtifactBeatByIndex,
 } from '@/components/scene/scenes/mira/mira-artifact-model';
@@ -39,5 +40,17 @@ describe('mira artifact model', () => {
 
     expect(snapshots.every((snapshot) => snapshot.title.length > 0)).toBe(true);
     expect(snapshots.every((snapshot) => snapshot.metric.length > 0)).toBe(true);
+  });
+
+  it('test_flow_copy_when_loaded_does_not_repeat_live_leads_as_metric', () => {
+    const metrics = MIRA_ARTIFACT_BEATS.map((_, index) => getMiraFlowSnapshot(index).metric);
+
+    expect(metrics).not.toContain('DriveX live leads');
+    expect(metrics).not.toContain('LIVE LEADS');
+    expect(metrics[0]).toBe('Production voice agent');
+  });
+
+  it('test_artifact_visual_mode_when_loaded_uses_filament_wake', () => {
+    expect(getMiraArtifactVisualMode()).toBe('filament-wake');
   });
 });

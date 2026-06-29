@@ -84,11 +84,12 @@ function Readout({ beat, beatIndex }: {
     <aside className={styles.readout}>
       <p className={styles.eyebrow}>REMOTION BOARD / FRAME {frameForBeat(beatIndex)}</p>
       <h1 className={styles.title}>MIRA</h1>
+      <p className={styles.systemLine}>Live sales call -&gt; voice AI -&gt; CRM / WhatsApp</p>
       <p className={styles.frame}>{beatIndex + 1}/8</p>
       <h2 className={styles.beatName}>{snapshot.title}</h2>
       <strong className={styles.metric}>{snapshot.metric}</strong>
       <p className={styles.copy}>
-        Particle flow: {snapshot.activeStage.label}. {outputLabel(beat)} path is active.
+        Filament wake: {snapshot.activeStage.shortLabel}. {outputLabel(beat)} path is active.
       </p>
     </aside>
   );

@@ -63,13 +63,19 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
 
   await expect.poll(async () => page.evaluate(() => {
     const testWindow = window as Window & {
-      __miraArtifactDebug?: { activeBeatId: string; hasFlowTargets: boolean };
+      __miraArtifactDebug?: {
+        activeBeatId: string;
+        hasFlowTargets: boolean;
+        renderMode: string;
+      };
     };
     return testWindow.__miraArtifactDebug;
   })).toMatchObject({
     activeBeatId: 'voice',
     hasFlowTargets: true,
+    renderMode: 'filament-wake',
   });
+  await expect(page.locator('body')).not.toContainText(/LIVE LEADS|DriveX live leads/i);
 
   const titleBox = await page.getByTestId('mira-project-title').boundingBox();
   const captionBox = await page.getByTestId('mira-particle-caption').boundingBox();

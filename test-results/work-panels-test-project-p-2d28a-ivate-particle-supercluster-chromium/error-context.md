@@ -6,40 +6,13 @@
 
 # Test info
 
-- Name: work-panels.spec.ts >> test_mira_phase_when_scrubbed_shows_particle_flow_context
-- Location: tests/e2e/work-panels.spec.ts:44:5
+- Name: work-panels.spec.ts >> test_project_phases_when_scrubbed_activate_particle_supercluster
+- Location: tests/e2e/work-panels.spec.ts:17:5
 
 # Error details
 
 ```
-Error: expect(received).toMatchObject(expected)
-
-Matcher error: received value must be a non-null object
-
-Received has value: undefined
-
-Call Log:
-- Timeout 5000ms exceeded while waiting on the predicate
-```
-
-# Page snapshot
-
-```yaml
-- generic [active] [ref=e1]:
-  - generic:
-    - generic:
-      - region "MIRA":
-        - generic:
-          - paragraph: MIRA trace
-          - heading "MIRA" [level=1]
-          - paragraph: Live sales call -> voice AI -> CRM / WhatsApp
-          - generic:
-            - generic: 4/8
-            - strong: Realtime Voice Intake
-            - emphasis: VAD + streaming ASR
-  - button "Open Next.js Dev Tools" [ref=e10] [cursor=pointer]:
-    - img [ref=e11]
-  - alert [ref=e14]
+Error: Timeout 5000ms exceeded while waiting on the predicate
 ```
 
 # Test source
@@ -78,7 +51,8 @@ Call Log:
   31 | 
   32 |     await page.waitForTimeout(600);
   33 | 
-  34 |     await expect.poll(async () => page.evaluate(() => {
+> 34 |     await expect.poll(async () => page.evaluate(() => {
+     |     ^ Error: Timeout 5000ms exceeded while waiting on the predicate
   35 |       const testWindow = window as Window & {
   36 |         __portfolioDebug?: { activeProjectId: string };
   37 |       };
@@ -108,8 +82,7 @@ Call Log:
   61 |   await expect(page.getByTestId('mira-particle-caption')).toContainText('Realtime Voice Intake');
   62 |   await expect(page.locator('[data-testid="mira-system-trace"]')).toHaveCount(0);
   63 | 
-> 64 |   await expect.poll(async () => page.evaluate(() => {
-     |   ^ Error: expect(received).toMatchObject(expected)
+  64 |   await expect.poll(async () => page.evaluate(() => {
   65 |     const testWindow = window as Window & {
   66 |       __miraArtifactDebug?: {
   67 |         activeBeatId: string;
