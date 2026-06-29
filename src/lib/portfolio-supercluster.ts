@@ -15,6 +15,7 @@ import {
   portfolioArtifactProfile,
 } from './portfolio-artifacts';
 import { getPortfolioStopForProgress } from './portfolio-journey';
+import type { PortfolioStepTransition } from './portfolio-step-transition';
 import type { ScenePhase } from './scene-state';
 
 export const PORTFOLIO_PARTICLE_ROLE = {
@@ -66,10 +67,16 @@ export interface PortfolioMorphState {
   readonly activeProject: number;
   readonly activeProjectId: PortfolioChapterId | null;
   readonly beatMorph: number;
+  readonly fromBeat: number;
+  readonly fromProject: number;
   readonly glyphMorph: number;
+  readonly isTransitioning: boolean;
   readonly projectMorph: number;
   readonly release: number;
+  readonly stepMorph: number;
   readonly titleMorph: number;
+  readonly toBeat: number;
+  readonly toProject: number;
 }
 
 const DEFAULT_PARTICLES_PER_BEAT = 5200;
@@ -90,6 +97,10 @@ function clamp01(value: number): number {
 function smoothstep(edge0: number, edge1: number, value: number): number {
   const t = clamp01((value - edge0) / (edge1 - edge0));
   return t * t * (3 - 2 * t);
+}
+
+function mix(from: number, to: number, t: number): number {
+  return from + (to - from) * t;
 }
 
 function hash01(seed: number): number {
@@ -188,6 +199,10 @@ function titleMorphFor(progress: number | undefined, localProgress: number): num
   if (stop.kind !== 'projectTitle') return 0;
   const release = smoothstep(0.84, 1, localProgress);
   return smoothstep(0.08, 0.14, localProgress) * (1 - release);
+}
+
+function titleMorphForStopKind(kind: string): number {
+  return kind === 'projectTitle' ? 1 : 0;
 }
 
 export function portfolioProjectIndex(id: PortfolioChapterId): number {
@@ -348,6 +363,7 @@ export function getPortfolioMorphState(
   phase: ScenePhase,
   localProgress: number,
   progress?: number,
+  transition?: PortfolioStepTransition,
 ): PortfolioMorphState {
   if (!isPortfolioChapterPhase(phase)) {
     return {
@@ -355,25 +371,65 @@ export function getPortfolioMorphState(
       activeProject: -1,
       activeProjectId: null,
       beatMorph: 0,
+      fromBeat: -1,
+      fromProject: -1,
       glyphMorph: 0,
+      isTransitioning: false,
       projectMorph: 0,
       release: 0,
+      stepMorph: 1,
       titleMorph: 0,
+      toBeat: -1,
+      toProject: -1,
     };
   }
   const snapshot = getPortfolioBookSnapshot(phase as PortfolioProjectPhase, localProgress);
   const release = smoothstep(0.84, 1, localProgress);
+  if (transition?.active && transition.fromStop && transition.toStop) {
+    const stepMorph = transition.easedProgress;
+    const fromProject = portfolioProjectIndex(transition.fromStop.projectId);
+    const toProject = portfolioProjectIndex(transition.toStop.projectId);
+    const titleMorph = mix(
+      titleMorphForStopKind(transition.fromStop.kind),
+      titleMorphForStopKind(transition.toStop.kind),
+      stepMorph,
+    );
+    return {
+      activeBeat: stepMorph < 0.5 ? transition.fromStop.beatIndex : transition.toStop.beatIndex,
+      activeProject: stepMorph < 0.5 ? fromProject : toProject,
+      activeProjectId: stepMorph < 0.5
+        ? transition.fromStop.projectId
+        : transition.toStop.projectId,
+      beatMorph: 1 - release,
+      fromBeat: transition.fromStop.beatIndex,
+      fromProject,
+      glyphMorph: (1 - titleMorph) * (1 - release),
+      isTransitioning: true,
+      projectMorph: 1 - release,
+      release,
+      stepMorph,
+      titleMorph,
+      toBeat: transition.toStop.beatIndex,
+      toProject,
+    };
+  }
   const titleMorph = titleMorphFor(progress, localProgress);
   return {
     activeBeat: snapshot.beatIndex,
     activeProject: snapshot.chapterIndex,
     activeProjectId: snapshot.chapter.id,
     beatMorph: smoothstep(0.18, 0.34, localProgress) * (1 - release),
+    fromBeat: snapshot.beatIndex,
+    fromProject: snapshot.chapterIndex,
     glyphMorph: titleMorph > 0
       ? 0
       : smoothstep(0.08, 0.16, snapshot.beatProgress) * (1 - release),
+    isTransitioning: false,
     projectMorph: smoothstep(0.04, 0.18, localProgress) * (1 - release),
     release,
+    stepMorph: 1,
     titleMorph,
+    toBeat: snapshot.beatIndex,
+    toProject: snapshot.chapterIndex,
   };
 }

@@ -11,11 +11,19 @@ import { syncMiraCatalogueForScene } from '@/lib/mira-state';
 import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
 import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
 import {
+  type PortfolioStop,
   getPortfolioStopForProgress,
   getProgressForPortfolioStop,
   resolvePortfolioGesture,
 } from '@/lib/portfolio-journey';
 import { getPortfolioMorphState } from '@/lib/portfolio-supercluster';
+import {
+  beginPortfolioStepTransition,
+  finishPortfolioStepTransition,
+  getPortfolioStepTransition,
+  resetPortfolioStepTransition,
+  syncPortfolioStepTransition,
+} from '@/lib/portfolio-step-transition';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -73,8 +81,19 @@ export default function ScrollOrchestrator() {
       wheelMultiplier: 0.68,
     });
     lenisRef.current = lenis;
-    const snapToProgress = (progress: number): void => {
-      scrollToProgress(lenis, progress, snappingRef);
+    const snapToStop = (stop: PortfolioStop): void => {
+      beginPortfolioStepTransition(useScene.getState().journeyProgress, stop);
+      scrollToProgress(lenis, stop.progress, snappingRef, finishPortfolioStepTransition);
+    };
+    const jumpWithLenis = (progress: number): void => {
+      const clampedProgress = Math.max(0, Math.min(1, progress));
+      const target = clampedProgress * getTotalScroll();
+      resetPortfolioStepTransition();
+      snappingRef.current = false;
+      lenis.scrollTo(target, { duration: 0, force: true, lock: false });
+      window.scrollTo({ top: target, behavior: 'auto' });
+      applyJourneyProgress(clampedProgress);
+      lastProgressRef.current = clampedProgress;
     };
     const finishWarpAutoplay = (): void => {
       if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
@@ -117,10 +136,10 @@ export default function ScrollOrchestrator() {
 
     // Test handle: bypasses Lenis/GSAP so Playwright can drive scene state directly.
     if (process.env.NODE_ENV !== 'production') {
-      window.__setJourneyProgress = jumpToProgress;
+      window.__setJourneyProgress = jumpWithLenis;
       window.__setPortfolioStop = (index: number) => {
         snappingRef.current = false;
-        jumpToProgress(getProgressForPortfolioStop(index));
+        jumpWithLenis(getProgressForPortfolioStop(index));
       };
     }
 
@@ -129,7 +148,7 @@ export default function ScrollOrchestrator() {
         event.preventDefault();
         return;
       }
-      handlePortfolioWheel(event, snappingRef.current, snapToProgress);
+      handlePortfolioWheel(event, isPortfolioLocked(snappingRef.current), snapToStop);
     };
     const onTouchStart = (event: TouchEvent): void => {
       touchStartYRef.current = event.touches[0]?.clientY ?? null;
@@ -139,7 +158,7 @@ export default function ScrollOrchestrator() {
         event.preventDefault();
         return;
       }
-      handlePortfolioTouch(event, touchStartYRef, snappingRef.current, snapToProgress);
+      handlePortfolioTouch(event, touchStartYRef, isPortfolioLocked(snappingRef.current), snapToStop);
     };
 
     window.addEventListener('wheel', onWheel, { capture: true, passive: false });
@@ -165,6 +184,7 @@ export default function ScrollOrchestrator() {
     return () => {
       if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
       useScene.getState().setWarpAutoplayActive(false);
+      resetPortfolioStepTransition();
       trigger.kill();
       window.removeEventListener('wheel', onWheel, { capture: true });
       window.removeEventListener('touchstart', onTouchStart, { capture: true });
@@ -188,6 +208,7 @@ function scrollToProgress(
   lenis: Lenis,
   progress: number,
   snappingRef: MutableRefObject<boolean>,
+  onComplete?: () => void,
 ): void {
   const target = progress * getTotalScroll();
   snappingRef.current = true;
@@ -196,18 +217,12 @@ function scrollToProgress(
     lock: true,
     onComplete: () => {
       applyJourneyProgress(progress);
+      onComplete?.();
       window.setTimeout(() => {
         snappingRef.current = false;
       }, SNAP_COOLDOWN_MS);
     },
   });
-}
-
-function jumpToProgress(progress: number): void {
-  const target = progress * getTotalScroll();
-  applyJourneyProgress(progress);
-  window.scrollTo({ top: target, behavior: 'auto' });
-  ScrollTrigger.update();
 }
 
 function syncScrollPosition(progress: number): void {
@@ -250,10 +265,14 @@ function isPortfolioActive(): boolean {
   return isPortfolioChapterPhase(useScene.getState().phase);
 }
 
+function isPortfolioLocked(snapping: boolean): boolean {
+  return snapping || getPortfolioStepTransition().active;
+}
+
 function handlePortfolioWheel(
   event: WheelEvent,
   locked: boolean,
-  snapToProgress: (progress: number) => void,
+  snapToStop: (stop: PortfolioStop) => void,
 ): void {
   if (!isPortfolioActive()) return;
   event.preventDefault();
@@ -263,14 +282,14 @@ function handlePortfolioWheel(
     delta: event.deltaY,
     locked,
   });
-  if (result.committed) snapToProgress(result.stop.progress);
+  if (result.committed) snapToStop(result.stop);
 }
 
 function handlePortfolioTouch(
   event: TouchEvent,
   touchStartYRef: MutableRefObject<number | null>,
   locked: boolean,
-  snapToProgress: (progress: number) => void,
+  snapToStop: (stop: PortfolioStop) => void,
 ): void {
   if (!isPortfolioActive()) return;
   const touchY = event.touches[0]?.clientY;
@@ -284,11 +303,12 @@ function handlePortfolioTouch(
   });
   if (!result.committed) return;
   touchStartYRef.current = touchY;
-  snapToProgress(result.stop.progress);
+  snapToStop(result.stop);
 }
 
 function applyJourneyProgress(progress: number): void {
   const snap = progressToPhase(progress);
+  syncPortfolioStepTransition(progress);
   syncMiraCatalogueForScene(snap.phase, snap.localProgress);
   syncPortfolioBookForScene(snap.phase, snap.localProgress);
   exposePortfolioDebug(snap.phase, snap.localProgress, progress);
@@ -303,7 +323,8 @@ function applyJourneyProgress(progress: number): void {
 
 function exposePortfolioDebug(phase: ScenePhase, local: number, progress: number): void {
   if (typeof window === 'undefined') return;
-  const morph = getPortfolioMorphState(phase, local, progress);
+  const transition = getPortfolioStepTransition();
+  const morph = getPortfolioMorphState(phase, local, progress, transition);
   const stop = getPortfolioStopForProgress(progress);
   (window as Window & { __portfolioDebug?: unknown }).__portfolioDebug = {
     activeBeat: morph.activeBeat,
@@ -313,6 +334,8 @@ function exposePortfolioDebug(phase: ScenePhase, local: number, progress: number
     cameraLocked: stop.cameraLocked,
     glyphMorph: morph.glyphMorph,
     projectMorph: morph.projectMorph,
+    stepMorph: morph.stepMorph,
     titleMorph: morph.titleMorph,
+    transitionActive: transition.active,
   };
 }

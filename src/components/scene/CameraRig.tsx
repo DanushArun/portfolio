@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { MIRA_CAMERA } from '@/lib/mira-canonical';
 import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
 import {
+  getPortfolioChapter,
   getPortfolioBookSnapshot,
   isPortfolioChapterPhase,
   type PortfolioProjectPhase,
@@ -15,12 +16,35 @@ import {
   samplePortfolioReadingCamera,
 } from '@/lib/portfolio-book-route';
 import { getPortfolioStopForProgress } from '@/lib/portfolio-journey';
+import {
+  getPortfolioStepTransition,
+  type PortfolioStepTransition,
+} from '@/lib/portfolio-step-transition';
 import { useScene, type ScenePhase } from '@/lib/scene-state';
 
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 const MIRA_POS = new THREE.Vector3(...MIRA_CAMERA.position);
 const DEFAULT_POS = new THREE.Vector3(0, 2, 30);
 const TEMP_ORBIT = new THREE.Vector3();
+
+type PortfolioCamera = ReturnType<typeof samplePortfolioReadingCamera>;
+
+function mixCamera(from: PortfolioCamera, to: PortfolioCamera, progress: number): PortfolioCamera {
+  return {
+    fov: from.fov + (to.fov - from.fov) * progress,
+    lookAt: from.lookAt.clone().lerp(to.lookAt, progress),
+    position: from.position.clone().lerp(to.position, progress),
+  };
+}
+
+function samplePortfolioTransitionCamera(
+  transition: PortfolioStepTransition,
+): PortfolioCamera | null {
+  if (!transition.active || !transition.fromStop || !transition.toStop) return null;
+  const from = samplePortfolioReadingCamera(getPortfolioChapter(transition.fromStop.projectId));
+  const to = samplePortfolioReadingCamera(getPortfolioChapter(transition.toStop.projectId));
+  return mixCamera(from, to, transition.easedProgress);
+}
 
 function setFov(camera: THREE.PerspectiveCamera, fov: number): void {
   camera.fov = fov;
@@ -53,13 +77,15 @@ function applyPortfolioCamera(config: {
   local: number;
   phase: PortfolioProjectPhase;
   reducedMotion: boolean;
+  transition: PortfolioStepTransition;
 }): void {
   const snapshot = getPortfolioBookSnapshot(config.phase, config.local);
   const stop = getPortfolioStopForProgress(config.journeyProgress);
-  const portfolioCamera = stop.cameraLocked
+  const transitionCamera = samplePortfolioTransitionCamera(config.transition);
+  const portfolioCamera = transitionCamera ?? (stop.cameraLocked
     ? samplePortfolioReadingCamera(snapshot.chapter)
-    : samplePortfolioBookCamera(snapshot);
-  const damping = stop.cameraLocked ? 0.18 : 0.075;
+    : samplePortfolioBookCamera(snapshot));
+  const damping = config.transition.active || stop.cameraLocked ? 0.18 : 0.075;
   config.camera.position.lerp(portfolioCamera.position, config.reducedMotion ? 1 : damping);
   config.camera.lookAt(portfolioCamera.lookAt);
   config.camera.fov += (portfolioCamera.fov - config.camera.fov) *
@@ -79,6 +105,7 @@ function applyPhaseCamera(config: {
   phase: ScenePhase;
   reducedMotion: boolean;
   time: number;
+  transition: PortfolioStepTransition;
 }): void {
   if (config.phase === 'C05_WARP' || config.phase === 'C06_ANOMALY') {
     applyWarpCamera(config.camera);
@@ -99,6 +126,7 @@ function applyPhaseCamera(config: {
       local: config.local,
       phase: config.phase,
       reducedMotion: config.reducedMotion,
+      transition: config.transition,
     });
     return;
   }
@@ -118,6 +146,7 @@ export default function CameraRig(): null {
       phase: scene.phase,
       reducedMotion,
       time: state.clock.elapsedTime,
+      transition: getPortfolioStepTransition(),
     });
     camera.updateProjectionMatrix();
   });

@@ -3,8 +3,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import ProjectChapterOverlay from '@/components/work/ProjectChapterOverlay';
 import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
+import { progressToPhase } from '@/lib/journey-map';
+import { getPortfolioStops } from '@/lib/portfolio-journey';
+import {
+  beginPortfolioStepTransition,
+  resetPortfolioStepTransition,
+  syncPortfolioStepTransition,
+} from '@/lib/portfolio-step-transition';
 
 afterEach(() => {
+  resetPortfolioStepTransition();
   cleanup();
 });
 
@@ -48,5 +56,27 @@ describe('project chapter overlay', () => {
     expect(container.textContent).toContain('Challenge');
     expect(container.textContent).toContain('LATENCY / COLLAPSE');
     expect(container.textContent).toContain('Streaming');
+  });
+
+  it('test_step_transition_when_active_shows_outgoing_and_incoming_descriptions', () => {
+    const stops = getPortfolioStops();
+    const from = stops.find((stop) => stop.id === 'MIRA-hero');
+    const to = stops.find((stop) => stop.id === 'MIRA-problem');
+    if (!from || !to) throw new Error('MIRA transition stops missing');
+    const midpoint = (from.progress + to.progress) / 2;
+    const snap = progressToPhase(midpoint);
+
+    act(() => {
+      beginPortfolioStepTransition(from.progress, to);
+      syncPortfolioStepTransition(midpoint);
+      syncPortfolioBookForScene(snap.phase, snap.localProgress);
+    });
+
+    const { container } = render(<ProjectChapterOverlay />);
+    const incoming = container.querySelector('[data-testid="project-step-description-incoming"]');
+
+    expect(container.textContent).toContain('Hero');
+    expect(container.textContent).toContain('Problem');
+    expect(incoming?.getAttribute('aria-label')).toContain('Live C2C');
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { PORTFOLIO_CHAPTERS, getPortfolioChapter } from '@/lib/portfolio-book';
+import { progressToPhase } from '@/lib/journey-map';
 import {
   getPortfolioArtifactLabel,
   portfolioArtifactProfile,
@@ -12,6 +13,12 @@ import {
   getPortfolioMorphState,
   portfolioProjectIndex,
 } from '@/lib/portfolio-supercluster';
+import {
+  beginPortfolioStepTransition,
+  getPortfolioStepTransition,
+  resetPortfolioStepTransition,
+  syncPortfolioStepTransition,
+} from '@/lib/portfolio-step-transition';
 
 describe('portfolio supercluster', () => {
   function samplesFor(id: 'MIRA'): ReturnType<typeof portfolioArtifactProfile>[] {
@@ -226,5 +233,32 @@ describe('portfolio supercluster', () => {
 
     expect(state.titleMorph).toBeGreaterThan(0.9);
     expect(state.glyphMorph).toBe(0);
+  });
+
+  it('test_morph_state_when_step_transition_is_active_exposes_from_to_beats', () => {
+    const stops = getPortfolioStops();
+    const from = stops.find((stop) => stop.id === 'MIRA-hero');
+    const to = stops.find((stop) => stop.id === 'MIRA-problem');
+    if (!from || !to) throw new Error('MIRA transition stops missing');
+    const midpoint = (from.progress + to.progress) / 2;
+    const snap = progressToPhase(midpoint);
+
+    beginPortfolioStepTransition(from.progress, to);
+    syncPortfolioStepTransition(midpoint);
+
+    const state = getPortfolioMorphState(
+      snap.phase,
+      snap.localProgress,
+      midpoint,
+      getPortfolioStepTransition(),
+    );
+
+    expect(state.isTransitioning).toBe(true);
+    expect(state.fromBeat).toBe(0);
+    expect(state.toBeat).toBe(1);
+    expect(state.stepMorph).toBeGreaterThan(0);
+    expect(state.stepMorph).toBeLessThan(1);
+
+    resetPortfolioStepTransition();
   });
 });

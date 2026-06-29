@@ -17,6 +17,14 @@
   top: clamp(2rem, 7vh, 4.8rem);
 }
 
+.copyLayer {
+  display: grid;
+  gap: 0.64rem;
+  grid-area: 1 / 1;
+  min-width: 0;
+  will-change: opacity, transform;
+}
+
 .eyebrow,
 .step,
 .tag {
@@ -70,14 +78,24 @@
 
 .tagRail {
   bottom: clamp(2.2rem, 5vh, 4.2rem);
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 0.58rem;
   justify-content: center;
+  justify-items: center;
   left: 50%;
   max-width: min(74vw, 52rem);
   position: absolute;
   transform: translateX(-50%);
+}
+
+.tagLayer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.58rem;
+  grid-area: 1 / 1;
+  justify-content: center;
+  max-width: 100%;
+  will-change: opacity, transform;
 }
 
 .tag {

@@ -15,14 +15,20 @@ export const portfolioVert = /* glsl */ `
   uniform float uActiveBeat;
   uniform float uActiveProject;
   uniform float uBeatMorph;
+  uniform float uFromBeat;
+  uniform float uFromProject;
   uniform float uGlyphMorph;
   uniform float uMotion;
   uniform float uPixelRatio;
   uniform float uProjectMorph;
   uniform float uRelease;
   uniform float uReveal;
+  uniform float uStepMorph;
   uniform float uTitleMorph;
+  uniform float uToBeat;
+  uniform float uToProject;
   uniform float uTime;
+  uniform float uTransitionActive;
 
   varying vec3 vColor;
   varying float vAlpha;
@@ -37,8 +43,18 @@ export const portfolioVert = /* glsl */ `
   }
 
   void main() {
-    float project = sameIndex(aProjectIndex, uActiveProject);
-    float beat = project * sameIndex(aBeatIndex, uActiveBeat);
+    float settledProject = sameIndex(aProjectIndex, uActiveProject);
+    float settledBeat = settledProject * sameIndex(aBeatIndex, uActiveBeat);
+    float fromProject = sameIndex(aProjectIndex, uFromProject);
+    float toProject = sameIndex(aProjectIndex, uToProject);
+    float fromBeat = fromProject * sameIndex(aBeatIndex, uFromBeat);
+    float toBeat = toProject * sameIndex(aBeatIndex, uToBeat);
+    float transition = clamp(uTransitionActive, 0.0, 1.0);
+    float stepMorph = clamp(uStepMorph, 0.0, 1.0);
+    float transitionProject = max(fromProject, toProject);
+    float transitionBeat = max(fromBeat * (1.0 - stepMorph), toBeat * stepMorph);
+    float project = mix(settledProject, transitionProject, transition);
+    float beat = mix(settledBeat, transitionBeat, transition);
     float glyphRole = sameRole(aRole, 4.0);
     float glyph = beat * glyphRole;
     float titleGlyph = beat * glyphRole * uTitleMorph;
