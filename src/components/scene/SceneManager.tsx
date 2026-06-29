@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import { useScene, isCosmic, isBlackHoleCanvas, isR3FCanvas } from '@/lib/scene-state';
@@ -15,6 +15,7 @@ import PostFX from './PostFX';
 const WarpScene = dynamic(() => import('./scenes/WarpScene'), { ssr: false });
 const MiraScene = dynamic(() => import('./scenes/MiraScene'), { ssr: false });
 const StarField = dynamic(() => import('./StarField'), { ssr: false });
+const WARP_PRELOAD_LOCAL = 0.25;
 
 import HUD from '@/components/hud/HUD';
 import VoidPrologue from './VoidPrologue';
@@ -28,8 +29,10 @@ export default function SceneManager() {
   const veil            = useScene((s) => s.veil);
   const cosmicProgress  = useScene((s) => s.cosmicProgress);
   const local           = useScene((s) => s.localProgress);
+  const warpLocked      = useScene((s) => s.warpAutoplayActive);
   const pathname        = usePathname();
   const isHome          = pathname === '/';
+  const warpPreloaded   = useRef(false);
 
   useEffect(() => {
     if (!isHome) return;
@@ -42,17 +45,27 @@ export default function SceneManager() {
     if (isCosmic(phase)) useScene.setState({ veil: 0 });
   }, [isHome, phase]);
 
+  useEffect(() => {
+    if (!isHome) return;
+    if (phase !== 'C04_HORIZON') return;
+    if (local < WARP_PRELOAD_LOCAL || warpPreloaded.current) return;
+    warpPreloaded.current = true;
+    void (WarpScene as { preload?: () => Promise<unknown> }).preload?.();
+  }, [isHome, phase, local]);
+
   useKeyboardNavigation();
 
   if (!isHome) return null;
 
   const showBH    = isBlackHoleCanvas(phase);
-  // R3F canvas covers C05+ — WarpScene renders during C05_WARP and C06_ANOMALY.
-  const showR3F   = isR3FCanvas(phase);
-  // BH canvas only renders during C01..C04. By C05 the user is engulfed and
-  // the warp scene takes over — no fading needed since the BH canvas isn't
-  // even mounted.
+  // Keep R3F warm during late C04 so WarpScene mount cost is paid before handoff.
+  const showWarpR3F = phase === 'C04_HORIZON' && local >= WARP_PRELOAD_LOCAL;
+  const showR3F   = isR3FCanvas(phase) || showWarpR3F;
   const bhAlpha   = showBH ? 1 : 0;
+
+  const showWarp   = showWarpR3F || phase === 'C05_WARP' || phase === 'C06_ANOMALY';
+  const showSuper  = phase === 'C07_TRANSITION' || phase === 'C08_EMERGE'
+    || phase === 'C09_PROJECT' || isPortfolioChapterPhase(phase);
 
   // Journey remapping.
   // Fall-in darkness.
@@ -67,9 +80,7 @@ export default function SceneManager() {
   const fallDarkness = (() => {
     if (phase === 'C04_HORIZON') return Math.min(0.96, local * 1.1);
     if (phase === 'C05_WARP') {
-      if (local < 0.01) return 0.96;
-      if (local < 0.05) return 0.96 * (1 - (local - 0.01) / 0.04);
-      return 0;
+      return Math.max(0, 0.96 * (1 - local / 0.03));
     }
     return 0;
   })();
@@ -143,12 +154,11 @@ export default function SceneManager() {
                 read as motionless distant pinpricks against the bursting warp
                 particles, which breaks the "moving fast" illusion. */}
             {phase !== 'C05_WARP' && phase !== 'C06_ANOMALY' && <StarField />}
-            {(phase === 'C05_WARP' || phase === 'C06_ANOMALY') && <WarpScene />}
+            {showWarp && <WarpScene />}
             {/* Supercluster reveal: active from post-flash emergence through
                 the full W01-W07 portfolio route. Project information is
                 carried by the canvas particle field, not a DOM overlay. */}
-            {(phase === 'C07_TRANSITION' || phase === 'C08_EMERGE'
-              || phase === 'C09_PROJECT' || isPortfolioChapterPhase(phase)) && <MiraScene />}
+            {showSuper && <MiraScene />}
             <PostFX />
           </Suspense>
         </Canvas>
@@ -196,6 +206,17 @@ export default function SceneManager() {
       <WorkDashboard />
       <HUD />
       <VoidPrologue />
+      {warpLocked && (
+        <div
+          aria-hidden
+          style={{
+            position: 'fixed',
+            inset: 0,
+            pointerEvents: 'auto',
+            zIndex: 100,
+          }}
+        />
+      )}
       <div
         aria-hidden
         style={{

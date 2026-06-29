@@ -130,6 +130,7 @@ function dispatchMiraFocusAction(action: KeyAction): boolean {
 
 export function dispatchKeyAction(action: KeyAction): void {
   if (!action) return;
+  if (useScene.getState().warpAutoplayActive) return;
   if (dispatchPortfolioStopAction(action)) return;
   if (dispatchMiraFocusAction(action)) return;
   const state = useScene.getState();

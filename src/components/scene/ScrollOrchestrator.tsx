@@ -6,7 +6,7 @@ import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useScene, type ScenePhase } from '@/lib/scene-state';
-import { progressToPhase } from '@/lib/journey-map';
+import { phaseToProgress, progressToPhase } from '@/lib/journey-map';
 import { syncMiraCatalogueForScene } from '@/lib/mira-state';
 import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
 import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
@@ -20,6 +20,35 @@ import { getPortfolioMorphState } from '@/lib/portfolio-supercluster';
 gsap.registerPlugin(ScrollTrigger);
 
 const SNAP_COOLDOWN_MS = 520;
+const WARP_START_PROGRESS = phaseToProgress('C04_HORIZON', 0);
+const WARP_RELEASE_PROGRESS = phaseToProgress('C08_EMERGE', 0.12);
+const WARP_AUTOPLAY_SEGMENTS = [
+  {
+    durationMs: 1600,
+    from: phaseToProgress('C04_HORIZON', 0),
+    to: phaseToProgress('C04_HORIZON', 1),
+  },
+  {
+    durationMs: 2200,
+    from: phaseToProgress('C05_WARP', 0),
+    to: phaseToProgress('C05_WARP', 1),
+  },
+  {
+    durationMs: 1700,
+    from: phaseToProgress('C06_ANOMALY', 0),
+    to: phaseToProgress('C06_ANOMALY', 1),
+  },
+  {
+    durationMs: 1200,
+    from: phaseToProgress('C07_TRANSITION', 0),
+    to: phaseToProgress('C07_TRANSITION', 1),
+  },
+  {
+    durationMs: 700,
+    from: phaseToProgress('C08_EMERGE', 0),
+    to: WARP_RELEASE_PROGRESS,
+  },
+] as const;
 
 declare global {
   interface Window {
@@ -32,6 +61,8 @@ export default function ScrollOrchestrator() {
   const lenisRef = useRef<Lenis | null>(null);
   const snappingRef = useRef(false);
   const touchStartYRef = useRef<number | null>(null);
+  const warpFrameRef = useRef<number | null>(null);
+  const lastProgressRef = useRef(0);
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -44,6 +75,37 @@ export default function ScrollOrchestrator() {
     lenisRef.current = lenis;
     const snapToProgress = (progress: number): void => {
       scrollToProgress(lenis, progress, snappingRef);
+    };
+    const finishWarpAutoplay = (): void => {
+      if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
+      warpFrameRef.current = null;
+      syncScrollPosition(WARP_RELEASE_PROGRESS);
+      applyJourneyProgress(WARP_RELEASE_PROGRESS);
+      useScene.getState().setWarpAutoplayActive(false);
+      snappingRef.current = false;
+      lenis.start();
+      lastProgressRef.current = WARP_RELEASE_PROGRESS;
+    };
+    const startWarpAutoplay = (): void => {
+      if (useScene.getState().warpAutoplayActive) return;
+      useScene.getState().setWarpAutoplayActive(true);
+      snappingRef.current = true;
+      lenis.stop();
+      syncScrollPosition(WARP_START_PROGRESS);
+      applyJourneyProgress(WARP_START_PROGRESS);
+      const startedAt = performance.now();
+      const tick = (now: number): void => {
+        const elapsed = now - startedAt;
+        const sample = sampleWarpAutoplayProgress(elapsed);
+        const progress = sample.progress;
+        applyJourneyProgress(progress);
+        if (sample.done) {
+          finishWarpAutoplay();
+          return;
+        }
+        warpFrameRef.current = requestAnimationFrame(tick);
+      };
+      warpFrameRef.current = requestAnimationFrame(tick);
     };
 
     // GSAP ticker is the single RAF driver — do NOT also use requestAnimationFrame.
@@ -63,12 +125,20 @@ export default function ScrollOrchestrator() {
     }
 
     const onWheel = (event: WheelEvent): void => {
+      if (useScene.getState().warpAutoplayActive) {
+        event.preventDefault();
+        return;
+      }
       handlePortfolioWheel(event, snappingRef.current, snapToProgress);
     };
     const onTouchStart = (event: TouchEvent): void => {
       touchStartYRef.current = event.touches[0]?.clientY ?? null;
     };
     const onTouchMove = (event: TouchEvent): void => {
+      if (useScene.getState().warpAutoplayActive) {
+        event.preventDefault();
+        return;
+      }
       handlePortfolioTouch(event, touchStartYRef, snappingRef.current, snapToProgress);
     };
 
@@ -82,11 +152,19 @@ export default function ScrollOrchestrator() {
       start: 'top top',
       end:   'bottom bottom',
       onUpdate: (self) => {
+        if (useScene.getState().warpAutoplayActive) return;
+        if (shouldStartWarpAutoplay(lastProgressRef.current, self.progress)) {
+          startWarpAutoplay();
+          return;
+        }
+        lastProgressRef.current = self.progress;
         applyJourneyProgress(self.progress);
       },
     });
 
     return () => {
+      if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
+      useScene.getState().setWarpAutoplayActive(false);
       trigger.kill();
       window.removeEventListener('wheel', onWheel, { capture: true });
       window.removeEventListener('touchstart', onTouchStart, { capture: true });
@@ -130,6 +208,42 @@ function jumpToProgress(progress: number): void {
   applyJourneyProgress(progress);
   window.scrollTo({ top: target, behavior: 'auto' });
   ScrollTrigger.update();
+}
+
+function syncScrollPosition(progress: number): void {
+  const target = progress * getTotalScroll();
+  window.scrollTo({ top: target, behavior: 'auto' });
+}
+
+function easeInOut(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+
+function mix(from: number, to: number, t: number): number {
+  return from + (to - from) * t;
+}
+
+function sampleWarpAutoplayProgress(elapsedMs: number): {
+  done: boolean;
+  progress: number;
+} {
+  let remaining = Math.max(0, elapsedMs);
+  for (const segment of WARP_AUTOPLAY_SEGMENTS) {
+    if (remaining > segment.durationMs) {
+      remaining -= segment.durationMs;
+      continue;
+    }
+    const local = remaining / segment.durationMs;
+    return {
+      done: false,
+      progress: mix(segment.from, segment.to, easeInOut(local)),
+    };
+  }
+  return { done: true, progress: WARP_RELEASE_PROGRESS };
+}
+
+function shouldStartWarpAutoplay(previous: number, current: number): boolean {
+  return current > previous && previous < WARP_START_PROGRESS && current >= WARP_START_PROGRESS;
 }
 
 function isPortfolioActive(): boolean {

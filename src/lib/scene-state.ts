@@ -46,6 +46,7 @@ type SceneStore = {
   shatterActive: boolean;
   veil: number;
   horizonProgress: number;
+  warpAutoplayActive: boolean;
 
   setPhase: (p: ScenePhase) => void;
   setProgress: (j: number, c: number, w: number, l: number, phase: ScenePhase) => void;
@@ -54,6 +55,7 @@ type SceneStore = {
   setShatter: (active: boolean) => void;
   setVeil: (v: number) => void;
   setHorizonProgress: (v: number) => void;
+  setWarpAutoplayActive: (active: boolean) => void;
   tickPulsar: () => void;
   advanceScene: () => void;    // advance to next cosmic scene
   beginJourney: () => void;    // VOID → EVENT_HORIZON → DESCENT → MIRA_PULSAR
@@ -73,6 +75,7 @@ export const useScene = create<SceneStore>((set, get) => ({
   shatterActive: false,
   veil: 0,
   horizonProgress: 0,
+  warpAutoplayActive: false,
 
   setPhase: (phase) => set({ phase, phaseStart: performance.now() }),
 
@@ -93,6 +96,8 @@ export const useScene = create<SceneStore>((set, get) => ({
 
   setHorizonProgress: (horizonProgress) => set({ horizonProgress }),
 
+  setWarpAutoplayActive: (warpAutoplayActive) => set({ warpAutoplayActive }),
+
   tickPulsar: () => set((s) => ({ pulsarBeat: s.pulsarBeat + 1 })),
 
   advanceScene: () => {
@@ -111,6 +116,7 @@ export const useScene = create<SceneStore>((set, get) => ({
       phaseStart: performance.now(),
       veil: 0,
       horizonProgress: 0,
+      warpAutoplayActive: false,
       journeyProgress: 0,
       cosmicProgress: 0,
       workProgress: 0,

@@ -24,6 +24,7 @@ const Z_BOUNDS = 20;
 const MAX_SPEED_FACTOR = 2;
 const MAX_SCALE_FACTOR = 50;
 const PARTICLE_RADIUS = 0.025;     // half of upstream's 0.05 per request
+const MIN_ACTIVE_PARTICLES = 180;
 
 // Temp objects for instance manipulation
 const temp       = new THREE.Matrix4();
@@ -115,13 +116,13 @@ export default function WarpScene() {
     }
     const velocity = BASE_V + (1 - BASE_V) * accelOut;
 
-    // ── Density ramp: ~8 particles at engulfment → 2500 by cp 0.75 ───────
+    // ── Density ramp: visible from first frame to avoid a black-on-enter feel ─
     // Peaks with the velocity curve so the tunnel is fullest at peak speed.
     // Holds full density through the deceleration so the user still sees a
     // dense field as they slow into the flash.
     const fillT = Math.min(1, cp / 0.75);
     const fill = 0.003 + 0.997 * Math.pow(fillT, 2.6);
-    const activeCount = Math.max(8, Math.floor(COUNT * fill));
+    const activeCount = Math.max(MIN_ACTIVE_PARTICLES, Math.floor(COUNT * fill));
     m.count = activeCount;
 
     // ── Brightness boost over the last 12% of cp → screen-blowout flash ──

@@ -12,7 +12,9 @@ const PENULTIMATE_PHASE: ScenePhase = ALL_PHASES[ALL_PHASES.length - 2];
 
 export function SkipToNextButton(): React.JSX.Element | null {
   const phase = useScene((s) => s.phase);
+  const warpAutoplayActive = useScene((s) => s.warpAutoplayActive);
   const advance = useScene((s) => s.advanceScene);
+  if (warpAutoplayActive) return null;
   if (phase === FINAL_PHASE) return null;
   const label = phase === PENULTIMATE_PHASE ? 'outro' : 'next';
   return (
