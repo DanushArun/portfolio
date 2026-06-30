@@ -158,6 +158,14 @@ describe('portfolio supercluster', () => {
     expect(withExponent.cells.length).toBeGreaterThan(withoutExponent.cells.length);
   });
 
+  it('test_glyph_layout_when_built_renders_squared_as_readable_particle_glyph', () => {
+    const withExponent = buildPortfolioGlyphLayout(['O(N²)']);
+    const withoutExponent = buildPortfolioGlyphLayout(['O(N)']);
+    const exponentCells = withExponent.cells.length - withoutExponent.cells.length;
+
+    expect(exponentCells).toBeGreaterThanOrEqual(150);
+  });
+
   it('test_glyph_layout_when_built_samples_letters_as_solid_particle_cells', () => {
     const layout = buildPortfolioGlyphLayout(['A']);
 
