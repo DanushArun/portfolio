@@ -71,7 +71,7 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
     .toHaveAttribute('aria-label', /calls new leads/);
   await expect(page.getByTestId('project-tag-rail')).toContainText('Voice AI');
   await expect(page.locator('[data-testid="mira-system-trace"]')).toHaveCount(0);
-  await expect(page.locator('[data-phase-indicator]')).toBeVisible();
+  await expect(page.locator('[data-phase-indicator]')).toHaveCount(0);
   await expect(page.locator('[data-journey-progress]')).toBeVisible();
   await expect(page.locator('[data-skip-next]')).toBeVisible();
 

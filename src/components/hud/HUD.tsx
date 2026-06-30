@@ -2,13 +2,12 @@
 
 // src/components/hud/HUD.tsx
 // Job 003 AC10 — production HUD scaffold. Replaces the dev overlay.
-//   bottom-right: PhaseIndicator + SkipToNextButton
+//   bottom-right: JourneyProgressBar + SkipToNextButton
 //   bottom-left : audio / RM / quality slots (Job 003 ships disabled stubs)
 // During C04 horizon (scroll 0.155–0.205) the HUD fades — ux-spec §C04.
 
 import { useScene, type ScenePhase } from '@/lib/scene-state';
 import { JourneyProgressBar } from './JourneyProgressBar';
-import { PhaseIndicator } from './PhaseIndicator';
 import { SkipToNextButton } from './SkipToNextButton';
 import { ToggleSlot } from './ToggleSlot';
 import styles from './HUD.module.css';
@@ -40,7 +39,6 @@ export default function HUD(): React.JSX.Element | null {
   return (
     <div className={styles.root} aria-label="Scene controls" style={{ opacity }}>
       <div className={styles.cluster + ' ' + styles.bottomRight}>
-        <PhaseIndicator />
         <JourneyProgressBar />
         <SkipToNextButton />
       </div>

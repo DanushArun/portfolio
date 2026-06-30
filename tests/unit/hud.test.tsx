@@ -40,9 +40,10 @@ describe('HUD progress', () => {
     const { container } = render(<HUD />);
 
     const bottomRightHud = container.querySelector(
-      '[data-phase-indicator] + [data-journey-progress] + [data-skip-next]',
+      '[data-journey-progress] + [data-skip-next]',
     );
 
     expect(bottomRightHud).not.toBeNull();
+    expect(container.querySelector('[data-phase-indicator]')).toBeNull();
   });
 });

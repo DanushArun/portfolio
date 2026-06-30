@@ -26,15 +26,6 @@
   align-items: flex-end;
 }
 
-.phaseIndicator {
-  font-family: var(--font-composer);
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  color: rgba(240, 228, 210, 0.6);
-  text-transform: uppercase;
-  user-select: none;
-}
-
 .journeyProgress {
   appearance: none;
   background: rgba(240, 228, 210, 0.12);
