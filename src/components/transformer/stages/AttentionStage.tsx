@@ -16,7 +16,7 @@ export default function AttentionStage() {
 
   return (
     <group>
-      <Text position={[-3, 2, 0]} fontSize={0.15} color="#FFA85C" anchorX="center" anchorY="middle">Q</Text>
+      <Text position={[-3, 2, 0]} fontSize={0.15} color="#9FB3C8" anchorX="center" anchorY="middle">Q</Text>
       <Text position={[-3, 0, 0]} fontSize={0.15} color="#4ECDC4" anchorX="center" anchorY="middle">K</Text>
       <Text position={[-3, -2, 0]} fontSize={0.15} color="#45B7D1" anchorX="center" anchorY="middle">V</Text>
 

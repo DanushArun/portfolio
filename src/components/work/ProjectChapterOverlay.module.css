@@ -22,7 +22,28 @@
   top: clamp(2rem, 7vh, 4.8rem);
 }
 
-.copyLayer {
+.identity::before {
+  background: rgba(159, 179, 200, 0.52);
+  content: "";
+  height: calc(100% - 0.3rem);
+  left: -1.05rem;
+  position: absolute;
+  top: 0.1rem;
+  width: 1px;
+}
+
+.projectIdentity {
+  display: grid;
+  gap: 0.64rem;
+  min-width: 0;
+}
+
+.descriptionStage {
+  display: grid;
+  min-width: 0;
+}
+
+.descriptionLayer {
   display: grid;
   gap: 0.64rem;
   grid-area: 1 / 1;
@@ -40,13 +61,13 @@
 }
 
 .eyebrow {
-  color: rgba(255, 197, 111, 0.68);
+  color: rgba(159, 179, 200, 0.72);
   font-size: clamp(0.66rem, 0.72vw, 0.82rem);
   margin: 0;
 }
 
 .title {
-  color: rgba(250, 239, 220, 0.86);
+  color: rgba(250, 239, 220, 0.9);
   font-family: var(--font-dop), Georgia, Cambria, "Times New Roman", serif;
   font-size: clamp(3rem, 6vw, 7.4rem);
   font-style: italic;
@@ -54,7 +75,7 @@
   letter-spacing: 0;
   line-height: 0.84;
   margin: 0;
-  text-shadow: 0 0 32px rgba(255, 197, 111, 0.12);
+  text-shadow: 0 0 28px rgba(8, 7, 10, 0.42);
 }
 
 .step {
@@ -68,7 +89,7 @@
 }
 
 .step span {
-  color: rgba(255, 197, 111, 0.78);
+  color: rgba(159, 179, 200, 0.86);
 }
 
 .description {
@@ -94,6 +115,46 @@
   transform: translateX(-50%);
 }
 
+.tagDetail {
+  background:
+    linear-gradient(180deg, rgba(8, 7, 10, 0.82), rgba(8, 7, 10, 0.66));
+  border: 1px solid rgba(159, 179, 200, 0.24);
+  border-radius: 4px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+  color: rgba(240, 228, 210, 0.78);
+  display: grid;
+  gap: 0.42rem;
+  left: 50%;
+  margin-bottom: 0;
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0.82rem 0.95rem;
+  pointer-events: auto;
+  position: absolute;
+  bottom: calc(100% + 0.7rem);
+  transform: translateX(-50%);
+  width: max-content;
+}
+
+.tagDetailLabel {
+  color: rgba(159, 179, 200, 0.9);
+  font-family: var(--font-composer), ui-monospace, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.tagDetailText {
+  color: rgba(240, 228, 210, 0.72);
+  font-family: var(--font-composer), ui-monospace, monospace;
+  font-size: clamp(0.68rem, 0.72vw, 0.78rem);
+  letter-spacing: 0;
+  line-height: 1.5;
+  margin: 0;
+  text-align: center;
+}
+
 .tagLayer {
   display: flex;
   flex-wrap: wrap;
@@ -106,14 +167,30 @@
 }
 
 .tag {
-  background: rgba(8, 7, 10, 0.30);
-  border: 1px solid rgba(255, 197, 111, 0.34);
-  border-radius: 999px;
-  color: rgba(255, 213, 154, 0.88);
+  appearance: none;
+  background: rgba(8, 7, 10, 0.20);
+  border: 1px solid rgba(159, 179, 200, 0.25);
+  border-radius: 4px;
+  color: rgba(240, 228, 210, 0.72);
+  cursor: pointer;
   font-size: clamp(0.58rem, 0.66vw, 0.72rem);
   line-height: 1;
+  min-height: 32px;
   padding: 0.55rem 0.72rem;
+  pointer-events: auto;
+  transition:
+    background 160ms var(--ease-instrument),
+    border-color 160ms var(--ease-instrument),
+    color 160ms var(--ease-instrument);
   white-space: nowrap;
+}
+
+.tag:hover,
+.tag:focus-visible,
+.tag[aria-expanded="true"] {
+  background: rgba(159, 179, 200, 0.1);
+  border-color: rgba(159, 179, 200, 0.62);
+  color: rgba(240, 228, 210, 0.96);
 }
 
 @media (max-width: 760px) {

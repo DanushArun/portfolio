@@ -15,14 +15,14 @@ export default function StageIndicator() {
             key={stage.id}
             className={`flex items-center gap-2 ${i <= currentStage ? 'opacity-100' : 'opacity-30'}`}
           >
-            <div className={`w-2 h-2 rounded-full transition-colors ${i === currentStage ? 'bg-[#FFA85C]' : 'bg-[#F0E4D2]/30'}`} />
+            <div className={`w-2 h-2 rounded-full transition-colors ${i === currentStage ? 'bg-[#9FB3C8]' : 'bg-[#F0E4D2]/30'}`} />
             <span className="text-[10px] uppercase tracking-widest font-[var(--font-composer)] text-[#F0E4D2]/60">
               {stage.label}
             </span>
             {i < STAGES.length - 1 && <div className="w-4 h-px bg-[#F0E4D2]/15" />}
           </div>
         ))}
-        <div className="ml-3 text-[10px] font-[var(--font-composer)] text-[#FFA85C]/60">
+        <div className="ml-3 text-[10px] font-[var(--font-composer)] text-[#9FB3C8]/60">
           {(globalProgress * 100).toFixed(0)}%
         </div>
       </div>

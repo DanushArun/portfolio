@@ -4,7 +4,7 @@
 //
 // Palette is LOCKED (founder, 2026-05-12):
 //   void       #08070a   absolute background
-//   accretion  #FFA85C   the only accent / use sparingly
+//   signal     #9FB3C8   UI accent / use sparingly
 //   cream      #F0E4D2   body text / paper
 //
 // Typography variables match `src/app/layout.tsx` exactly:
@@ -17,7 +17,7 @@
 
 export const palette = {
   void:      '#08070a',
-  accretion: '#FFA85C',
+  signal:    '#9FB3C8',
   cream:     '#F0E4D2',
 } as const;
 
@@ -51,15 +51,15 @@ export const type = {
 // Per-W-phase accent placeholders. Each W-job overrides its row with locked
 // accents. Job 003 ships placeholders so consumers compile.
 export const panelHues = {
-  W01_MIRA:       { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W02_AIDEN:      { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W03_VANGUARD:   { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W04_INSPECTION: { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W05_WAVEFIELD:  { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W06_EMI:        { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W07_FORMULA:    { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W08_ABOUT:      { primary: palette.cream, accent: palette.accretion, bg: palette.void },
-  W09_CONNECT:    { primary: palette.cream, accent: palette.accretion, bg: palette.void },
+  W01_MIRA:       { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W02_AIDEN:      { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W03_VANGUARD:   { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W04_INSPECTION: { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W05_WAVEFIELD:  { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W06_EMI:        { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W07_FORMULA:    { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W08_ABOUT:      { primary: palette.cream, accent: palette.signal, bg: palette.void },
+  W09_CONNECT:    { primary: palette.cream, accent: palette.signal, bg: palette.void },
 } as const;
 
 export const fontSize = {

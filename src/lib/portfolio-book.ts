@@ -22,6 +22,11 @@ export interface PortfolioBookNode {
   readonly radius: number;
 }
 
+export interface PortfolioStackTag {
+  readonly detail: string;
+  readonly label: string;
+}
+
 export interface PortfolioBeat {
   readonly description: string;
   readonly distance: number;
@@ -33,7 +38,7 @@ export interface PortfolioBeat {
   readonly particleLines: readonly string[];
   readonly question: string;
   readonly sectionLabel: string;
-  readonly stack: readonly string[];
+  readonly stack: readonly PortfolioStackTag[];
   readonly title: string;
 }
 

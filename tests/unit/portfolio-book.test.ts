@@ -98,11 +98,12 @@ describe('portfolio book', () => {
     expect(hero.description).toBe(
       'An AI that calls new leads instantly, qualifies them in five languages, and syncs data.',
     );
-    expect(hero.stack).toEqual([
+    expect(hero.stack.map((tag) => tag.label)).toEqual([
       'Voice AI',
       'Multilingual',
       'CRM Sync',
     ]);
+    expect(hero.stack[0].detail).toContain('outbound qualification');
   });
 
   it('test_vanguard_when_loaded_uses_local_testing_engine_terms', () => {
@@ -115,6 +116,13 @@ describe('portfolio book', () => {
     const text = JSON.stringify(getPortfolioChapter('FORMULA'));
 
     expect(text).toContain('carbon fiber body panels');
+  });
+
+  it('test_wave_field_when_loaded_preserves_complexity_notation_for_particles', () => {
+    const scaleBeat = getPortfolioChapter('WAVEFIELD').beats.find((beat) => beat.id === 'scale');
+
+    expect(scaleBeat?.particleLines.join(' ')).toContain('O(N²)');
+    expect(scaleBeat?.particleLines.join(' ')).toContain('O(N LOG N)');
   });
 
   it('test_projects_when_loaded_open_with_clear_project_descriptions', () => {
@@ -130,7 +138,9 @@ describe('portfolio book', () => {
   });
 
   it('test_mira_when_loaded_has_tags_for_every_required_section', () => {
-    expect(getPortfolioChapter('MIRA').beats.every((beat) => beat.stack.length > 0)).toBe(true);
+    expect(getPortfolioChapter('MIRA').beats.every((beat) => {
+      return beat.stack.every((tag) => tag.label.length > 0 && tag.detail.length > 20);
+    })).toBe(true);
   });
 
   it('test_mira_when_loaded_does_not_restore_stale_catalogue_copy', () => {

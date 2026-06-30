@@ -2,11 +2,11 @@
 
 /* ---------------------------------------------------------------
  * Job 003 design tokens — single source of truth.
- * Palette locked by founder 2026-05-12. Mirror of `src/lib/design-tokens.ts`.
+ * Palette locked by founder 2026-06-30. Mirror of `src/lib/design-tokens.ts`.
  * --------------------------------------------------------------- */
 :root {
   --color-void:      #08070a;
-  --color-accretion: #FFA85C;
+  --color-signal:    #9FB3C8;
   --color-cream:     #F0E4D2;
 
   /* Easing — six named curves. Never reach for CSS `ease` or `linear`. */
@@ -23,7 +23,7 @@
  * re-export them so `font-composer` / `font-dop` utilities resolve. */
 @theme inline {
   --color-void:      var(--color-void);
-  --color-accretion: var(--color-accretion);
+  --color-signal:    var(--color-signal);
   --color-cream:     var(--color-cream);
 
   --font-composer: var(--font-composer);
@@ -111,15 +111,15 @@ button {
  * Selection
  * --------------------------------------------------------------- */
 ::selection {
-  background: var(--color-accretion);
+  background: var(--color-signal);
   color: var(--color-void);
 }
 
 /* ---------------------------------------------------------------
- * Focus — accretion outline, 2px offset. AC14 contrast 9.8:1.
+ * Focus — signal outline, 2px offset. Contrast exceeds WCAG AA.
  * --------------------------------------------------------------- */
 :focus-visible {
-  outline: 1px solid var(--color-accretion);
+  outline: 1px solid var(--color-signal);
   outline-offset: 2px;
 }
 

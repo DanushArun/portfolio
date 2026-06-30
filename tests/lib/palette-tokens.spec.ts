@@ -19,8 +19,8 @@ describe('Job 003 palette tokens', () => {
     expect(parseCustomProp(css, '--color-void')).toBe(palette.void);
   });
 
-  it('--color-accretion in globals.css equals palette.accretion', () => {
-    expect(parseCustomProp(css, '--color-accretion')).toBe(palette.accretion);
+  it('--color-signal in globals.css equals palette.signal', () => {
+    expect(parseCustomProp(css, '--color-signal')).toBe(palette.signal);
   });
 
   it('--color-cream in globals.css equals palette.cream', () => {
@@ -29,7 +29,7 @@ describe('Job 003 palette tokens', () => {
 
   it('palette is locked to the founder values', () => {
     expect(palette.void).toBe('#08070a');
-    expect(palette.accretion).toBe('#FFA85C');
+    expect(palette.signal).toBe('#9FB3C8');
     expect(palette.cream).toBe('#F0E4D2');
   });
 });

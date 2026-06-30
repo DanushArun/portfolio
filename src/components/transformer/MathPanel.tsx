@@ -14,7 +14,7 @@ function MatrixDisplay({ values, rows, cols, label }: {
 
   return (
     <div className="mb-4">
-      <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2 font-[var(--font-composer)]">
+      <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2 font-[var(--font-composer)]">
         {label}
       </div>
       <div className="font-[var(--font-composer)] text-xs space-y-1">
@@ -48,7 +48,7 @@ export default function MathPanel() {
   return (
     <div className="p-6 font-[var(--font-composer)]">
       <div className="mb-6 pb-4 border-b border-[#F0E4D2]/10">
-        <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-1">
+        <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-1">
           {stage.label}
         </div>
         <h2 className="text-lg text-[#F0E4D2] mb-2">{stage.title}</h2>
@@ -56,22 +56,22 @@ export default function MathPanel() {
       </div>
 
       <div className="mb-6 p-4 rounded bg-[#F0E4D2]/5 border border-[#F0E4D2]/10">
-        <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">
+        <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">
           Formula
         </div>
-        <code className="text-sm text-[#FFA85C]">{stage.formula}</code>
+        <code className="text-sm text-[#9FB3C8]">{stage.formula}</code>
       </div>
 
       {currentStage === 0 && (
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">Input Text</div>
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">Input Text</div>
           <div className="text-sm text-[#F0E4D2] mb-4">&quot;The quick brown fox&quot;</div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">Token IDs</div>
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">Token IDs</div>
           <div className="space-y-1">
             {TOKENS.map((t) => (
               <div key={t.id} className="flex justify-between text-xs">
                 <span className="text-[#F0E4D2]">{t.text}</span>
-                <span className="text-[#FFA85C]">{t.id}</span>
+                <span className="text-[#9FB3C8]">{t.id}</span>
               </div>
             ))}
           </div>
@@ -80,7 +80,7 @@ export default function MathPanel() {
 
       {currentStage === 1 && (
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">
             Embeddings (d_model={EMBED_DIM_DISPLAY} for display)
           </div>
           {TOKENS.map((token, i) => (
@@ -97,7 +97,7 @@ export default function MathPanel() {
 
       {currentStage === 2 && (
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">
             Attention Weights (Head 1)
           </div>
           <MatrixDisplay
@@ -112,7 +112,7 @@ export default function MathPanel() {
 
       {currentStage === 3 && (
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">Residual Connection</div>
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">Residual Connection</div>
           <div className="text-xs text-[#F0E4D2]/60 mb-2">X&apos; = X + MultiHeadOutput</div>
           <div className="text-xs text-[#F0E4D2]/40">Attention output added to original embedding</div>
         </div>
@@ -120,7 +120,7 @@ export default function MathPanel() {
 
       {currentStage === 4 && (
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">Layer Normalization</div>
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">Layer Normalization</div>
           <div className="text-xs text-[#F0E4D2]/60 mb-2">μ = mean(X&apos;), σ = std(X&apos;)</div>
           <div className="text-xs text-[#F0E4D2]/60 mb-2">X_ln = γ · (X&apos; - μ) / σ + β</div>
           <div className="text-xs text-[#F0E4D2]/40">Normalizes to mean=0, std=1 with learnable γ, β</div>
@@ -129,7 +129,7 @@ export default function MathPanel() {
 
       {currentStage === 5 && (
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">Feed-Forward Network</div>
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">Feed-Forward Network</div>
           <div className="text-xs text-[#F0E4D2]/60 mb-2">FFN(x) = GELU(xW₁ + b₁)W₂ + b₂</div>
           <div className="text-xs text-[#F0E4D2]/40">W₁: 512 → 2048, W₂: 2048 → 512</div>
         </div>
@@ -137,18 +137,18 @@ export default function MathPanel() {
 
       {currentStage === 6 && (
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-[#FFA85C]/60 mb-2">Output Probabilities</div>
+          <div className="text-[10px] uppercase tracking-widest text-[#9FB3C8]/60 mb-2">Output Probabilities</div>
           <div className="space-y-2">
             {OUTPUT_PROBS.map((p, i) => (
               <div key={i} className="flex items-center gap-3">
                 <span className="text-xs text-[#F0E4D2] w-16">{p.word}</span>
                 <div className="flex-1 h-4 bg-[#F0E4D2]/5 rounded overflow-hidden">
                   <div
-                    className="h-full bg-[#FFA85C]/60 rounded"
+                    className="h-full bg-[#9FB3C8]/60 rounded"
                     style={{ width: `${p.prob * 100}%` }}
                   />
                 </div>
-                <span className="text-xs text-[#FFA85C] w-12 text-right">
+                <span className="text-xs text-[#9FB3C8] w-12 text-right">
                   {(p.prob * 100).toFixed(0)}%
                 </span>
               </div>

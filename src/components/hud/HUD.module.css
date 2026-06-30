@@ -50,11 +50,11 @@
 }
 
 .journeyProgress::-webkit-progress-value {
-  background: var(--color-accretion);
+  background: var(--color-signal);
 }
 
 .journeyProgress::-moz-progress-bar {
-  background: var(--color-accretion);
+  background: var(--color-signal);
 }
 
 .skipButton {
@@ -81,7 +81,7 @@
 }
 
 .skipButton:hover .skipArrow {
-  color: var(--color-accretion);
+  color: var(--color-signal);
 }
 
 .skipButton:active {
@@ -118,7 +118,7 @@
 
 .toggleSlot:hover:not([aria-disabled="true"]) {
   color: rgba(240, 228, 210, 1);
-  border-color: var(--color-accretion);
+  border-color: var(--color-signal);
 }
 
 html[data-rm="reduce"] .root,

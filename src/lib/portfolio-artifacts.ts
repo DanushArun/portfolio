@@ -20,7 +20,7 @@ const ARTIFACT_LABELS = {
   AIDEN: 'CALL INTEL',
   VANGUARD: 'QA GRAPH',
   INSPECTION: 'DEFECT QA',
-  WAVEFIELD: 'O N LOG N',
+  WAVEFIELD: 'O(N LOG N)',
   EMI: 'DB CURVES',
   FORMULA: 'RACE OPS',
 } as const satisfies Record<PortfolioChapterId, string>;

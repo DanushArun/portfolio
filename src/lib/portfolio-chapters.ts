@@ -6,6 +6,7 @@ import type {
   PortfolioChapterId,
   PortfolioProjectPhase,
 } from './portfolio-book';
+import { stackTags } from './portfolio-stack-tags';
 import { workPanelDetails } from './work-panel-data';
 
 export const PROJECT_PHASES = [
@@ -40,7 +41,6 @@ type CaseStudyBeatConfig = Readonly<{
 }>;
 
 const PARTICLE_LINE_MAX = 26;
-
 function camera(orbit: number, lift: number, distance: number, fov: number): BeatCamera {
   return { distance, fov, lift, orbit };
 }
@@ -48,7 +48,7 @@ function camera(orbit: number, lift: number, distance: number, fov: number): Bea
 function particleWordsFor(text: string): readonly string[] {
   return text
     .toUpperCase()
-    .replace(/[^A-Z0-9,]+/g, ' ')
+    .replace(/[^A-Z0-9(),²]+/g, ' ')
     .split(' ')
     .filter((word) => word.length > 0);
 }
@@ -86,12 +86,13 @@ function beat([
   beatCamera,
   stack,
 ]: BeatTuple): PortfolioBeat {
+  const config = { description, metric, title };
   return {
     id,
     title,
     question,
     metric,
-    stack,
+    stack: stackTags(stack, config),
     description,
     particleLines: particleLinesForDescription(description),
     sectionLabel: title,
@@ -105,7 +106,7 @@ function caseStudyBeat(config: CaseStudyBeatConfig): PortfolioBeat {
     title: config.title,
     question: config.question,
     metric: config.metric,
-    stack: config.stack,
+    stack: stackTags(config.stack, config),
     description: config.description,
     particleLines: particleLinesForDescription(config.description),
     sectionLabel: config.sectionLabel,
@@ -341,7 +342,7 @@ export const PORTFOLIO_CHAPTERS: readonly PortfolioChapter[] = [
         'Signal gating ensures the network retains precise contextual meaning over huge distances.',
         camera(1.85, 0.72, 4.4, 35), ['Information gating', 'Context']]),
       beat(['scale', 'Computational Target', 'What is the speedup?', 'Breaking quadratic limits',
-        'The architecture mathematically targets a reduction from quadratic to O(n log n) cost.',
+        'Reducing Transformer Attention from O(n²) to O(n log n).',
         camera(2.65, 0.30, 4.6, 37), ['Algorithm scaling', 'Efficiency']]),
       beat(['artifact', 'The Artifact', 'What was delivered?', 'Comprehensive paper',
         'Defended the architecture through a rigorous framework proving theoretical viability.',
