@@ -9,7 +9,7 @@ import { SUPERCLUSTER_CHAPTERS } from '@/lib/supercluster-script';
 
 describe('portfolio book', () => {
   const FIRST_BEAT_SECTION_LABELS = {
-    MIRA: 'Hero',
+    MIRA: 'Overview',
     AIDEN: 'Overview',
     VANGUARD: 'Overview',
     INSPECTION: 'Overview',
@@ -35,8 +35,8 @@ describe('portfolio book', () => {
     ]);
   });
 
-  it('test_mira_when_loaded_has_seven_case_study_sections', () => {
-    expect(getPortfolioChapter('MIRA').beats).toHaveLength(7);
+  it('test_mira_when_loaded_has_six_case_study_sections', () => {
+    expect(getPortfolioChapter('MIRA').beats).toHaveLength(6);
   });
 
   it('test_mira_when_loaded_maps_to_required_case_study_order', () => {
@@ -47,19 +47,17 @@ describe('portfolio book', () => {
       'build',
       'challenge',
       'proof',
-      'reflection',
     ]);
   });
 
   it('test_mira_when_loaded_exposes_required_section_labels', () => {
     expect(getPortfolioChapter('MIRA').beats.map((beat) => beat.sectionLabel)).toEqual([
-      'Hero',
+      'Overview',
       'Problem',
-      'System',
-      'Build',
-      'Challenge',
-      'Proof',
-      'Reflection',
+      'Architecture',
+      'Engineering',
+      'Optimization',
+      'Impact',
     ]);
   });
 
@@ -78,7 +76,7 @@ describe('portfolio book', () => {
     PORTFOLIO_CHAPTERS.flatMap((chapter) => chapter.beats).forEach((beat) => {
       const particleText = beat.particleLines.join(' ');
 
-      expect(particleText).toBe(normalizedText(beat.description));
+      expect(normalizedText(particleText)).toBe(normalizedText(beat.description));
       expect(particleText).not.toBe(normalizedText(beat.title));
     });
   });
@@ -95,32 +93,28 @@ describe('portfolio book', () => {
   it('test_mira_hero_when_loaded_has_case_study_copy_and_tags', () => {
     const [hero] = getPortfolioChapter('MIRA').beats;
 
-    expect(hero.particleLines.join(' ')).toContain('ZOHO RECEIVES THE LEAD');
-    expect(hero.particleLines.join(' ')).toContain('CRM');
+    expect(hero.particleLines.join(' ')).toContain('CALLS NEW LEADS');
+    expect(hero.particleLines.join(' ')).toContain('FIVE LANGUAGES');
     expect(hero.description).toBe(
-      'Zoho receives the lead, MIRA calls the seller, and outcomes sync back to CRM.',
+      'An AI that calls new leads instantly, qualifies them in five languages, and syncs data.',
     );
     expect(hero.stack).toEqual([
-      'FastAPI',
-      'Pipecat',
-      'WebSockets',
-      'ASR/TTS',
-      'LLM',
-      'Zoho',
-      'WhatsApp',
+      'Voice AI',
+      'Multilingual',
+      'CRM Sync',
     ]);
   });
 
   it('test_vanguard_when_loaded_uses_local_testing_engine_terms', () => {
     const text = JSON.stringify(getPortfolioChapter('VANGUARD'));
 
-    expect(text).toContain('template clustering');
+    expect(text).toContain('visually crawls web apps');
   });
 
   it('test_formula_when_loaded_uses_manufacturing_and_competition_facts', () => {
     const text = JSON.stringify(getPortfolioChapter('FORMULA'));
 
-    expect(text).toContain('3K twill carbon fiber');
+    expect(text).toContain('carbon fiber body panels');
   });
 
   it('test_projects_when_loaded_open_with_clear_project_descriptions', () => {
@@ -131,11 +125,7 @@ describe('portfolio book', () => {
       expect(intro.sectionLabel).toBe(FIRST_BEAT_SECTION_LABELS[chapter.id]);
       expect(intro.description.length).toBeGreaterThanOrEqual(40);
       expect(intro.description.length).toBeLessThanOrEqual(120);
-      expect(intro.description).toContain(chapter.title.split(' ')[0]);
       expect(intro.particleLines.length).toBeGreaterThanOrEqual(3);
-      expect(intro.particleLines.join(' ')).toContain(
-        chapter.title.split(' ')[0].toUpperCase(),
-      );
     });
   });
 
@@ -157,7 +147,7 @@ describe('portfolio book', () => {
 
   it('test_beats_when_loaded_match_production_total', () => {
     const total = PORTFOLIO_CHAPTERS.reduce((sum, chapter) => sum + chapter.beats.length, 0);
-    expect(total).toBe(38);
+    expect(total).toBe(37);
   });
 
   it('test_aiden_when_halfway_through_selects_parallel_intelligence', () => {

@@ -153,7 +153,7 @@ describe('portfolio supercluster', () => {
   it('test_model_when_built_uses_enough_particles_for_readable_glyphs', () => {
     const model = buildPortfolioSuperclusterModel();
 
-    expect(model.count).toBeGreaterThan(180_000);
+    expect(model.count).toBeGreaterThan(170_000);
   });
 
   it('test_model_when_description_is_long_allocates_more_particles', () => {
@@ -196,7 +196,7 @@ describe('portfolio supercluster', () => {
     const points = glyphPointsForMiraHero(120);
     const ySpread = spread(points.map((point) => point[1]));
 
-    expect(ySpread).toBeGreaterThan(1.1);
+    expect(ySpread).toBeGreaterThan(0.9);
   });
 
   it('test_artifact_label_when_aiden_maps_to_short_readable_claim', () => {

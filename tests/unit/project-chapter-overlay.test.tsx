@@ -24,9 +24,9 @@ describe('project chapter overlay', () => {
     const { container } = render(<ProjectChapterOverlay />);
 
     expect(container.textContent).toContain('MIRA');
-    expect(container.textContent).toContain('Hero');
-    expect(container.textContent).toContain('01 / 07');
-    expect(container.textContent).toContain('Zoho receives the lead');
+    expect(container.textContent).toContain('Overview');
+    expect(container.textContent).toContain('01 / 06');
+    expect(container.textContent).toContain('calls new leads');
   });
 
   it('test_mira_hero_when_active_uses_one_description_for_text_and_aria', () => {
@@ -46,19 +46,19 @@ describe('project chapter overlay', () => {
     const { container } = render(<ProjectChapterOverlay />);
     const rail = container.querySelector('[data-testid="project-tag-rail"]');
 
-    expect(rail?.textContent).toContain('FastAPI');
-    expect(rail?.textContent).toContain('Pipecat');
-    expect(rail?.textContent).toContain('WhatsApp');
+    expect(rail?.textContent).toContain('Voice AI');
+    expect(rail?.textContent).toContain('Multilingual');
+    expect(rail?.textContent).toContain('CRM Sync');
   });
 
   it('test_mira_challenge_when_active_shows_latency_constraint', () => {
-    act(() => syncPortfolioBookForScene('W01_MIRA', 0.62));
+    act(() => syncPortfolioBookForScene('W01_MIRA', 0.70));
 
     const { container } = render(<ProjectChapterOverlay />);
 
-    expect(container.textContent).toContain('Challenge');
-    expect(container.textContent).toContain('Streaming audio');
-    expect(container.textContent).toContain('Streaming');
+    expect(container.textContent).toContain('Optimization');
+    expect(container.textContent).toContain('VAD');
+    expect(container.textContent).toContain('Pre-warming');
   });
 
   it('test_step_transition_when_active_shows_outgoing_and_incoming_descriptions', () => {
@@ -78,9 +78,9 @@ describe('project chapter overlay', () => {
     const { container } = render(<ProjectChapterOverlay />);
     const incoming = container.querySelector('[data-testid="project-step-description-incoming"]');
 
-    expect(container.textContent).toContain('Hero');
+    expect(container.textContent).toContain('Overview');
     expect(container.textContent).toContain('Problem');
-    expect(incoming?.textContent).toContain('C2C and OLX leads');
-    expect(incoming?.getAttribute('aria-label')).toContain('C2C and OLX leads');
+    expect(incoming?.textContent).toContain('High intent leads');
+    expect(incoming?.getAttribute('aria-label')).toContain('High intent leads');
   });
 });

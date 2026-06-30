@@ -66,10 +66,10 @@ test('test_mira_phase_when_scrubbed_shows_particle_flow_context', async ({ page 
 
   await expect(page.getByTestId('project-chapter-title')).toContainText('MIRA');
   await expect(page.getByTestId('project-step-description'))
-    .toContainText('Zoho receives the lead');
+    .toContainText('calls new leads');
   await expect(page.getByTestId('project-step-description'))
-    .toHaveAttribute('aria-label', /Zoho receives the lead/);
-  await expect(page.getByTestId('project-tag-rail')).toContainText('FastAPI');
+    .toHaveAttribute('aria-label', /calls new leads/);
+  await expect(page.getByTestId('project-tag-rail')).toContainText('Voice AI');
   await expect(page.locator('[data-testid="mira-system-trace"]')).toHaveCount(0);
   await expect(page.locator('[data-phase-indicator]')).toBeVisible();
   await expect(page.locator('[data-journey-progress]')).toBeVisible();

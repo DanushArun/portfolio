@@ -45,6 +45,6 @@ describe('work panels', () => {
   it('test_about_panel_when_rendered_shows_operating_loop', () => {
     const { container } = render(<AboutPanel />);
 
-    expect(container.textContent).toContain('Find the bottleneck');
+    expect(container.textContent).toContain('architecture, implementation and defense');
   });
 });

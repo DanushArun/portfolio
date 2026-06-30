@@ -33,7 +33,7 @@ test('test_portfolio_scroll_when_wheel_moves_advances_monotonically', async ({ p
   });
 
   expect(before).toBe(8);
-  expect(after ?? 0).toBeGreaterThanOrEqual(before ?? 0);
+  expect(after).toBe((before ?? 0) + 1);
 });
 
 test('test_portfolio_scroll_when_small_wheel_input_does_not_lock_the_page', async ({ page }) => {

@@ -13,6 +13,6 @@ describe('panelCopy.W01_MIRA', () => {
   });
 
   it('describes the language coverage accurately in the body', () => {
-    expect(panelCopy.W01_MIRA.body).toMatch(/English and 4 South Indian/);
+    expect(panelCopy.W01_MIRA.body).toMatch(/five languages/);
   });
 });

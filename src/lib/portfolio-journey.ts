@@ -42,6 +42,7 @@ export interface PortfolioStepInput {
 
 const ENTRY_SPAN = 0.14;
 const EXIT_START = 0.88;
+const PROGRESS_EPSILON = 0.000001;
 const TITLE_LOCAL_PROGRESS = 0.16;
 
 function beatLocalProgress(beatIndex: number, beatCount: number): number {
@@ -142,4 +143,17 @@ export function resolvePortfolioStep(input: PortfolioStepInput): PortfolioGestur
   }
   const target = Math.max(0, Math.min(stops.length - 1, currentIndex + input.direction));
   return { committed: target !== currentIndex, stop: stops[target] };
+}
+
+export function resolvePortfolioSnapStep(input: PortfolioStepInput): PortfolioGestureResult {
+  const stops = getPortfolioStops();
+  const currentIndex = nearestStopIndex(input.currentProgress, stops);
+  if (input.locked) {
+    return { committed: false, stop: stops[currentIndex] };
+  }
+  const target = input.direction > 0
+    ? stops.find((stop) => stop.progress > input.currentProgress)?.index ?? currentIndex
+    : stops.findLast((stop) => stop.progress < input.currentProgress)?.index ?? currentIndex;
+  const committed = Math.abs(stops[target].progress - input.currentProgress) > PROGRESS_EPSILON;
+  return { committed, stop: stops[target] };
 }

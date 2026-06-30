@@ -1,8 +1,8 @@
 // src/components/scene/ScrollOrchestrator.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
-import Lenis from 'lenis';
+import { useEffect, useRef, type MutableRefObject } from 'react';
+import Lenis, { type VirtualScrollData } from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useScene, type ScenePhase } from '@/lib/scene-state';
@@ -14,6 +14,7 @@ import {
   type PortfolioStop,
   getPortfolioStopForProgress,
   getProgressForPortfolioStop,
+  resolvePortfolioSnapStep,
 } from '@/lib/portfolio-journey';
 import { getPortfolioMorphState } from '@/lib/portfolio-supercluster';
 import {
@@ -27,6 +28,10 @@ import {
 gsap.registerPlugin(ScrollTrigger);
 
 const SNAP_COOLDOWN_MS = 520;
+const PORTFOLIO_SNAP_COOLDOWN_MS = 180;
+const PORTFOLIO_SNAP_DELTA_THRESHOLD = 48;
+const PORTFOLIO_SNAP_DURATION = 0.42;
+const PORTFOLIO_SNAP_IDLE_MS = 180;
 const JOURNEY_NAVIGATION_EVENT = 'portfolio:go-to-progress';
 const WARP_START_PROGRESS = phaseToProgress('C04_HORIZON', 0);
 const WARP_RELEASE_PROGRESS = phaseToProgress('C08_EMERGE', 0.12);
@@ -70,6 +75,21 @@ interface JourneyNavigationOptions {
   readonly immediate?: boolean;
 }
 
+interface ScrollProgressOptions {
+  readonly cooldownMs?: number;
+  readonly duration?: number;
+  readonly force?: boolean;
+  readonly lock?: boolean;
+}
+
+interface ScrollProgressConfig {
+  readonly lenis: Lenis;
+  readonly onComplete?: () => void;
+  readonly options?: ScrollProgressOptions;
+  readonly progress: number;
+  readonly snappingRef: MutableRefObject<boolean>;
+}
+
 export default function ScrollOrchestrator() {
   const lenisRef = useRef<Lenis | null>(null);
   const snappingRef = useRef(false);
@@ -77,15 +97,54 @@ export default function ScrollOrchestrator() {
   const warpAutoplayConsumedRef = useRef(false);
   const progressFrameRef = useRef<number | null>(null);
   const pendingProgressRef = useRef<number | null>(null);
+  const portfolioDeltaRef = useRef(0);
+  const portfolioDeltaResetRef = useRef<number | null>(null);
   const lastProgressRef = useRef(0);
 
   useEffect(() => {
+    const clearPortfolioDelta = (): void => {
+      portfolioDeltaRef.current = 0;
+      if (portfolioDeltaResetRef.current === null) return;
+      window.clearTimeout(portfolioDeltaResetRef.current);
+      portfolioDeltaResetRef.current = null;
+    };
+    let snapToStop: (stop: PortfolioStop) => void = () => undefined;
+    const handlePortfolioScroll = (data: VirtualScrollData): boolean => {
+      const direction = Math.sign(data.deltaY) as -1 | 0 | 1;
+      if (direction === 0) return true;
+      if (!isPortfolioActive()) {
+        clearPortfolioDelta();
+        return true;
+      }
+      if (snappingRef.current || useScene.getState().warpAutoplayActive) return false;
+      const result = resolvePortfolioSnapStep({
+        currentProgress: useScene.getState().journeyProgress,
+        direction,
+      });
+      if (!result.committed) {
+        clearPortfolioDelta();
+        return true;
+      }
+      if (portfolioDeltaResetRef.current !== null) {
+        window.clearTimeout(portfolioDeltaResetRef.current);
+      }
+      portfolioDeltaRef.current += data.deltaY;
+      portfolioDeltaResetRef.current = window.setTimeout(
+        clearPortfolioDelta,
+        PORTFOLIO_SNAP_IDLE_MS,
+      );
+      if (Math.abs(portfolioDeltaRef.current) < PORTFOLIO_SNAP_DELTA_THRESHOLD) return false;
+      clearPortfolioDelta();
+      snapToStop(result.stop);
+      return false;
+    };
     const lenis = new Lenis({
       lerp: 0.32,
       smoothWheel: true,
       syncTouch: true,
       syncTouchLerp: 0.12,
       touchMultiplier: 1.1,
+      virtualScroll: handlePortfolioScroll,
       wheelMultiplier: 1.15,
     });
     lenisRef.current = lenis;
@@ -105,9 +164,20 @@ export default function ScrollOrchestrator() {
         if (pending !== null) applyJourneyProgress(pending);
       });
     };
-    const snapToStop = (stop: PortfolioStop): void => {
+    snapToStop = (stop: PortfolioStop): void => {
       beginPortfolioStepTransition(useScene.getState().journeyProgress, stop);
-      scrollToProgress(lenis, stop.progress, snappingRef, finishPortfolioStepTransition);
+      scrollToProgress({
+        lenis,
+        onComplete: finishPortfolioStepTransition,
+        options: {
+          cooldownMs: PORTFOLIO_SNAP_COOLDOWN_MS,
+          duration: PORTFOLIO_SNAP_DURATION,
+          force: true,
+          lock: true,
+        },
+        progress: stop.progress,
+        snappingRef,
+      });
     };
     const jumpWithLenis = (
       progress: number,
@@ -121,7 +191,7 @@ export default function ScrollOrchestrator() {
         syncLenisScrollPosition(lenis, clampedProgress);
         applyJourneyProgressNow(clampedProgress);
       } else {
-        scrollToProgress(lenis, clampedProgress, snappingRef, undefined);
+        scrollToProgress({ lenis, progress: clampedProgress, snappingRef });
       }
       lastProgressRef.current = clampedProgress;
     };
@@ -212,6 +282,7 @@ export default function ScrollOrchestrator() {
     return () => {
       if (warpFrameRef.current !== null) cancelAnimationFrame(warpFrameRef.current);
       if (progressFrameRef.current !== null) cancelAnimationFrame(progressFrameRef.current);
+      clearPortfolioDelta();
       useScene.getState().setWarpAutoplayActive(false);
       resetPortfolioStepTransition();
       trigger.kill();
@@ -232,23 +303,21 @@ function getTotalScroll(): number {
   return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
 }
 
-function scrollToProgress(
-  lenis: Lenis,
-  progress: number,
-  snappingRef: MutableRefObject<boolean>,
-  onComplete?: () => void,
-): void {
+function scrollToProgress(config: ScrollProgressConfig): void {
+  const options = config.options ?? {};
+  const progress = config.progress;
   const target = progress * getTotalScroll();
-  snappingRef.current = true;
-  lenis.scrollTo(target, {
-    duration: 0.24,
-    lock: false,
+  config.snappingRef.current = true;
+  config.lenis.scrollTo(target, {
+    duration: options.duration ?? 0.24,
+    force: options.force,
+    lock: options.lock ?? false,
     onComplete: () => {
       applyJourneyProgress(progress);
-      onComplete?.();
+      config.onComplete?.();
       window.setTimeout(() => {
-        snappingRef.current = false;
-      }, SNAP_COOLDOWN_MS);
+        config.snappingRef.current = false;
+      }, options.cooldownMs ?? SNAP_COOLDOWN_MS);
     },
   });
 }

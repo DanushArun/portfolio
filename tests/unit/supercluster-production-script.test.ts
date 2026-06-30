@@ -12,12 +12,12 @@ function totalDots(): number {
 
 describe('supercluster production script', () => {
   it('test_dots_when_loaded_match_pdf_total', () => {
-    expect(totalDots()).toBe(38);
+    expect(totalDots()).toBe(37);
   });
 
   it('test_chapters_when_loaded_match_pdf_dot_counts', () => {
     expect(SUPERCLUSTER_CHAPTERS.map((chapter) => [chapter.id, chapter.dots.length])).toEqual([
-      ['MIRA', 7],
+      ['MIRA', 6],
       ['AIDEN', 6],
       ['VANGUARD', 5],
       ['INSPECTION', 5],
@@ -57,7 +57,7 @@ describe('supercluster production script', () => {
     expect(mira?.dots[4]).toMatchObject({
       answer: '7s -> <500ms TTFB',
       id: 'challenge',
-      label: '5/7',
+      label: '5/6',
     });
   });
 
@@ -71,7 +71,6 @@ describe('supercluster production script', () => {
       'build',
       'challenge',
       'proof',
-      'reflection',
     ]);
   });
 

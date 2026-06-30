@@ -5,6 +5,7 @@ import {
   getPortfolioStopForProgress,
   getPortfolioStops,
   resolvePortfolioGesture,
+  resolvePortfolioSnapStep,
 } from '@/lib/portfolio-journey';
 
 describe('portfolio journey stops', () => {
@@ -73,5 +74,29 @@ describe('portfolio journey stops', () => {
     });
 
     expect(result).toEqual({ committed: false, stop: current });
+  });
+
+  it('test_snap_step_when_between_stops_advances_to_adjacent_stop', () => {
+    const stops = getPortfolioStops();
+    const current = stops.find((stop) => stop.id === 'AIDEN-title');
+    const next = stops.find((stop) => stop.id === 'AIDEN-problem');
+    if (!current || !next) throw new Error('AIDEN stop missing');
+    const progress = current.progress + ((next.progress - current.progress) * 0.25);
+
+    const result = resolvePortfolioSnapStep({ currentProgress: progress, direction: 1 });
+
+    expect(result).toEqual({ committed: true, stop: next });
+  });
+
+  it('test_snap_step_when_near_next_stop_still_lands_on_next_stop', () => {
+    const stops = getPortfolioStops();
+    const current = stops.find((stop) => stop.id === 'AIDEN-title');
+    const next = stops.find((stop) => stop.id === 'AIDEN-problem');
+    if (!current || !next) throw new Error('AIDEN stop missing');
+    const progress = current.progress + ((next.progress - current.progress) * 0.75);
+
+    const result = resolvePortfolioSnapStep({ currentProgress: progress, direction: 1 });
+
+    expect(result).toEqual({ committed: true, stop: next });
   });
 });

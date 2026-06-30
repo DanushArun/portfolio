@@ -2,6 +2,7 @@ import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { phaseToProgress } from '@/lib/journey-map';
+import { getPortfolioStops } from '@/lib/portfolio-journey';
 import { useScene } from '@/lib/scene-state';
 
 const mockState = vi.hoisted(() => ({
@@ -15,12 +16,22 @@ type ScrollTriggerConfig = {
 };
 
 type RafCallback = FrameRequestCallback;
+type VirtualScrollData = {
+  deltaX: number;
+  deltaY: number;
+  event: Event;
+};
+type LenisOptions = {
+  virtualScroll?: (data: VirtualScrollData) => boolean;
+};
 type MockLenisApi = {
+  options: LenisOptions;
   scrollTo: ReturnType<typeof vi.fn>;
 };
 
 vi.mock('lenis', () => ({
   default: class MockLenis {
+    options: LenisOptions;
     destroy(): void {}
     on(): void {}
     raf(): void {}
@@ -33,7 +44,8 @@ vi.mock('lenis', () => ({
       mockState.scrollTriggerConfig?.onUpdate({ progress: mockState.releaseProgress });
     }
 
-    constructor() {
+    constructor(options: LenisOptions = {}) {
+      this.options = options;
       mockState.lenisInstances.push(this);
     }
   },
@@ -127,5 +139,35 @@ describe('ScrollOrchestrator warp autoplay', () => {
       { force: true, immediate: true, lock: false, target: startTop },
       { force: true, immediate: true, lock: false, target: releaseTop },
     ]));
+  });
+
+  it('test_project_snap_when_large_wheel_delta_advances_one_locked_stop', async () => {
+    render(<ScrollOrchestrator />);
+    await waitFor(() => expect(mockState.lenisInstances).toHaveLength(1));
+
+    const stops = getPortfolioStops();
+    const start = stops.find((stop) => stop.id === 'AIDEN-title');
+    const next = stops.find((stop) => stop.id === 'AIDEN-problem');
+    if (!start || !next) throw new Error('AIDEN stop missing');
+    act(() => {
+      useScene.setState({
+        journeyProgress: start.progress,
+        localProgress: start.localProgress,
+        phase: start.phase,
+      });
+    });
+
+    const lenis = mockState.lenisInstances[0] as MockLenisApi;
+    const handled = lenis.options.virtualScroll?.({
+      deltaX: 0,
+      deltaY: 650,
+      event: new WheelEvent('wheel'),
+    });
+
+    expect(handled).toBe(false);
+    expect(lenis.scrollTo).toHaveBeenCalledWith(
+      next.progress * TOTAL_SCROLL,
+      expect.objectContaining({ duration: 0.42, force: true, lock: true }),
+    );
   });
 });
