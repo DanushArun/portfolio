@@ -78,15 +78,15 @@ function SecondaryLinks(): React.JSX.Element {
   );
 }
 
-function BestNextStep(): React.JSX.Element {
+function ClosingQuote(): React.JSX.Element {
   return (
     <div 
       className={`${styles.nextStep} ${styles.staggerReveal}`} 
       style={{ '--stagger-index': 4 } as React.CSSProperties}
-      aria-label="Best next step"
+      aria-label="Alan Kay quote"
     >
-      <span>Best next step</span>
-      <strong>Technical screen or systems walkthrough.</strong>
+      <span>Alan Kay</span>
+      <strong>The best way to predict the future is to invent it.</strong>
     </div>
   );
 }
@@ -108,7 +108,7 @@ export default function ConnectPanel(): React.JSX.Element {
         <SignalHeader titleId={titleId} />
         <PrimaryEmailLink />
         <SecondaryLinks />
-        <BestNextStep />
+        <ClosingQuote />
       </div>
     </section>
   );

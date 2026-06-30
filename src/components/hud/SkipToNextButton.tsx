@@ -5,9 +5,7 @@
 // AC11 keyboard adapter dispatches the same `advanceScene()` action.
 
 import { useScene, ALL_PHASES, type ScenePhase } from '@/lib/scene-state';
-import { phaseToProgress } from '@/lib/journey-map';
-import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
-import { getPrimaryPortfolioStopForPhase } from '@/lib/portfolio-journey';
+import { adjacentPhaseProgress } from '@/lib/journey-navigation';
 import styles from './HUD.module.css';
 
 const FINAL_PHASE: ScenePhase = ALL_PHASES[ALL_PHASES.length - 1];
@@ -15,11 +13,7 @@ const PENULTIMATE_PHASE: ScenePhase = ALL_PHASES[ALL_PHASES.length - 2];
 const JOURNEY_NAVIGATION_EVENT = 'portfolio:go-to-progress';
 
 function nextPhaseProgress(phase: ScenePhase): number | null {
-  const index = ALL_PHASES.indexOf(phase);
-  const next = ALL_PHASES[index + 1];
-  if (!next) return null;
-  if (isPortfolioChapterPhase(next)) return getPrimaryPortfolioStopForPhase(next).progress;
-  return phaseToProgress(next, 0.05);
+  return adjacentPhaseProgress(phase, 1);
 }
 
 function requestJourneyProgress(progress: number): void {

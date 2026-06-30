@@ -141,7 +141,7 @@ export const workPanelDetails = {
   },
   W09_CONNECT: {
     lead: '',
-    role: 'The fastest next step is a technical screen or systems walkthrough.',
+    role: '',
     metrics: [
       { label: 'Location', value: 'Bengaluru' },
       { label: 'Target', value: 'AI systems & product' },

@@ -7,12 +7,12 @@
 
 import { useEffect } from 'react';
 import { useScene, ALL_PHASES } from '@/lib/scene-state';
-import { progressToPhase, phaseToProgress } from '@/lib/journey-map';
+import { phaseToProgress, progressToPhase } from '@/lib/journey-map';
 import { syncMiraCatalogueForScene } from '@/lib/mira-state';
 import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
 import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
+import { adjacentPhaseProgress, phaseEntryProgress } from '@/lib/journey-navigation';
 import {
-  getPrimaryPortfolioStopForPhase,
   getPortfolioStopForProgress,
   getPortfolioStops,
   resolvePortfolioStep,
@@ -61,8 +61,7 @@ function isFormFocused(): boolean {
 function phaseAt(idx: number, local: number): number {
   const clamped = Math.max(0, Math.min(ALL_PHASES.length - 1, idx));
   const phase = ALL_PHASES[clamped];
-  if (isPortfolioChapterPhase(phase)) return getPrimaryPortfolioStopForPhase(phase).progress;
-  return phaseToProgress(phase, Math.max(0, Math.min(1, local)));
+  return phaseEntryProgress(phase, Math.max(0, Math.min(1, local)));
 }
 
 function applyProgress(target: number): void {
@@ -120,7 +119,10 @@ function dispatchPortfolioStopAction(action: KeyAction): boolean {
   const direction = directionForPortfolioAction(action);
   if (direction === null) return false;
   const result = resolvePortfolioStep({ currentProgress: state.journeyProgress, direction });
-  if (result.committed) applyProgress(result.stop.progress);
+  const target = result.committed
+    ? result.stop.progress
+    : adjacentPhaseProgress(state.phase, direction);
+  if (target !== null) applyProgress(target);
   return true;
 }
 

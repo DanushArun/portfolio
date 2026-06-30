@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resolveKeyAction, dispatchKeyAction } from '@/lib/scene-state/keyboard-adapter';
 import { useScene, ALL_PHASES } from '@/lib/scene-state';
+import { phaseToProgress } from '@/lib/journey-map';
 import { getPortfolioStopForProgress, getPortfolioStops } from '@/lib/portfolio-journey';
 import {
   resetMiraStateForTest,
@@ -131,5 +132,20 @@ describe('dispatchKeyAction', () => {
 
     expect(getPortfolioStopForProgress(useScene.getState().journeyProgress).id)
       .toBe('AIDEN-problem');
+  });
+
+  it('exits to About when moving forward from the final Formula stop', () => {
+    const start = getPortfolioStops().find((stop) => stop.id === 'FORMULA-competition');
+    if (!start) throw new Error('FORMULA final stop missing');
+    useScene.setState({
+      phase: start.phase,
+      localProgress: start.localProgress,
+      journeyProgress: start.progress,
+    });
+
+    dispatchKeyAction('local-forward');
+
+    expect(useScene.getState().phase).toBe('W08_ABOUT');
+    expect(useScene.getState().journeyProgress).toBe(phaseToProgress('W08_ABOUT', 0.05));
   });
 });

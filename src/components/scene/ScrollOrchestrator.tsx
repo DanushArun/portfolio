@@ -7,6 +7,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useScene, type ScenePhase } from '@/lib/scene-state';
 import { phaseToProgress, progressToPhase } from '@/lib/journey-map';
+import { adjacentPhaseProgress } from '@/lib/journey-navigation';
 import { syncMiraCatalogueForScene } from '@/lib/mira-state';
 import { isPortfolioChapterPhase } from '@/lib/portfolio-book';
 import { syncPortfolioBookForScene } from '@/lib/portfolio-book-state';
@@ -110,6 +111,7 @@ export default function ScrollOrchestrator() {
       portfolioDeltaResetRef.current = null;
     };
     let snapToStop: (stop: PortfolioStop) => void = () => undefined;
+    let snapToJourneyProgress: (progress: number) => void = () => undefined;
     const handlePortfolioScroll = (data: VirtualScrollData): boolean => {
       const direction = Math.sign(data.deltaY) as -1 | 0 | 1;
       if (direction === 0) return true;
@@ -120,15 +122,24 @@ export default function ScrollOrchestrator() {
       if (snappingRef.current || useScene.getState().warpAutoplayActive) {
         return consumePortfolioScroll(data);
       }
-      const currentProgress = useScene.getState().journeyProgress;
+      const state = useScene.getState();
+      const currentProgress = state.journeyProgress;
       const currentStop = getPortfolioStopForProgress(currentProgress);
       const result = resolvePortfolioSnapStep({
         currentProgress,
         direction,
       });
-      if (!result.committed) {
+      const targetProgress = result.committed
+        ? result.stop.progress
+        : adjacentPhaseProgress(state.phase, direction);
+      if (targetProgress === null) {
         clearPortfolioDelta();
         return true;
+      }
+      if (!result.committed) {
+        clearPortfolioDelta();
+        window.setTimeout(() => snapToJourneyProgress(targetProgress), 0);
+        return consumePortfolioScroll(data);
       }
       if (portfolioDeltaResetRef.current !== null) {
         window.clearTimeout(portfolioDeltaResetRef.current);
@@ -183,6 +194,20 @@ export default function ScrollOrchestrator() {
           lock: true,
         },
         progress: stop.progress,
+        snappingRef,
+      });
+    };
+    snapToJourneyProgress = (progress: number): void => {
+      resetPortfolioStepTransition();
+      scrollToProgress({
+        lenis,
+        options: {
+          cooldownMs: PORTFOLIO_SNAP_COOLDOWN_MS,
+          duration: PORTFOLIO_SNAP_DURATION,
+          force: true,
+          lock: true,
+        },
+        progress,
         snappingRef,
       });
     };

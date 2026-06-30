@@ -76,6 +76,7 @@ import ScrollOrchestrator from '@/components/scene/ScrollOrchestrator';
 
 const WARP_START_PROGRESS = phaseToProgress('C04_HORIZON', 0);
 const WARP_RELEASE_PROGRESS = phaseToProgress('C08_EMERGE', 0.12);
+const ABOUT_ENTRY_PROGRESS = phaseToProgress('W08_ABOUT', 0.05);
 const TOTAL_SCROLL = 9_000;
 
 beforeEach(() => {
@@ -195,5 +196,34 @@ describe('ScrollOrchestrator warp autoplay', () => {
 
     expect(handled).toBe(true);
     expect(lenis.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('test_project_snap_when_formula_final_stop_scrolls_forward_exits_to_about', async () => {
+    render(<ScrollOrchestrator />);
+    await waitFor(() => expect(mockState.lenisInstances).toHaveLength(1));
+
+    const stops = getPortfolioStops();
+    const start = stops.find((stop) => stop.id === 'FORMULA-competition');
+    if (!start) throw new Error('FORMULA final stop missing');
+    act(() => {
+      useScene.setState({
+        journeyProgress: start.progress,
+        localProgress: start.localProgress,
+        phase: start.phase,
+      });
+    });
+
+    const lenis = mockState.lenisInstances[0] as MockLenisApi;
+    const handled = lenis.options.virtualScroll?.({
+      deltaX: 0,
+      deltaY: 1,
+      event: new WheelEvent('wheel'),
+    });
+
+    expect(handled).toBe(true);
+    await waitFor(() => expect(lenis.scrollTo).toHaveBeenCalledWith(
+      ABOUT_ENTRY_PROGRESS * TOTAL_SCROLL,
+      expect.objectContaining({ duration: 0.42, force: true, lock: true }),
+    ));
   });
 });
