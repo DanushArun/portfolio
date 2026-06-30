@@ -164,10 +164,36 @@ describe('ScrollOrchestrator warp autoplay', () => {
       event: new WheelEvent('wheel'),
     });
 
-    expect(handled).toBe(false);
-    expect(lenis.scrollTo).toHaveBeenCalledWith(
+    expect(handled).toBe(true);
+    await waitFor(() => expect(lenis.scrollTo).toHaveBeenCalledWith(
       next.progress * TOTAL_SCROLL,
       expect.objectContaining({ duration: 0.42, force: true, lock: true }),
-    );
+    ));
+  });
+
+  it('test_project_snap_when_on_heading_requires_extra_wheel_effort', async () => {
+    render(<ScrollOrchestrator />);
+    await waitFor(() => expect(mockState.lenisInstances).toHaveLength(1));
+
+    const stops = getPortfolioStops();
+    const start = stops.find((stop) => stop.id === 'AIDEN-title');
+    if (!start) throw new Error('AIDEN title stop missing');
+    act(() => {
+      useScene.setState({
+        journeyProgress: start.progress,
+        localProgress: start.localProgress,
+        phase: start.phase,
+      });
+    });
+
+    const lenis = mockState.lenisInstances[0] as MockLenisApi;
+    const handled = lenis.options.virtualScroll?.({
+      deltaX: 0,
+      deltaY: 90,
+      event: new WheelEvent('wheel'),
+    });
+
+    expect(handled).toBe(true);
+    expect(lenis.scrollTo).not.toHaveBeenCalled();
   });
 });

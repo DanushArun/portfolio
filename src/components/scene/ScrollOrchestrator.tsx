@@ -30,6 +30,7 @@ gsap.registerPlugin(ScrollTrigger);
 const SNAP_COOLDOWN_MS = 520;
 const PORTFOLIO_SNAP_COOLDOWN_MS = 180;
 const PORTFOLIO_SNAP_DELTA_THRESHOLD = 48;
+const PORTFOLIO_TITLE_SNAP_DELTA_THRESHOLD = 140;
 const PORTFOLIO_SNAP_DURATION = 0.42;
 const PORTFOLIO_SNAP_IDLE_MS = 180;
 const JOURNEY_NAVIGATION_EVENT = 'portfolio:go-to-progress';
@@ -116,9 +117,13 @@ export default function ScrollOrchestrator() {
         clearPortfolioDelta();
         return true;
       }
-      if (snappingRef.current || useScene.getState().warpAutoplayActive) return false;
+      if (snappingRef.current || useScene.getState().warpAutoplayActive) {
+        return consumePortfolioScroll(data);
+      }
+      const currentProgress = useScene.getState().journeyProgress;
+      const currentStop = getPortfolioStopForProgress(currentProgress);
       const result = resolvePortfolioSnapStep({
-        currentProgress: useScene.getState().journeyProgress,
+        currentProgress,
         direction,
       });
       if (!result.committed) {
@@ -133,10 +138,12 @@ export default function ScrollOrchestrator() {
         clearPortfolioDelta,
         PORTFOLIO_SNAP_IDLE_MS,
       );
-      if (Math.abs(portfolioDeltaRef.current) < PORTFOLIO_SNAP_DELTA_THRESHOLD) return false;
+      if (Math.abs(portfolioDeltaRef.current) < snapThresholdForStop(currentStop)) {
+        return consumePortfolioScroll(data);
+      }
       clearPortfolioDelta();
-      snapToStop(result.stop);
-      return false;
+      window.setTimeout(() => snapToStop(result.stop), 0);
+      return consumePortfolioScroll(data);
     };
     const lenis = new Lenis({
       lerp: 0.32,
@@ -301,6 +308,21 @@ export default function ScrollOrchestrator() {
 function getTotalScroll(): number {
   if (typeof window === 'undefined') return 0;
   return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+}
+
+function snapThresholdForStop(stop: PortfolioStop): number {
+  if (stop.kind === 'projectTitle') return PORTFOLIO_TITLE_SNAP_DELTA_THRESHOLD;
+  return PORTFOLIO_SNAP_DELTA_THRESHOLD;
+}
+
+function preventDefaultScroll(data: VirtualScrollData): void {
+  if (data.event.cancelable) data.event.preventDefault();
+}
+
+function consumePortfolioScroll(data: VirtualScrollData): boolean {
+  preventDefaultScroll(data);
+  data.deltaY = Math.sign(data.deltaY) * 0.01;
+  return true;
 }
 
 function scrollToProgress(config: ScrollProgressConfig): void {
