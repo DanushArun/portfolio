@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Danush Arun — Portfolio
 
-## Getting Started
+A browser-driven portfolio built with Next.js, React and TypeScript.
+The page presents a personal manifesto, Mira, selected projects, numbers, a working formula and
+contact.
 
-First, run the development server:
+## Experience and architecture
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+[page.tsx](src/app/page.tsx) assembles the sections as client-only dynamic imports.
+A loader introduces the experience; a custom cursor and navigation frame the page.
+GSAP ScrollTrigger coordinates scroll animation, while Lenis manages smooth scrolling.
+The dependency manifest also includes Three.js and React Three Fiber for visual work.
+
+```mermaid
+flowchart LR
+    Page[Next.js page] --> Sections[Portfolio sections]
+    Sections --> Motion[GSAP and Lenis]
+    Sections --> Content[Projects and contact]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+git clone https://github.com/DanushArun/portfolio.git
+cd portfolio
+npm ci
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open `http://localhost:3000`. The manifest pins Next.js 16.2.4 and React 19.2.4.
+Use a Node version compatible with the locked dependencies.
 
-## Learn More
+## Edit and verify
 
-To learn more about Next.js, take a look at the following resources:
+- [src/components](src/components): page sections and interaction components.
+- [globals.css](src/app/globals.css): shared styling.
+- [public](public): static assets.
+- [screenshot-hero.mjs](tools/screenshot-hero.mjs): browser screenshot helper.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+npm run build
+npm start
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run `npm start` after a successful build. The manifest has no automated test script.
+This README was checked against source and scripts; a browser or production build was not run
+for this documentation update. Review keyboard navigation, reduced-motion behavior and mobile
+performance before treating the animated experience as validated.
